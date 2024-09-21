@@ -44,15 +44,13 @@ def plot_a2():
     fig, ax = plt.subplots(figsize=(8, 8))
     ax.set_aspect('equal')
 
-    # Basis for the A2 lattice
     a2_basis = np.array([[math.sqrt(3), 1], [0, 2]])
 
-    # Plot the A2 lattice and its cosets
     plot_lattice(ax, a2_basis, label='L', color='blue')
 
     ax.set_xlabel('x')
     ax.set_ylabel('y')
-    ax.set_title('A2 Lattice and its Cosets')
+    ax.set_title('A2 Lattice')
 
     ax.grid(True)
     plt.xlim(-5, 5)
