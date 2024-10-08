@@ -1,0 +1,5 @@
+# Ignore the entire .idea folder
+.idea/
+
+# Ignore .DS_Store (for macOS)
+.DS_Store
