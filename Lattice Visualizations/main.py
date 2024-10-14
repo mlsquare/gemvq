@@ -7,10 +7,10 @@ import numpy as np
 
 def calculate_avg_error(d, q, G, Q_nn, num_samples=50):
     errors = []
-    betas = np.linspace(0.01, q, 5)
+    betas = np.linspace(0.01, q, 50)
 
     for beta in betas:
-        quantizer = Quantizer(G, Q_nn, beta=1, q=q)
+        quantizer = Quantizer(G, Q_nn, beta=beta, q=q)
         avg_error = 0
 
         for _ in range(num_samples):
