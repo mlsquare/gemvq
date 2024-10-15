@@ -17,6 +17,6 @@ class Quantizer:
         return encoded_mod_q
 
     def decode(self, y):
-        x_hat = np.dot(self.G, y / self.beta) * self.beta
-        closest_coarse = (self.q * self.beta) * self.Q_nn(x_hat / self.q * self.beta)
-        return x_hat - closest_coarse
+        x_p = np.dot(self.G, y)
+        x_pp = self.q * self.Q_nn(x_p / self.q)
+        return self.beta * (x_p - x_pp)
