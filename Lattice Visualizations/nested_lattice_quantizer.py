@@ -2,19 +2,17 @@ import numpy as np
 
 
 class Quantizer:
-    def __init__(self, G, Q_nn, beta=1, q=4):
+    def __init__(self, G, Q_nn, beta, q):
         self.beta = beta
         self.q = q
         self.G = G
         self.Q_nn = Q_nn
 
     def encode(self, x):
-        fine_x = self.Q_nn(x / self.beta) * self.beta
-        coarse_x = self.Q_nn(x / (self.q * self.beta)) * (self.q * self.beta)
-        x_e = fine_x - coarse_x
-        encoded = np.dot(x_e, np.linalg.inv(self.G).T)
-        encoded_mod_q = np.mod(encoded, self.q)
-        return encoded_mod_q
+        t = self.Q_nn(x / self.beta)
+        y = np.dot(np.linalg.inv(self.G), t)
+        enc = np.mod(y, self.q)
+        return enc
 
     def decode(self, y):
         x_p = np.dot(self.G, y)
