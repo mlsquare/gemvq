@@ -5,62 +5,45 @@ from plot_stats import *
 import numpy as np
 
 
-def calculate_avg_error(d, q, G, Q_nn, num_samples=500):
+def run_experiment(lattice_name, q_values, d, G, Q_nn, n_samples):
     errors = []
-    betas = np.linspace(0.1, q, 500)
-
-    for beta in betas:
-        quantizer = Quantizer(G, Q_nn, beta=1, q=q)
-        avg_error = 0
-
-        for _ in range(num_samples):
-            x = np.random.normal(0, 10, d)
-            encoded_x = quantizer.encode(x)
-            decoded_x = quantizer.decode(encoded_x)
-            error = calculate_mse(x, decoded_x)
-            avg_error += error # todo: maybe wrong here
-
-        avg_error /= num_samples
-        errors.append(avg_error)
-    best_beta_index = np.argmin(errors)
-    best_beta = betas[best_beta_index]
-    # plot_beta_results(betas, errors, best_beta)
-    return errors, best_beta, errors[best_beta_index]
-
-
-def run_experiment(lattice_name, q_values, d, G, Q_nn, num_samples=50):
-    results = {}
     for q in q_values:
-        errors, best_beta, smallest_error = calculate_avg_error(d, q, G, Q_nn, num_samples)
-        results[q] = (best_beta, smallest_error)
+        n_betas = int(5 * (q - 0.1))
+        betas = np.linspace(0.1, q, n_betas)
+        errors_for_beta = []
+        for beta in betas:
+            avg_err = 0
+            quantizer = Quantizer(G, Q_nn, beta=beta, q=q)
+            samples = np.random.normal(0, 10, size=(n_samples, d))
+            for x in samples:
+                y = quantizer.encode(x)
+                x_hat = quantizer.decode(y)
+                avg_err += calculate_mse(x, x_hat)
 
-    q_list = list(results.keys())
-    average_errors = [results[q][1] for q in q_list]
+            avg_err /= n_samples
+            errors_for_beta.append(avg_err)
+        errors_for_beta = np.array(errors_for_beta)
+        smallest_error, best_beta = np.min(errors_for_beta), betas[np.argmin(errors_for_beta)]
+        errors.append(smallest_error)
+        print(f"Best beta for q={q}: {best_beta:.2f} with average error: {smallest_error:.4f}. product= {best_beta*q}")
 
-    plot_q_results(lattice_name, q_list, average_errors)
-
-    for q in q_list:
-        print(f"Best beta for q={q}: {results[q][0]:.2f} with average error: {results[q][1]:.4f}")
+    plot_q_results(lattice_name, q_values, errors)
 
 
 def main():
-    num_samples = 100
-    # q_values = np.array(np.linspace(6, 100, 25))
-    q_values = np.array([6])
+    num_samples = 1000
+    q_values = np.array(np.linspace(2, 100, 25)).astype(int)
 
     # print("running z2...")
-    # G_Z_2 = get_z2()
-    # run_experiment("Z2", q_values, 2, G_Z_2, np.round, num_samples)
-    #
-    # G_E_8 = get_e8()
-    # print("running e8...")
-    # run_experiment("E8", q_values, 8, G_E_8, closest_point_E8, num_samples)
-    #
-    # G_D_3 = get_d3()
-    print("running z2...")
+    # run_experiment("z2", q_values, 2, get_z2(), np.round, num_samples)
 
-    run_experiment("z2", q_values, 2, get_z2, np.round, num_samples)
+    print("running D3...")
+    run_experiment("D3", q_values, 3, get_d3(), closest_point_Dn, num_samples)
+
+    print("running e8...")
+    run_experiment("E8", q_values, 8, get_e8(), closest_point_E8, num_samples)
+
     print("Done")
-    #
+
 
 main()

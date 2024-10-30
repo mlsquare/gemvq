@@ -1,11 +1,11 @@
 import numpy as np
 
 
-def calculate_mse(x, decoded_x):
+def calculate_mse(x, x_hat):
     """
     Calculate the Mean Squared Error between the original vector x and the decoded vector decoded_x.
     """
-    return np.mean((x - decoded_x) ** 2)
+    return np.mean((x - x_hat) ** 2)
 
 def get_z2():
     return np.array([
