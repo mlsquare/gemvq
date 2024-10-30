@@ -7,10 +7,19 @@ def calculate_mse(x, x_hat):
     """
     return np.mean((x - x_hat) ** 2)
 
+
 def get_z2():
     return np.array([
         [1, 0],
         [0, 1]
+    ])
+
+
+def get_z3():
+    return np.array([
+        [1, 0, 0],
+        [0, 1, 0],
+        [0, 0, 1]
     ])
 
 def get_d3():
