@@ -5,12 +5,12 @@ from plot_stats import *
 import numpy as np
 
 
-def calculate_avg_error(d, q, G, Q_nn, num_samples=50):
+def calculate_avg_error(d, q, G, Q_nn, num_samples=500):
     errors = []
-    betas = np.linspace(0.01, q, 50)
+    betas = np.linspace(0.1, q, 500)
 
     for beta in betas:
-        quantizer = Quantizer(G, Q_nn, beta=beta, q=q)
+        quantizer = Quantizer(G, Q_nn, beta=1, q=q)
         avg_error = 0
 
         for _ in range(num_samples):
@@ -18,7 +18,7 @@ def calculate_avg_error(d, q, G, Q_nn, num_samples=50):
             encoded_x = quantizer.encode(x)
             decoded_x = quantizer.decode(encoded_x)
             error = calculate_mse(x, decoded_x)
-            avg_error += error
+            avg_error += error # todo: maybe wrong here
 
         avg_error /= num_samples
         errors.append(avg_error)
@@ -45,16 +45,22 @@ def run_experiment(lattice_name, q_values, d, G, Q_nn, num_samples=50):
 
 def main():
     num_samples = 100
-    q_values = np.linspace(2, 100, 10).astype(int)
+    # q_values = np.array(np.linspace(6, 100, 25))
+    q_values = np.array([6])
 
-    G_E_8 = get_e8()
-    print("running e8...")
-    run_experiment("E8", q_values, 8, G_E_8, closest_point_E8, num_samples)
+    # print("running z2...")
+    # G_Z_2 = get_z2()
+    # run_experiment("Z2", q_values, 2, G_Z_2, np.round, num_samples)
+    #
+    # G_E_8 = get_e8()
+    # print("running e8...")
+    # run_experiment("E8", q_values, 8, G_E_8, closest_point_E8, num_samples)
+    #
+    # G_D_3 = get_d3()
+    print("running z2...")
 
-    G_D_3 = get_d3()
-    print("running d3...")
-    run_experiment("D3", q_values, 3, G_D_3, closest_point_Dn, num_samples)
+    run_experiment("z2", q_values, 2, get_z2, np.round, num_samples)
     print("Done")
-
+    #
 
 main()

@@ -2,7 +2,7 @@ from matplotlib import pyplot as plt
 
 
 def plot_beta_results(betas, errors, best_beta):
-    plt.figure(figsize=(10, 6))
+    plt.figure()
     plt.plot(betas, errors, marker='o')
     plt.title('Distortion vs. Beta')
     plt.xlabel('Beta')
