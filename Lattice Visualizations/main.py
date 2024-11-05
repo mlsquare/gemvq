@@ -9,6 +9,7 @@ def run_experiment(lattice_name, q_values, d, G, Q_nn, n_samples):
     errors = []
     for q in q_values:
         avg_err = 0
+    beta_min = (1 / (d * q)) * (x_std / sig_l)
 
         quantizer = Quantizer(G, Q_nn, beta=1, q=q)
         samples = np.random.normal(0, 10, size=(n_samples, d))
