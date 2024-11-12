@@ -25,8 +25,8 @@ def get_z3():
 
 def get_a2():
     return np.array([
-        [np.sqrt(3)/2, 0],
-        [0.5, 1]
+        [1, 0],
+        [0.5, np.sqrt(3)/2]
     ]).T
 
 
