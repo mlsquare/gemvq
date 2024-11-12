@@ -4,8 +4,8 @@ import sys
 import os
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-from nested_lattice_quantizer import Quantizer
-from closest_point import closest_point_Dn, closest_point_E8
+from nested_lattice_quantizer import Quantizer, NestedQuantizer
+from closest_point import closest_point_Dn, closest_point_E8, closest_point_A2
 from utils import *
 
 def closest_point_Zn(x):
@@ -68,6 +68,17 @@ class TestQuantizer(unittest.TestCase):
         expected = np.array([-0.5, 0.5, 0.5, -0.5, -0.5, -2.5, -0.5, 1.5])
         np.testing.assert_almost_equal(decoded, expected, decimal=5, err_msg="E₈ lattice decode failed")
 
+class TestNestedQuantizer(unittest.TestCase):
+    def test_A2_lattice(self):
+        """Test the Quantizer on A2 lattice."""
+        G = get_a2()
+        quantizer = NestedQuantizer(G, closest_point_A2, q=4)
+
+        x = np.array([9, 0])
+        bl, bm = quantizer.encode(x)
+        decoded = quantizer.decode(bl, bm)
+        expected = np.array([-7, 0])
+        np.testing.assert_almost_equal(decoded, expected, decimal=5, err_msg="A_2 lattice decode failed")
 
 if __name__ == '__main__':
     unittest.main()
