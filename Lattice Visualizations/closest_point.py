@@ -54,3 +54,38 @@ def closest_point_E8(x):
         return y_0
     else:
         return y_1
+
+
+def upscale(u):
+    M = np.array([[1, 0, -1], [1/np.sqrt(3), -2/np.sqrt(3), 1/np.sqrt(3)]])
+    return np.dot(u, M)
+
+
+def downscale(x):
+    M_t = np.array([[1, 0, -1], [1 / np.sqrt(3), -2 / np.sqrt(3), 1 / np.sqrt(3)]]).T
+    return 0.5 * np.dot(x, M_t)
+
+
+def closest_point_A2(u):
+    x = upscale(u)
+    s = np.sum(x)
+    x_p = x - (s / len(x)) * np.array([1, 1, 1])
+    f_x_p = np.round(x_p)
+    delta = int(np.sum(f_x_p))
+
+    distances = x - f_x_p
+    sorted_indices = np.argsort(np.abs(distances))
+
+    if delta == 0:
+        return downscale(f_x_p)
+    elif delta > 0:
+        for i in range(delta):
+            f_x_p[sorted_indices[i]] -= 1
+    elif delta < 0:
+        for i in range(-delta):
+            f_x_p[sorted_indices[-i-1]] += 1
+
+    return downscale(f_x_p)
+
+
+
