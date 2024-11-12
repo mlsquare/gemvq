@@ -50,6 +50,12 @@ class TestClosestPointAlgorithms(unittest.TestCase):
         result = closest_point_A2(point)
         np.testing.assert_allclose(result, expected, atol=1e-9, rtol=1e-7, err_msg="Failed to find the correct closest point in A2")
 
+    def test_closest_point_A2_on_lattice(self):
+        point = np.array([1, 0])
+        expected = np.array([1, 0])
+        result = closest_point_A2(point)
+        np.testing.assert_allclose(result, expected, atol=1e-9, rtol=1e-7, err_msg="Failed to find the correct closest point in A2")
+
 class TestHelpersForA2(unittest.TestCase):
     def test_upscale_for_A2(self):
         u1 = np.array([0, 0])
