@@ -30,6 +30,13 @@ def get_a2():
     ]).T
 
 
+def get_d2():
+    return np.array([
+        [1, -1],
+        [2, 0]
+    ]).T
+
+
 def get_d3():
     return np.array([
         [1, -1, 0],
