@@ -11,7 +11,7 @@ class Quantizer:
     def encode(self, x):
         t = self.Q_nn(x / self.beta)
         y = np.dot(np.linalg.inv(self.G), t)
-        enc = np.mod(y, self.q)
+        enc = np.mod(np.round(y), self.q).astype(int)
         return enc
 
     def decode(self, y):
@@ -33,10 +33,10 @@ class NestedQuantizer:
         return b_l, b_m
 
     def q_Q(self, x):
-        return (self.q**2) * self.Q_nn(x / (self.q**2))
+        return self.q * self.Q_nn(x / self.q)
 
     def decode(self, b_l, b_m):
         x_l_hat = np.dot(self.G, b_l) - self.q_Q(np.dot(self.G, b_l))
         x_m_hat = np.dot(self.G, b_m) - self.q_Q(np.dot(self.G, b_m))
-        return x_l_hat + self.q*x_m_hat - self.q_Q(np.dot(self.G, x_l_hat + self.q*x_m_hat))
+        return x_l_hat + self.q*x_m_hat
 
