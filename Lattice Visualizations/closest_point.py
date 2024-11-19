@@ -1,4 +1,31 @@
+import math
+
 import numpy as np
+
+def f_x(x):
+    # Implementation of a custom rounding function for single values or arrays
+    if isinstance(x, (int, float)):
+        return _f_x(x)
+    elif isinstance(x, np.ndarray):
+        vectorized_round = np.vectorize(_f_x)
+        return vectorized_round(x)
+    else:
+        raise TypeError("Input must be an int, float, or numpy array.")
+
+
+def _f_x(x):
+    # an implementetion of round that's more accurate to our needs
+    if x == 0:
+        return 0
+    m = math.floor(x)
+    if m <= x <= m + 0.5:
+        return m
+    if m + 0.5 < x < m + 1:
+        return m + 1
+    if -m-0.5 <= x <= -m:
+        return -m
+    if -m-1 < x < -m-0.5:
+        return -m-1
 
 """
 Closest Point Algorithm for the D_n Lattice.
@@ -66,15 +93,18 @@ def downscale(x):
     return 0.5 * np.dot(x, M_t)
 
 
+"""
+Closest Point Algorithm for the A_2 Lattice.
+"""
 def closest_point_A2(u):
     x = upscale(u)
     s = np.sum(x)
     x_p = x - (s / len(x)) * np.array([1, 1, 1])
-    f_x_p = np.round(x_p)
+    f_x_p = f_x(x_p)
     delta = int(np.sum(f_x_p))
 
     distances = x - f_x_p
-    sorted_indices = np.argsort(np.abs(distances))
+    sorted_indices = np.argsort(distances)
 
     if delta == 0:
         return downscale(f_x_p)
