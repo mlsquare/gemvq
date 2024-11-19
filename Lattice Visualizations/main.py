@@ -56,7 +56,6 @@ def run_experiment(lattice_name, q_values, d, G, Q_nn, sig_l, n_samples):
     plt.title('Minimum Error vs q on Log-Log Scale')
     plt.grid(True, which="both", ls="--", linewidth=0.5)
 
-    # Calculating the slope
     log_q_values = np.log(q_values)
     log_min_errors = np.log(min_errors)
     slope, intercept = np.polyfit(log_q_values, log_min_errors, 1)  # Linear fit in log-log scale
@@ -76,7 +75,7 @@ def main():
     # print("running z3...")
     # z2 = get_z2()
     # run_experiment("z2", q_values, 2, z2, np.round, 1/12, num_samples)
-    #
+
     print("running d3...")
     d3 = get_d3()
     run_experiment("D3", q_values, 3, d3, closest_point_Dn, 3/24, num_samples)
