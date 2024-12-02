@@ -8,7 +8,16 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')
 from closest_point import closest_point_Dn, closest_point_E8, upscale, downscale, closest_point_A2
 
 
+
 class TestClosestPointAlgorithms(unittest.TestCase):
+
+    def test_closest_point_d2(self):
+        point = np.array([-0.66, -1.58])
+        result = closest_point_Dn(point)
+        expected = np.array([-1, -1])
+        np.testing.assert_array_equal(result, expected, "Failed to return the correct lattice point in D2")
+
+
     def test_closest_point_d3_on_lattice(self):
         point = np.array([1, 0, 0])
         result = closest_point_Dn(point)
@@ -64,7 +73,7 @@ class TestClosestPointAlgorithms(unittest.TestCase):
 
     def test_scaled_closest_point_A2(self):
         point = np.array([3, np.sqrt(3)])
-        expected = np.array([5, 0])
+        expected = 5 * np.array([.5, np.sqrt(3)/2])
         result = 5 * closest_point_A2(point/5)
         np.testing.assert_allclose(result, expected, atol=1e-9, rtol=1e-7,
                                    err_msg="Failed to find the correct closest point in scaled A2")

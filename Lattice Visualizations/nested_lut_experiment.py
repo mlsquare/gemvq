@@ -2,7 +2,7 @@ import numpy as np
 from matplotlib import pyplot as plt
 
 from closest_point import closest_point_Dn, closest_point_A2
-from nested_lattice_quantizer import NestedQuantizer, Quantizer
+from nested_lattice_quantizer import NestedLatticeQuantizer, LatticeQuantizer
 from utils import get_d2, get_a2
 
 from scipy.spatial import Voronoi, voronoi_plot_2d
@@ -10,7 +10,7 @@ from scipy.spatial import Voronoi, voronoi_plot_2d
 
 def plot_codebook(G, closest_point, q):
     lattice_points = []
-    quantizer = Quantizer(G, closest_point, 1, q**2)  # q^4 close points
+    quantizer = LatticeQuantizer(G, closest_point, 1, q**2)  # q^4 close points
 
     for i in range(2*(q**2) + 10):
         for j in range(2*(q**2) + 10):
@@ -56,7 +56,7 @@ def plot_scaled_voronoi_cells(lattice_points, q, color='blue'):
 def plot_nested_codebook(G, closest_point, q):
     lattice_points = []
     colors = []
-    quantizer = NestedQuantizer(G, closest_point, q)
+    quantizer = NestedLatticeQuantizer(G, closest_point, q)
 
     distinct_colors = [
         "red", "orange", "yellow", "green", "blue", "purple", "cyan", "magenta",
@@ -78,7 +78,7 @@ def plot_nested_codebook(G, closest_point, q):
 
 
 def generate_nested_codebook(G, closest_point, q):
-    quantizer = NestedQuantizer(G, closest_point, q)
+    quantizer = NestedLatticeQuantizer(G, closest_point, q)
     codebook = set()
     for i in range(q):
         for j in range(q):
