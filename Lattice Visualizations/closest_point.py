@@ -2,30 +2,15 @@ import math
 
 import numpy as np
 
-def f_x(x):
-    # Implementation of a custom rounding function for single values or arrays
-    if isinstance(x, (int, float)):
-        return _f_x(x)
-    elif isinstance(x, np.ndarray):
-        vectorized_round = np.vectorize(_f_x)
-        return vectorized_round(x)
+def custom_round(x):
+    if isinstance(x, np.ndarray):
+        return np.array([custom_round(val) for val in x])
     else:
-        raise TypeError("Input must be an int, float, or numpy array.")
+        if x > 0:
+            return np.floor(x + 0.5) - 1 if (x - np.floor(x)) == 0.5 else np.floor(x + 0.5)
+        else:
+            return np.ceil(x - 0.5) + 1 if (np.ceil(x) - x) == 0.5 else np.ceil(x - 0.5)
 
-
-def _f_x(x):
-    # an implementetion of round that's more accurate to our needs
-    if x == 0:
-        return 0
-    m = math.floor(x)
-    if m <= x <= m + 0.5:
-        return m
-    if m + 0.5 < x < m + 1:
-        return m + 1
-    if -m-0.5 <= x <= -m:
-        return -m
-    if -m-1 < x < -m-0.5:
-        return -m-1
 
 """
 Closest Point Algorithm for the D_n Lattice.
@@ -38,15 +23,15 @@ def g_x(x):
     Compute g(x) by rounding the vector x to the nearest integers,
     but flip the rounding for the coordinate farthest from an integer.
     """
-    f_x = np.round(x)
+    f_x = custom_round(x)
     delta = np.abs(x - f_x)
     k = np.argmax(delta)
     g_x_ = f_x.copy()
 
-    if f_x[k] < x[k]:
-        g_x_[k] = f_x[k] + 1
+    if x[k] >= 0:
+        g_x_[k] = f_x[k] + 1 if f_x[k] < x[k] else f_x[k] - 1
     else:
-        g_x_[k] = f_x[k] - 1
+        g_x_[k] = f_x[k] + 1 if f_x[k] <= x[k] else f_x[k] - 1
 
     return g_x_
 
@@ -55,7 +40,7 @@ def closest_point_Dn(x):
     """
     Find the closest point in the D_n lattice for a given vector x.
     """
-    f_x = np.round(x)
+    f_x = custom_round(x)
     g_x_res = g_x(x)
     return f_x if np.sum(f_x) % 2 == 0 else g_x_res
 
@@ -100,7 +85,7 @@ def closest_point_A2(u):
     x = upscale(u)
     s = np.sum(x)
     x_p = x - (s / len(x)) * np.array([1, 1, 1])
-    f_x_p = f_x(x_p)
+    f_x_p = custom_round(x_p)
     delta = int(np.sum(f_x_p))
 
     distances = x - f_x_p
