@@ -19,6 +19,9 @@ class Quantizer:
         x_pp = self.q * self.Q_nn(x_p / self.q)
         return self.beta * (x_p - x_pp)
 
+    def quantize(self, x):
+        return self.decode(self.encode(x))
+
 
 class NestedQuantizer:
     def __init__(self, G, Q_nn, q):
@@ -40,3 +43,7 @@ class NestedQuantizer:
         x_m_hat = np.dot(self.G, b_m) - self.q_Q(np.dot(self.G, b_m))
         return x_l_hat + self.q*x_m_hat
 
+    def quantize(self, x):
+        b_l, b_m = self.encode(x)
+        x = self.decode(b_l, b_m)
+        return x
