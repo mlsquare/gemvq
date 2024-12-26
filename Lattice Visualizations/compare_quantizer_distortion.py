@@ -2,7 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 from closest_point import closest_point_Dn, closest_point_A2
-from nested_lattice_quantizer import NestedLatticeQuantizer, LatticeQuantizer
+from nested_lattice_quantizer import NestedQuantizer, Quantizer
 from utils import get_d2, get_a2
 
 
@@ -23,33 +23,34 @@ def compute_distortion(points, quantizer):
 
 def compare_quantizers(G, Q, q, variances, num_points):
     """Compare distortions for the nested and regular quantizers."""
-    nested_quantizer = NestedLatticeQuantizer(G, Q, q)
-    big_lattice_quantizer = LatticeQuantizer(G, Q, q**2)
-    small_lattice_quantizer = LatticeQuantizer(G, Q, q*(q-1))
+    nested_quantizer = NestedQuantizer(G, Q, q)
+    big_lattice_quantizer = Quantizer(G, Q, q**2, beta=1)
+    small_lattice_quantizer = Quantizer(G, Q, q*(q-1), beta=1)
 
     nested_distortions = []
     big_lattice_distortions = []
     small_lattice_distortions = []
 
-    # for variance in variances:
-    variance = 18
-    points = generate_gaussian_points(mean=0, variance=variance, num_points=num_points)
+    for variance in variances:
+    # variance = 18
+        points = generate_gaussian_points(mean=0, variance=variance, num_points=num_points)
 
-    nested_distortion = compute_distortion(points, nested_quantizer)
-    big_distortion = compute_distortion(points, big_lattice_quantizer)
-    small_distortion = compute_distortion(points, small_lattice_quantizer)
+        nested_distortion = compute_distortion(points, nested_quantizer)
+        big_distortion = compute_distortion(points, big_lattice_quantizer)
+        small_distortion = compute_distortion(points, small_lattice_quantizer)
 
-    nested_distortions.append(nested_distortion)
-    big_lattice_distortions.append(big_distortion)
-    small_lattice_distortions.append(small_distortion)
+        nested_distortions.append(nested_distortion)
+        big_lattice_distortions.append(big_distortion)
+        small_lattice_distortions.append(small_distortion)
 
     plt.figure(figsize=(10, 6))
     plt.plot(variances, np.array(nested_distortions),
-             label="Nested Lattice Quantizer", marker='o', color='blue')
+             label="Nested Lattice Quantizer", marker='o', linestyle='-', color='blue')
     plt.plot(variances, np.array(big_lattice_distortions),
-             label="$q^2$ Lattice Quantizer", marker='s', color='orange')
+             label="q^2 Lattice Quantizer", marker='x', linestyle='--', color='orange')
     plt.plot(variances, np.array(small_lattice_distortions),
-             label="$q(q-1)$ Lattice Quantizer", marker='s', color='pink')
+             label="q(q-1) Lattice Quantizer", marker='+', linestyle='-.', color='pink')
+
     plt.xlabel("Variance of Gaussian Distribution")
     plt.ylabel("Distortion (Mean Squared Error)")
     plt.title(f"Quantizer Distortion Comparison (q={q})")
@@ -59,8 +60,8 @@ def compare_quantizers(G, Q, q, variances, num_points):
 
 
 if __name__ == "__main__":
-    G = get_d2()
-    q = 5
-    variances = np.linspace(1, 20.0, 15)
-    num_points = 5
-    compare_quantizers(G, closest_point_Dn, q, variances, num_points)
+    G = get_a2()
+    q = 6
+    variances = np.linspace(1, 120.0, 15)
+    num_points = 500
+    compare_quantizers(G, closest_point_A2, q, variances, num_points)
