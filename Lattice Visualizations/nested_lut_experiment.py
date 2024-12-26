@@ -118,16 +118,16 @@ def plot_with_voronoi(lattice_points, q):
     scaled_vertices_q2 = np.vstack([scaled_vertices_q2, scaled_vertices_q2[0]])
 
     plt.plot(scaled_vertices_q_qm1[:, 0], scaled_vertices_q_qm1[:, 1],
-             color='green', linewidth=2, label=f'Scaled Voronoi Cell ($q(q-1) \\mathcal{{V}}_0$)')
+             color='green', linewidth=2, label=f'Scaled Voronoi Cell (q(q-1)V)')
     plt.plot(scaled_vertices_q_qp1[:, 0], scaled_vertices_q_qp1[:, 1],
-             color='pink', linewidth=2, label=f'Scaled Voronoi Cell ($q(q+1) \\mathcal{{V}}_0$)')
+             color='pink', linewidth=2, label=f'Scaled Voronoi Cell (q(q+1)V)')
     plt.plot(scaled_vertices_q2[:, 0], scaled_vertices_q2[:, 1],
-             color='orange', linewidth=2, label=f'Scaled Voronoi Cell ($q^2 \\mathcal{{V}}_0$)')
+             color='orange', linewidth=2, label=f'Scaled Voronoi Cell (q^2V)')
 
     plt.xlabel("X-axis")
     plt.ylabel("Y-axis")
     plt.legend()
-    plt.title(f"Lattice with Scaled Voronoi Cells, $q^2$ = {q ** 2}$")
+    plt.title(f"Hierarchical Nested A_2 Lattice Codebook for q^2 = {q ** 2}")
     plt.grid(True)
     plt.gca().set_aspect('equal', adjustable='box')
     plt.show()
@@ -136,9 +136,9 @@ def plot_with_voronoi(lattice_points, q):
 def main():
     G = get_a2()
     closest_point = closest_point_A2
-    q = 5
+    q = 6
 
-    points1 = generate_codebook(G, closest_point, q ** 2, with_plot=True)
+    points1 = generate_codebook(G, closest_point, q ** 2, with_plot=False)
     compare_codebooks(G, closest_point, q=q, l_points=points1, with_plot=True)
 
 
