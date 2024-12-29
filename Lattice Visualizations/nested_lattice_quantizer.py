@@ -37,7 +37,8 @@ class NestedQuantizer:
     def __init__(self, G, Q_nn, q):
         self.q = q
         self.G = G
-        self.Q_nn = lambda x: Q_nn(x + np.array([1e-7, 1e-6]))
+        d = 1e-8 * np.random.normal(0, 1, size=len(G))
+        self.Q_nn = lambda x: Q_nn(x + d)
 
     def encode(self, x):
         G_inv = np.linalg.inv(self.G)
