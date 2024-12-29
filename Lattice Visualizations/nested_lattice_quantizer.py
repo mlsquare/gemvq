@@ -7,6 +7,7 @@ class Quantizer:
         self.Q_nn = Q_nn
         self.q = q
         self.beta = beta
+        self.codebook = self.create_codebook()
 
     def encode(self, x):
         t = self.Q_nn(x / self.beta)
@@ -21,6 +22,15 @@ class Quantizer:
 
     def quantize(self, x):
         return self.decode(self.encode(x))
+
+    def create_codebook(self):
+        d = self.G.shape[0]
+        indices = np.array(np.meshgrid(*[range(self.q)] * d)).T.reshape(-1, d)
+        points = []
+        for idx in indices:
+            l_p = np.dot(self.G, idx)
+            points.append(self.quantize(l_p))
+        return np.array(points)
 
 
 class NestedQuantizer:

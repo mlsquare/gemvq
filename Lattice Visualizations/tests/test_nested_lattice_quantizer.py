@@ -82,6 +82,15 @@ class TestQuantizer(unittest.TestCase):
         points = np.array(points)
         np.testing.assert_equal(len(np.unique(points, axis=0)), 16, err_msg="Wrong number of cosets")
 
+    def test_codebook(self):
+        G = get_d2()
+        q = 4
+        quantizer = Quantizer(G, closest_point_Dn, q=q,  beta=1)
+        np.testing.assert_equal(len(np.unique(quantizer.codebook, axis=0)), 16, err_msg="Wrong codebook size.")
+
+        quantizer = Quantizer(get_d3(), closest_point_Dn, q=q,  beta=1)
+        np.testing.assert_equal(len(np.unique(quantizer.codebook, axis=0)), 64, err_msg="Wrong codebook size.")
+
 
 class TestNestedQuantizer(unittest.TestCase):
     def test_A2_lattice(self):
