@@ -34,28 +34,41 @@ class Quantizer:
 
 
 class NestedQuantizer:
-    def __init__(self, G, Q_nn, q):
+    def __init__(self, G, Q_nn, q, beta, M):
         self.q = q
         self.G = G
+        self.M = M
+        self.beta = beta
         d = 1e-8 * np.random.normal(0, 1, size=len(G))
         self.Q_nn = lambda x: Q_nn(x + d)
 
+
     def encode(self, x):
+        x = x / self.beta
         G_inv = np.linalg.inv(self.G)
-        x_l = self.Q_nn(x)
-        b_l = np.mod(np.dot(G_inv, x_l), self.q)
-        b_m = np.mod(np.dot(G_inv, self.Q_nn(x_l / self.q)), self.q)
-        return b_l, b_m
+        x_l = x
+        encoding_vectors = []
+
+        for _ in range(self.M):
+            x_l = self.Q_nn(x_l)
+            b_i = np.mod(np.dot(G_inv, x_l), self.q)
+            encoding_vectors.append(b_i)
+            x_l = x_l / self.q
+
+        return tuple(encoding_vectors)
 
     def q_Q(self, x):
         return self.q * self.Q_nn(x / self.q)
 
-    def decode(self, b_l, b_m):
-        x_l = np.dot(self.G, b_l) - self.q_Q(np.dot(self.G, b_l))
-        x_m = np.dot(self.G, b_m) - self.q_Q(np.dot(self.G, b_m))
-        return x_l + self.q*x_m
+    def decode(self, b_list):
+        x_hat_list = []
+        for b in b_list:
+            x_i_hat = np.dot(self.G, b) - self.q_Q(np.dot(self.G, b))
+            x_hat_list.append(x_i_hat)
+        x_hat = sum([np.power(self.q, i) * x_i for i, x_i in enumerate(x_hat_list)])
+        return self.beta * x_hat
 
     def quantize(self, x):
-        b_l, b_m = self.encode(x)
-        x = self.decode(b_l, b_m)
+        b_list = self.encode(x)
+        x = self.decode(b_list)
         return x
