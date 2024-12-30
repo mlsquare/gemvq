@@ -33,7 +33,6 @@ def compare_quantizers(G, Q, q, variances, num_points):
     small_lattice_distortions = []
 
     for variance in variances:
-    # variance = 18
         points = generate_gaussian_points(mean=0, variance=variance, num_points=num_points)
 
         nested_distortion = compute_distortion(points, nested_quantizer)
