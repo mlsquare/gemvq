@@ -72,7 +72,7 @@ class TestQuantizer(unittest.TestCase):
     def test_has_all_cosets(self):
         G = get_d2()
         q = 4
-        quantizer = Quantizer(G, closest_point_Dn, q=4,  beta=1)
+        quantizer = Quantizer(G, closest_point_Dn, q=q,  beta=1)
         points = []
         for i in range(q):
             for j in range(q):
@@ -99,8 +99,8 @@ class TestNestedQuantizer(unittest.TestCase):
         quantizer = NestedQuantizer(G, closest_point_A2, q=3)
 
         x = np.array([-0.5, -np.sqrt(3)/2])
-        bl, bm = quantizer.encode(x)
-        decoded = quantizer.decode(bl, bm)
+        b_list = quantizer.encode(x)
+        decoded = quantizer.decode(b_list)
         expected = np.array([-0.5, -np.sqrt(3)/2])
         np.testing.assert_almost_equal(decoded, expected, decimal=5, err_msg="A_2 lattice decode failed")
 
@@ -110,8 +110,8 @@ class TestNestedQuantizer(unittest.TestCase):
         quantizer = NestedQuantizer(G, closest_point_A2, q=10)
 
         x = closest_point_A2(np.array([10.5, 0]))
-        bl, bm = quantizer.encode(x)
-        decoded = quantizer.decode(bl, bm)
+        b_list = quantizer.encode(x)
+        decoded = quantizer.decode(b_list)
         expected = np.array(x)
         np.testing.assert_almost_equal(decoded, expected, decimal=5, err_msg="A_2 lattice decode failed")
 
@@ -121,8 +121,8 @@ class TestNestedQuantizer(unittest.TestCase):
         quantizer = NestedQuantizer(G, closest_point_Dn, q=6)
 
         x = np.array([-1, -1])
-        bl, bm = quantizer.encode(x)
-        decoded = quantizer.decode(bl, bm)
+        b_list = quantizer.encode(x)
+        decoded = quantizer.decode(b_list)
         expected = np.array([-1, -1])
         np.testing.assert_almost_equal(decoded, expected, decimal=5, err_msg="D_2 lattice decode failed")
 
@@ -131,8 +131,8 @@ class TestNestedQuantizer(unittest.TestCase):
         quantizer = NestedQuantizer(G, closest_point_Dn, q=5)
 
         x = np.array([5.99, 8.32])
-        bl, bm = quantizer.encode(x)
-        decoded = quantizer.decode(bl, bm)
+        b_list = quantizer.encode(x)
+        decoded = quantizer.decode(b_list)
         expected = np.array([6, 8])
         np.testing.assert_almost_equal(decoded, expected, decimal=5, err_msg="D_2 lattice decode failed")
 
