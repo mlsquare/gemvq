@@ -2,7 +2,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 from closest_point import closest_point_Dn, closest_point_A2
-from nested_lattice_quantizer import NestedQuantizer, Quantizer
+from nested_lattice_quantizer import (NestedLatticeQuantizer as NQuantizer,
+                                      HierarchicalNestedLatticeQuantizer as HQuantizer)
 from utils import get_d2, get_a2
 
 
@@ -23,9 +24,9 @@ def compute_distortion(points, quantizer):
 
 def compare_quantizers(G, Q, q, variances, num_points):
     """Compare distortions for the nested and regular quantizers."""
-    nested_quantizer = NestedQuantizer(G, Q, q)
-    big_lattice_quantizer = Quantizer(G, Q, q**2, beta=1)
-    small_lattice_quantizer = Quantizer(G, Q, q*(q-1), beta=1)
+    nested_quantizer = HQuantizer(G, Q, q, beta=1, M=2)
+    big_lattice_quantizer = NQuantizer(G, Q, q**2, beta=1)
+    small_lattice_quantizer = NQuantizer(G, Q, q*(q-1), beta=1)
 
     nested_distortions = []
     big_lattice_distortions = []

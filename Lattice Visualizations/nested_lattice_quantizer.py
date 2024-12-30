@@ -1,7 +1,7 @@
 import numpy as np
 
 
-class Quantizer:
+class NestedLatticeQuantizer:
     def __init__(self, G, Q_nn, q, beta):
         self.G = G
         self.Q_nn = Q_nn
@@ -33,7 +33,7 @@ class Quantizer:
         return np.array(points)
 
 
-class NestedQuantizer:
+class HierarchicalNestedLatticeQuantizer:
     def __init__(self, G, Q_nn, q, beta, M):
         self.q = q
         self.G = G

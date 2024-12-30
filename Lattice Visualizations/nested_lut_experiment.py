@@ -3,13 +3,14 @@ from matplotlib import pyplot as plt
 from scipy.spatial import Voronoi, voronoi_plot_2d
 
 from closest_point import closest_point_Dn, closest_point_A2
-from nested_lattice_quantizer import NestedQuantizer, Quantizer
+from nested_lattice_quantizer import (NestedLatticeQuantizer as NQuantizer,
+                                      HierarchicalNestedLatticeQuantizer as HQuantizer)
 from utils import get_d2, get_a2
 
 
 def generate_codebook(G, closest_point, q, with_plot=True):
     points = []
-    quantizer = Quantizer(G, closest_point, q=q, beta=1)
+    quantizer = NQuantizer(G, closest_point, q=q, beta=1)
 
     for i in range(2*q):
         for j in range(q +10):
@@ -45,8 +46,8 @@ def compare_codebooks(G, closest_point, l_points, q, M, with_plot=True):
     matches = []
     alpha = int((q**M - q) / (q-1))
 
-    n_quantizer = NestedQuantizer(G, closest_point, q, beta=1, M=M)
-    l_quantizer = Quantizer(G, closest_point, q**M - alpha, beta=1)
+    h_quantizer = HQuantizer(G, closest_point, q, beta=1, M=M)
+    n_quantizer = NQuantizer(G, closest_point, q**M - alpha, beta=1)
 
     point_map = {}
     duplicates = []
@@ -55,11 +56,11 @@ def compare_codebooks(G, closest_point, l_points, q, M, with_plot=True):
     for i, j in l_points:
         l_p = np.array([i, j]) + d
 
-        b_list = n_quantizer.encode(l_p)
-        dec = n_quantizer.decode(b_list)
+        b_list = h_quantizer.encode(l_p)
+        dec = h_quantizer.decode(b_list)
 
-        enc = l_quantizer.encode(l_p)
-        l_dec = l_quantizer.decode(enc)
+        enc = n_quantizer.encode(l_p)
+        l_dec = n_quantizer.decode(enc)
 
         if np.allclose(l_dec, l_p, atol=1e-7):
             if not np.allclose(dec, l_dec, atol=1e-7):
@@ -143,9 +144,9 @@ def main():
     points1 = generate_codebook(G, closest_point, q ** M, with_plot=False)
     compare_codebooks(G, closest_point, q=q, l_points=points1, M=M, with_plot=True)
 
-    M = 3
-    points1 = generate_codebook(G, closest_point, q ** M, with_plot=False)
-    compare_codebooks(G, closest_point, q=q, l_points=points1, M=M, with_plot=True)
+    # M = 3
+    # points1 = generate_codebook(G, closest_point, q ** M, with_plot=False)
+    # compare_codebooks(G, closest_point, q=q, l_points=points1, M=M, with_plot=True)
 
 
 if __name__ == "__main__":
