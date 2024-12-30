@@ -1,4 +1,4 @@
-from nested_lattice_quantizer import LatticeQuantizer
+from nested_lattice_quantizer import *
 from utils import *
 from closest_point import closest_point_Dn, closest_point_E8
 from plot_stats import *
@@ -19,7 +19,7 @@ def run_experiment(lattice_name, q_values, d, G, Q_nn, sig_l, n_samples):
         optimal_beta = beta_min
 
         for beta in betas:
-            quantizer = LatticeQuantizer(G, Q_nn, beta=beta, q=q)
+            quantizer = Quantizer(G, Q_nn, beta=beta, q=q)
             avg_err = 0
 
             for x in samples:
@@ -69,7 +69,7 @@ def run_experiment(lattice_name, q_values, d, G, Q_nn, sig_l, n_samples):
 
 
 def main():
-    num_samples = 10000
+    num_samples = 1000
     q_values = np.array(np.linspace(4, 100, 25)).astype(int)
 
     # print("running z3...")
