@@ -12,8 +12,8 @@ def generate_codebook(G, closest_point, q, with_plot=True):
     points = []
     quantizer = NQuantizer(G, closest_point, q=q, beta=1)
 
-    for i in range(2*q):
-        for j in range(q +10):
+    for i in range(q):
+        for j in range(q):
             l_p = np.dot(G, np.array([i, j]))
             enc = quantizer.encode(l_p)
             dec = quantizer.decode(enc)
@@ -141,12 +141,12 @@ def main():
     q = 4
     M = 2
 
-    points1 = generate_codebook(G, closest_point, q ** M, with_plot=False)
+    points1 = np.unique(generate_codebook(G, closest_point, q ** M, with_plot=False), axis=0)
     compare_codebooks(G, closest_point, q=q, l_points=points1, M=M, with_plot=True)
 
-    # M = 3
-    # points1 = generate_codebook(G, closest_point, q ** M, with_plot=False)
-    # compare_codebooks(G, closest_point, q=q, l_points=points1, M=M, with_plot=True)
+    M = 3
+    points1 = generate_codebook(G, closest_point, q ** M, with_plot=False)
+    compare_codebooks(G, closest_point, q=q, l_points=points1, M=M, with_plot=True)
 
 
 if __name__ == "__main__":
