@@ -2,10 +2,11 @@ import unittest
 import numpy as np
 import sys
 import os
+from itertools import product
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from nested_lattice_quantizer import NestedLatticeQuantizer as NQ, HierarchicalNestedLatticeQuantizer as HQ
-from closest_point import closest_point_Dn, closest_point_E8, closest_point_A2
+from closest_point import closest_point_Dn, closest_point_E8, closest_point_A2, custom_round
 from utils import *
 
 def closest_point_Zn(x):
@@ -92,7 +93,7 @@ class TestQuantizer(unittest.TestCase):
         np.testing.assert_equal(len(np.unique(quantizer.codebook, axis=0)), 64, err_msg="Wrong codebook size.")
 
 
-class TestNestedQuantizer(unittest.TestCase):
+class TestHQuantizer(unittest.TestCase):
     def test_A2_lattice(self):
         """Test the Quantizer on A2 lattice."""
         G = get_a2()
@@ -135,6 +136,29 @@ class TestNestedQuantizer(unittest.TestCase):
         decoded = quantizer.decode(b_list)
         expected = np.array([6, 8])
         np.testing.assert_almost_equal(decoded, expected, decimal=5, err_msg="D_2 lattice decode failed")
+
+    def test_decoder_uniqueness(self):
+        q = 3
+        M = 2
+        d = 3
+        G = np.eye(d)
+        beta = 1.0
+
+        quantizer = HQ(G, custom_round, q, beta, M)
+
+        all_encodings = list(product(range(q), repeat=d * M))
+
+        decoded_outputs = set()
+
+        for encoding in all_encodings:
+            b_list = [np.array(encoding[i * d:(i + 1) * d]) for i in range(M)]
+
+            decoded = tuple(quantizer.decode(b_list))
+            decoded_outputs.add(decoded)
+
+        assert len(decoded_outputs) == len(all_encodings), \
+            f"Decoder is not unique: {len(decoded_outputs)} unique outputs for {len(all_encodings)} encodings."
+        print("Test passed: Decoder is unique for all encodings.")
 
 
 if __name__ == '__main__':
