@@ -16,9 +16,8 @@ def calculate_mse_for_samples(samples, quantizer):
     return mse / len(samples)
 
 
-def calculate_slope(R, min_errors):
+def calculate_slope(log_R, min_errors):
     """Calculate the slope of the log-log plot."""
-    log_R = np.log2(R)
     log_min_errors = np.log2(min_errors)
     slope = np.polyfit(log_R, log_min_errors, 1)[0]
     return slope
@@ -36,14 +35,13 @@ def run_comparison_experiment(G, q_nn, q_values, n_samples, d, sigma_squared, si
         for scheme in schemes:
             name, quantizer_class, nesting = (scheme["name"], scheme["quantizer"], scheme["nesting"])
 
-            beta_min = (1 /q) * np.sqrt((x_std ** 2) / sig_l)
+            beta_min = (1 /q**2) * np.sqrt(sigma_squared / sig_l)
             betas = beta_min + 0.25 * beta_min * np.arange(0, 20)
 
             min_error = float("inf")
             optimal_beta = beta_min
-
-            for beta in betas:
-                quantizer = quantizer_class(G, q_nn, beta=1, q=nesting(q))
+            for i, beta in enumerate(betas):
+                quantizer = quantizer_class(G, q_nn, beta=beta, q=nesting(q))
                 mse = calculate_mse_for_samples(samples, quantizer)
 
                 if mse < min_error:
@@ -66,10 +64,15 @@ def run_comparison_experiment(G, q_nn, q_values, n_samples, d, sigma_squared, si
         slope = calculate_slope(R, min_errors)
         print(f"Slope for {name}: {slope:.3f}")
 
+    R_values = np.linspace(min(R), max(R), 100)
+    pareto_log_distortions = - 2 * (R_values - min(R))
+    pareto_distortions = 2 ** pareto_log_distortions
+    plt.plot(R_values, pareto_distortions, label="Pareto Line (slope = -2)", color="red", linestyle="--")
+
     plt.xlabel(r"$R = 2 \log_2 q$")
     plt.ylabel("MSE (log scale)")
     plt.yscale("log")
-    plt.title("Comparison of Quantization Schemes using $E_8$ Lattice")
+    plt.title("Comparison of Quantization Schemes using $D_3$ Lattice")
     plt.legend()
     plt.grid(True)
     plt.show()
