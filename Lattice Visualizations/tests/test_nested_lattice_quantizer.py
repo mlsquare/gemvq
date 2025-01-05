@@ -87,10 +87,12 @@ class TestQuantizer(unittest.TestCase):
         G = get_d2()
         q = 4
         quantizer = NQ(G, closest_point_Dn, q=q,  beta=1)
-        np.testing.assert_equal(len(np.unique(quantizer.codebook, axis=0)), 16, err_msg="Wrong codebook size.")
+        codebook = quantizer.create_codebook()
+        np.testing.assert_equal(len(np.unique(codebook, axis=0)), 16, err_msg="Wrong codebook size.")
 
         quantizer = NQ(get_d3(), closest_point_Dn, q=q,  beta=1)
-        np.testing.assert_equal(len(np.unique(quantizer.codebook, axis=0)), 64, err_msg="Wrong codebook size.")
+        codebook = quantizer.create_codebook()
+        np.testing.assert_equal(len(np.unique(codebook, axis=0)), 64, err_msg="Wrong codebook size.")
 
 
 class TestHQuantizer(unittest.TestCase):
@@ -184,6 +186,16 @@ class TestHQuantizer(unittest.TestCase):
         expected = False
         np.testing.assert_equal(did_overload, expected, err_msg="Overload mechanism falsely detected overload")
 
+    def test_codebook(self):
+        G = get_d2()
+        q = 2
+        quantizer = HQ(G, closest_point_Dn, q=q,  beta=1, M=2)
+        codebook = quantizer.create_codebook()
+        np.testing.assert_equal(len(np.unique(codebook, axis=0)), 16, err_msg="Wrong codebook size.")
+
+        quantizer = HQ(get_d3(), closest_point_Dn, q=q,  beta=1)
+        codebook = quantizer.create_codebook()
+        np.testing.assert_equal(len(np.unique(codebook, axis=0)), 64, err_msg="Wrong codebook size.")
 
 
 if __name__ == '__main__':
