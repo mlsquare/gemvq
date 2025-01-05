@@ -25,7 +25,6 @@ def calculate_slope(log_R, min_errors):
 
 def run_comparison_experiment(G, q_nn, q_values, n_samples, d, sigma_squared, sig_l, schemes):
     x_std = np.sqrt(sigma_squared)
-    # samples = np.random.uniform(-0.5, 0.5, size=(n_samples, d))
     samples = np.random.normal(0, x_std, size=(n_samples, d))
 
     results = {scheme["name"]: {"R": [], "min_errors": []} for scheme in schemes}
@@ -35,12 +34,13 @@ def run_comparison_experiment(G, q_nn, q_values, n_samples, d, sigma_squared, si
         for scheme in schemes:
             name, quantizer_class, nesting = (scheme["name"], scheme["quantizer"], scheme["nesting"])
 
-            beta_min = (1 /q**2) * np.sqrt(sigma_squared / sig_l)
+            beta_min = (1 / q**2) * np.sqrt(sigma_squared / sig_l)
             betas = beta_min + 0.25 * beta_min * np.arange(0, 20)
 
             min_error = float("inf")
             optimal_beta = beta_min
-            for i, beta in enumerate(betas):
+
+            for beta in betas:
                 quantizer = quantizer_class(G, q_nn, beta=beta, q=nesting(q))
                 mse = calculate_mse_for_samples(samples, quantizer)
 
@@ -54,25 +54,26 @@ def run_comparison_experiment(G, q_nn, q_values, n_samples, d, sigma_squared, si
             print(f"Scheme: {name}, q = {q}, Optimal beta: {optimal_beta:.3f}, Minimum error: {min_error:.3f}")
 
     plt.figure(figsize=(10, 6))
-    for scheme in schemes:
+    colors = ['blue', 'green', 'orange']
+    for idx, scheme in enumerate(schemes):
         name = scheme["name"]
         R = results[name]["R"]
         min_errors = results[name]["min_errors"]
-        plt.plot(R, min_errors, label=name, marker='o')
+        color = colors[idx]
 
+        plt.plot(R, min_errors, label=name, marker='o', color=color)
 
         slope = calculate_slope(R, min_errors)
         print(f"Slope for {name}: {slope:.3f}")
+    pareto_distortions = [1 / (k ** 4) for k in q_values]
+    plt.plot(R, pareto_distortions, label=f"{name} Pareto Line $q^2$", color='red', linestyle="--")
 
-    R_values = np.linspace(min(R), max(R), 100)
-    pareto_log_distortions = - 2 * (R_values - min(R))
-    pareto_distortions = 2 ** pareto_log_distortions
-    plt.plot(R_values, pareto_distortions, label="Pareto Line (slope = -2)", color="red", linestyle="--")
-
+    pareto_distortions_qm1 = [1 / ((k * (k-1))**2) for k in q_values]
+    plt.plot(R, pareto_distortions_qm1, label=f"{name} Pareto Line $q(q-1)$", color='black', linestyle="--")
     plt.xlabel(r"$R = 2 \log_2 q$")
     plt.ylabel("MSE (log scale)")
     plt.yscale("log")
-    plt.title("Comparison of Quantization Schemes using $D_3$ Lattice")
+    plt.title("Comparison of Quantization Schemes with $D_3$ Lattice")
     plt.legend()
     plt.grid(True)
     plt.show()
@@ -81,8 +82,8 @@ def run_comparison_experiment(G, q_nn, q_values, n_samples, d, sigma_squared, si
 
 
 def main():
-    num_samples = 1000
-    q_values = np.array(np.linspace(2, 12, 10)).astype(int)
+    num_samples = 2000
+    q_values = np.array(np.linspace(2, 10, 8)).astype(int)
     sigma_squared = 1
     G = get_d3()
     q_nn = closest_point_Dn
