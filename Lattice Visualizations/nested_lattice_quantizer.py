@@ -13,7 +13,8 @@ class NestedLatticeQuantizer:
         t = self.Q_nn(x / self.beta)
         y = np.dot(np.linalg.inv(self.G), t)
         enc = np.mod(np.round(y), self.q).astype(int)
-        return enc
+        overload_error = True in (self.Q_nn(t/ self.q) != 0 * len(self.G))
+        return enc, overload_error
 
     def decode(self, y):
         x_p = np.dot(self.G, y)
@@ -21,7 +22,8 @@ class NestedLatticeQuantizer:
         return self.beta * (x_p - x_pp)
 
     def quantize(self, x):
-        return self.decode(self.encode(x))
+        enc, _ = self.encode(x)
+        return self.decode(enc)
 
     def create_codebook(self):
         d = self.G.shape[0]
@@ -55,7 +57,9 @@ class HierarchicalNestedLatticeQuantizer:
             encoding_vectors.append(b_i)
             x_l = x_l / self.q
 
-        return tuple(encoding_vectors)
+        alpha = self.q** self.M - ((self.q ** self.M - self.q)/(self.q - 1))
+        overload_error = True in (self.Q_nn(x/ alpha) != 0 * len(self.G))
+        return tuple(encoding_vectors), overload_error
 
     def q_Q(self, x):
         return self.q * self.Q_nn(x / self.q)
@@ -69,6 +73,6 @@ class HierarchicalNestedLatticeQuantizer:
         return self.beta * x_hat
 
     def quantize(self, x):
-        b_list = self.encode(x)
-        x = self.decode(b_list)
-        return x
+        b_list, _ = self.encode(x)
+        x_hat = self.decode(b_list)
+        return x_hat
