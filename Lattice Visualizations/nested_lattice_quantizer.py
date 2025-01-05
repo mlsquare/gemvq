@@ -76,3 +76,19 @@ class HierarchicalNestedLatticeQuantizer:
         b_list, _ = self.encode(x)
         x_hat = self.decode(b_list)
         return x_hat
+
+    def create_codebook(self):
+        """Create a codebook mapping M encoding vectors to quantized points."""
+        d = self.G.shape[0]
+        indices = np.array(np.meshgrid(*[range(self.q)] * d)).T.reshape(-1, d)
+
+        all_combinations = np.array(np.meshgrid(*[indices] * self.M)).T.reshape(-1, self.M, d)
+
+        codebook = {}
+
+        for combination in all_combinations:
+            encoded_vectors = tuple(tuple(b) for b in combination)
+            quantized_point = self.decode(list(combination))
+            codebook[encoded_vectors] = quantized_point
+
+        return codebook
