@@ -4,62 +4,84 @@ import numpy as np
 class NestedLatticeQuantizer:
     def __init__(self, G, Q_nn, q, beta):
         self.G = G
-        self.Q_nn = Q_nn
+        d = 1e-8 * np.random.normal(0, 1, size=len(G))
+        self.Q_nn = lambda x: Q_nn(x + d)
         self.q = q
         self.beta = beta
-        self.codebook = self.create_codebook()
+        self.G_inv = np.linalg.inv(G)
 
     def encode(self, x):
         t = self.Q_nn(x / self.beta)
-        y = np.dot(np.linalg.inv(self.G), t)
+        y = np.dot(self.G_inv, t)
         enc = np.mod(np.round(y), self.q).astype(int)
-        overload_error = True in (self.Q_nn(t/ self.q) != 0 * len(self.G))
+
+        overload_error = not np.allclose(self.Q_nn(t / self.q), 0, atol=1e-8)
         return enc, overload_error
+
+    def encode_with_overload_handling(self, x):
+        enc, did_overload = self.encode(x)
+        i_0 = 0
+        while did_overload:
+            i_0 += 1
+            x = x / 2
+            enc, did_overload = self.encode(x)
+        return enc, i_0
 
     def decode(self, y):
         x_p = np.dot(self.G, y)
         x_pp = self.q * self.Q_nn(x_p / self.q)
         return self.beta * (x_p - x_pp)
 
+    def decode_with_overload_handling(self, enc, i_0):
+        return self.decode(enc) * (2 ** i_0)
+
     def quantize(self, x):
-        enc, _ = self.encode(x)
+        enc = self.encode(x)[0]
         return self.decode(enc)
 
     def create_codebook(self):
         d = self.G.shape[0]
         indices = np.array(np.meshgrid(*[range(self.q)] * d)).T.reshape(-1, d)
-        points = []
+        points = {}
         for idx in indices:
             l_p = np.dot(self.G, idx)
-            points.append(self.quantize(l_p))
-        return np.array(points)
+            points[tuple(idx)] = self.quantize(l_p)
+        return points
 
 
 class HierarchicalNestedLatticeQuantizer:
-    def __init__(self, G, Q_nn, q, beta, M):
+    def __init__(self, G, Q_nn, q, beta, M=2):
         self.q = q
         self.G = G
         self.M = M
         self.beta = beta
+        self.G_inv = np.linalg.inv(G)
+
         d = 1e-8 * np.random.normal(0, 1, size=len(G))
         self.Q_nn = lambda x: Q_nn(x + d)
 
-
     def encode(self, x):
         x = x / self.beta
-        G_inv = np.linalg.inv(self.G)
         x_l = x
         encoding_vectors = []
 
         for _ in range(self.M):
             x_l = self.Q_nn(x_l)
-            b_i = np.mod(np.dot(G_inv, x_l), self.q)
+            b_i = np.mod(np.dot(self.G_inv, x_l), self.q)
             encoding_vectors.append(b_i)
             x_l = x_l / self.q
 
-        alpha = self.q** self.M - ((self.q ** self.M - self.q)/(self.q - 1))
-        overload_error = True in (self.Q_nn(x/ alpha) != 0 * len(self.G))
+        overload_error = not np.allclose(self.Q_nn(x_l), 0, atol=1e-8)
         return tuple(encoding_vectors), overload_error
+
+    def encode_with_overload_handling(self, x):
+        b_list, did_overload = self.encode(x)
+        i_0 = 0
+        while did_overload:
+            i_0 += 1
+            x = x / 2
+            b_list, did_overload = self.encode(x)
+        return b_list, i_0
 
     def q_Q(self, x):
         return self.q * self.Q_nn(x / self.q)
@@ -72,20 +94,19 @@ class HierarchicalNestedLatticeQuantizer:
         x_hat = sum([np.power(self.q, i) * x_i for i, x_i in enumerate(x_hat_list)])
         return self.beta * x_hat
 
+    def decode_with_overload_handling(self, b_list, i_0):
+        return self.decode(b_list) * (2 ** i_0)
+
     def quantize(self, x):
-        b_list, _ = self.encode(x)
-        x_hat = self.decode(b_list)
-        return x_hat
+        b_list = self.encode(x)[0]
+        return self.decode(b_list)
 
     def create_codebook(self):
-        """Create a codebook mapping M encoding vectors to quantized points."""
         d = self.G.shape[0]
         indices = np.array(np.meshgrid(*[range(self.q)] * d)).T.reshape(-1, d)
-
         all_combinations = np.array(np.meshgrid(*[indices] * self.M)).T.reshape(-1, self.M, d)
 
         codebook = {}
-
         for combination in all_combinations:
             encoded_vectors = tuple(tuple(b) for b in combination)
             quantized_point = self.decode(list(combination))
