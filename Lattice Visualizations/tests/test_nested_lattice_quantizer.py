@@ -59,6 +59,16 @@ class TestQuantizer(unittest.TestCase):
 
         np.testing.assert_almost_equal(decoded, [2, 2, -2], decimal=5, err_msg="D₃ lattice decode failed")
 
+    def test_D4_lattice(self):
+        G = get_d4()
+        quantizer = NQ(G, closest_point_Dn, beta=1, q=4)
+        x = np.array([0.6, -1.1, 1.7, 0.1])
+        expected = np.array([1, -1, 2, 0])
+
+        encoded, _ = quantizer.encode(x)
+        decoded = quantizer.decode(encoded)
+        np.testing.assert_almost_equal(decoded, expected, decimal=5, err_msg="D4 lattice decode failed")
+
     def test_E8_lattice(self):
         """Test the Quantizer on E₈ lattice."""
         G = get_e8()

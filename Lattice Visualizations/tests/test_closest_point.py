@@ -47,6 +47,12 @@ class TestClosestPointAlgorithms(unittest.TestCase):
         result = closest_point_Dn(point)
         np.testing.assert_array_equal(result, expected, "Failed at a boundary case in D3")
 
+    def test_closest_point_d4(self):
+        point = np.array([0.6, -1.1, 1.7, 0.1])
+        expected = np.array([1, -1, 2, 0])
+        result = closest_point_Dn(point)
+        np.testing.assert_array_equal(result, expected, "Failed to find the correct closest point in D4")
+
     def test_closest_point_e8_on_lattice(self):
         point = np.array([0, 1, 1, 0, 0, 0, 0, 0])
         result = closest_point_E8(point)

@@ -44,6 +44,14 @@ def get_d3():
         [0, 1, 1]
     ]).T
 
+def get_d4():
+    return np.array([
+        [1, -1, 0, 0],
+        [0, 1, -1, 0],
+        [0, 0, 1, -1],
+        [0, 0, 1, 1]
+    ])
+
 
 def get_e8():
     return np.array([
