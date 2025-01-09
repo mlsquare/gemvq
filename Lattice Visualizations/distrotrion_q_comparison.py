@@ -93,7 +93,7 @@ def run_comparison_experiment(G, q_nn, q_values, n_samples, d, sigma_squared, M,
     plt.plot(q_2_rates, benchmark_distortions, label=f"Error benchmark for $q^2$ quantizer", color='red',
              linestyle="--")
 
-    plt.xlabel(r"$2 \log_2 (q) + H(i_0)$")
+    plt.xlabel(r"$2 \log_2 (q) + H(i_0)/d$")
     plt.ylabel("Distortion (log scale)")
     plt.title("Distortion-Rate Function with $D_4$ Lattice and Overload Mechanism")
     plt.yscale("log")
