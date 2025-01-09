@@ -29,7 +29,7 @@ def calculate_slope(log_R, min_errors):
 def calculate_rate_and_distortion(samples, quantizer, q, beta_min):
     """Calculate rate-distortion for a given quantizer."""
     betas = beta_min + 0.02 * beta_min * np.arange(0, 40)
-
+    d = len(quantizer.G)
     min_error = float("inf")
     optimal_beta = beta_min
     optimal_i_0_values = []
@@ -66,8 +66,7 @@ def calculate_rate_and_distortion(samples, quantizer, q, beta_min):
     print("-" * 30)
     print(f"H(i_0) ={H_i_0}")
 
-
-    R = 4 * np.log2(q) + H_i_0
+    R = 2 * np.log2(q) + H_i_0 / d # M log2 (q) + H(i_0)
     return R, min_error, H_i_0
 
 
@@ -97,12 +96,9 @@ def run_comparison_experiment(G, q_nn, q_values, n_samples, d, sigma_squared, M,
     for idx, (name, scheme_results) in enumerate(results.items()):
         R = scheme_results["R"]
         min_errors = scheme_results["min_errors"]
-        H_i_0 = scheme_results["H_i_0"]
-        R_plus_H = [r + h for r, h in zip(R, H_i_0)]
-        plt.plot(R_plus_H, min_errors, label=name, marker=markers[idx], color=colors[idx])
+        plt.plot(R, min_errors, label=name, marker=markers[idx], color=colors[idx])
 
-
-    q_2_rates = np.add(results[schemes[2]["name"]]["R"], results[schemes[2]["name"]]["H_i_0"])
+    q_2_rates = results[schemes[2]["name"]]["R"]
     benchmark_distortions = [2 ** (-2 * k) for k in q_2_rates]
     plt.plot(q_2_rates, benchmark_distortions, label=f"Error benchmark for $q^2$ quantizer", color='red', linestyle="--")
 
