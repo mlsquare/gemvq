@@ -12,8 +12,8 @@ def calculate_mse_and_overload_for_samples(samples, quantizer):
     mse = 0
     i_0_count = []
     for x in samples:
-        encoding, i_0 = quantizer.encode_with_overload_handling(x)
-        x_hat = quantizer.decode_with_overload_handling(encoding, i_0)
+        encoding, i_0 = quantizer.encode(x)
+        x_hat = quantizer.decode(encoding, i_0)
         mse += calculate_mse(x, x_hat)
         i_0_count.append(i_0)
     return mse / len(samples), i_0_count
