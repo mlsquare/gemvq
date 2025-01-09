@@ -1,7 +1,7 @@
 import time
 from nested_lattice_quantizer import (NestedLatticeQuantizer as NQuantizer,
                                       HierarchicalNestedLatticeQuantizer as HQuantizer)
-from utils import get_a2, get_d3, get_e8, calculate_mse
+from utils import get_a2, get_d3, get_d4, get_e8, calculate_mse
 from closest_point import closest_point_A2, closest_point_Dn, closest_point_E8, custom_round
 import numpy as np
 import matplotlib.pyplot as plt
