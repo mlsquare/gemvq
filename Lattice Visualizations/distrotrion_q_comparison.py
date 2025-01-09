@@ -26,73 +26,63 @@ def calculate_slope(log_R, min_errors):
     return slope
 
 
-def calculate_rate_and_distortion(samples, quantizer, q, beta_min):
-    """Calculate rate-distortion for a given quantizer."""
-    betas = beta_min + 0.02 * beta_min * np.arange(0, 40)
+def calculate_rate_and_distortion(name, samples, quantizer, q, beta_min):
+    """Calculate rate-distortion for a given quantizer with updated optimization criterion."""
+    betas = beta_min + 0.05 * beta_min * np.arange(0, 40)
     d = len(quantizer.G)
-    min_error = float("inf")
-    optimal_beta = beta_min
-    optimal_i_0_values = []
-    opt_idx = 0
 
+    min_f_beta = float("inf")
+    optimal_beta = beta_min
+    optimal_mse = None
+    optimal_H_i_0 = None
+    optimal_R = None
+    best_beta_idx = -1
     for beta_idx, beta in enumerate(betas):
         quantizer.beta = beta
-
         mse, i_0_values = calculate_mse_and_overload_for_samples(samples, quantizer)
 
-        # print(f"for beta: {beta:.4f} the overload percent is: {overload_percent * 100 :.3f}% MSE:{mse}")
+        i_0_counts = np.bincount(i_0_values)
+        i_0_probs = i_0_counts / np.sum(i_0_counts)
+        H_i_0 = -sum(p * np.log2(p) for p in i_0_probs if p > 0)
+        R = 2 * np.log2(q) + (H_i_0 / d)
 
-        if mse < min_error:
-            min_error = mse
+        f_beta = mse / (2 ** (-2 * R))
+
+        if f_beta < min_f_beta:
+            min_f_beta = f_beta
             optimal_beta = beta
-            opt_idx = beta_idx
-            optimal_i_0_values = i_0_values
+            optimal_mse = mse
+            optimal_H_i_0 = H_i_0
+            optimal_R = R
+            best_beta_idx = beta_idx
 
-    print(f"Optimal beta for q={q}: {optimal_beta:.3f}, beta_idx = {opt_idx}, Minimum MSE={min_error:.3f}")
-
-    i_0_counts = np.bincount(optimal_i_0_values)
-    i_0_probs = i_0_counts / np.sum(i_0_counts)
-    H_i_0 = -sum(p * np.log2(p) for p in i_0_probs if p > 0)
-
-    total_samples = len(optimal_i_0_values)
-    print(f"\nOverload Statistics for q={q}:")
-    print("i_0 value | Count | Percentage")
-    print("-" * 30)
-    for i_0, count in enumerate(i_0_counts):
-        if count > 0:
-            percentage = (count / total_samples) * 100
-            print(f"{i_0:^9d} | {count:^5d} | {percentage:^6.2f}%")
-    print(f"Average i_0: {np.mean(optimal_i_0_values):.2f}")
-    print("-" * 30)
-    print(f"H(i_0) ={H_i_0}")
-
-    R = 2 * np.log2(q) + H_i_0 / d # M log2 (q) + H(i_0)
-    return R, min_error, H_i_0
+    print(f"For q={q} and scheme {name}: Optimal beta: {optimal_beta:.3f}, beta_idx:{best_beta_idx}, Minimum MSE: {optimal_mse:.3f}, "
+          f"Minimum f(beta)={min_f_beta:.3f}, optimal_H_i_0: {optimal_H_i_0}")
+    return optimal_R, optimal_mse, optimal_beta
 
 
 def run_comparison_experiment(G, q_nn, q_values, n_samples, d, sigma_squared, M, sig_l, schemes):
     x_std = np.sqrt(sigma_squared)
     samples = np.random.normal(0, x_std, size=(n_samples, d))
 
-    results = {scheme["name"]: {"R": [], "min_errors": [], "H_i_0": []} for scheme in schemes}
+    results = {scheme["name"]: {"R": [], "min_errors": []} for scheme in schemes}
 
     markers = ['o', 's', 'x']
     colors = ['blue', 'green', 'orange']
 
     for q_idx, q in enumerate(q_values):
         print(f"Processing q={q} ({q_idx + 1}/{len(q_values)})...")
+        beta_min = (1 / q ** M) * np.sqrt(1 / sig_l) * np.sqrt(d / (d + 2))
+        print(f"For q={q} the initial beta min: {beta_min}")
         for idx, scheme in enumerate(schemes):
-            beta_min = (1 / q**M) * np.sqrt(1 / sig_l) * np.sqrt(d/(d+2))
             name, quantizer_class, nesting = scheme["name"], scheme["quantizer"], scheme["nesting"]
             quantizer = quantizer_class(G, q_nn, q=nesting(q), beta=beta_min)
 
-            R, min_error, H_i_0 = calculate_rate_and_distortion(samples, quantizer, q, beta_min)
+            R, min_error, optimal_beta = calculate_rate_and_distortion(name, samples, quantizer, q, beta_min)
             results[name]["R"].append(R)
             results[name]["min_errors"].append(min_error)
-            results[name]["H_i_0"].append(H_i_0)
 
     plt.figure(figsize=(10, 6))
-
     for idx, (name, scheme_results) in enumerate(results.items()):
         R = scheme_results["R"]
         min_errors = scheme_results["min_errors"]
@@ -100,11 +90,12 @@ def run_comparison_experiment(G, q_nn, q_values, n_samples, d, sigma_squared, M,
 
     q_2_rates = results[schemes[2]["name"]]["R"]
     benchmark_distortions = [2 ** (-2 * k) for k in q_2_rates]
-    plt.plot(q_2_rates, benchmark_distortions, label=f"Error benchmark for $q^2$ quantizer", color='red', linestyle="--")
+    plt.plot(q_2_rates, benchmark_distortions, label=f"Error benchmark for $q^2$ quantizer", color='red',
+             linestyle="--")
 
     plt.xlabel(r"$2 \log_2 (q) + H(i_0)$")
     plt.ylabel("Distortion (log scale)")
-    plt.title("Distortion-Rate Function with $D_3$ Lattice and Overload Mechanism")
+    plt.title("Distortion-Rate Function with $D_4$ Lattice and Overload Mechanism")
     plt.yscale("log")
     plt.legend()
     plt.grid()
@@ -117,9 +108,9 @@ def main():
     num_samples = 5000
     q_values = np.arange(3, 9)
     sigma_squared = 1
-    G = get_d3()
+    G = get_d4()
     q_nn = closest_point_Dn
-    sig_l = 3/24
+    sig_l = np.sqrt(2) * 0.076602
     M = 2
 
     schemes = [
@@ -132,6 +123,5 @@ def main():
 
     print("Comparison complete. Results:")
     print(results)
-
 
 main()
