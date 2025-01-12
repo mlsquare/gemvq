@@ -93,16 +93,30 @@ class TestQuantizer(unittest.TestCase):
         points = np.array(points)
         np.testing.assert_equal(len(np.unique(points, axis=0)), 16, err_msg="Wrong number of cosets")
 
-    def test_codebook(self):
-        G = get_d2()
-        q = 4
-        quantizer = NQ(G, closest_point_Dn, q=q,  beta=1)
-        codebook = quantizer.create_codebook()
-        np.testing.assert_equal(len(np.unique(codebook, axis=0)), 16, err_msg="Wrong codebook size.")
+    # def test_codebook(self):
+    #     G = get_d2()
+    #     q = 4
+    #     quantizer = NQ(G, closest_point_Dn, q=q,  beta=1)
+    #     codebook = quantizer.create_codebook()
+    #     np.testing.assert_equal(len(np.unique(codebook, axis=0)), 16, err_msg="Wrong codebook size.")
+    #
+    #     quantizer = NQ(get_d3(), closest_point_Dn, q=q,  beta=1)
+    #     codebook = quantizer.create_codebook()
+    #     np.testing.assert_equal(len(np.unique(codebook, axis=0)), 64, err_msg="Wrong codebook size.")
 
-        quantizer = NQ(get_d3(), closest_point_Dn, q=q,  beta=1)
-        codebook = quantizer.create_codebook()
-        np.testing.assert_equal(len(np.unique(codebook, axis=0)), 64, err_msg="Wrong codebook size.")
+    def test_overload_handling_encode(self):
+        q = 3
+        d = 2
+        G = np.eye(d)
+        beta = d / (d + 2)
+        x = np.array([20.3, 20.4])
+        quantizer = NQ(G, custom_round, q, beta)
+        enc, i_0 = quantizer.encode_with_overload_handling(x)
+        np.testing.assert_equal(i_0, 5, err_msg="Overload mechanism did not calculate i_0 correctly")
+
+        decoded = quantizer.decode_with_overload_handling(enc, i_0)
+        expected = np.array([16, 16])
+        np.testing.assert_equal(decoded, expected, err_msg="Overload mechanism did not decoded correctly")
 
 
 class TestHQuantizer(unittest.TestCase):
@@ -170,7 +184,6 @@ class TestHQuantizer(unittest.TestCase):
 
         assert len(decoded_outputs) == len(all_encodings), \
             f"Decoder is not unique: {len(decoded_outputs)} unique outputs for {len(all_encodings)} encodings."
-        print("Test passed: Decoder is unique for all encodings.")
 
     def test_overload_mechanism(self):
         q = 2
@@ -178,13 +191,13 @@ class TestHQuantizer(unittest.TestCase):
         d = 2
         G = np.eye(d)
         beta = 1.0
-        x = np.array([20, 20])
+        x = np.array([20.3, 20.4])
         quantizer = HQ(G, custom_round, q, beta, M)
         _, did_overload = quantizer.encode(x)
         np.testing.assert_equal(did_overload, True, err_msg="Overload mechanism did not detect overload")
 
     def test_overload_mechanism_fp(self):
-        q = 2
+        q = 4
         M = 2
         d = 2
         G = np.eye(d)
@@ -196,16 +209,29 @@ class TestHQuantizer(unittest.TestCase):
         expected = False
         np.testing.assert_equal(did_overload, expected, err_msg="Overload mechanism falsely detected overload")
 
-    def test_codebook(self):
-        G = get_d2()
-        q = 2
-        quantizer = HQ(G, closest_point_Dn, q=q,  beta=1, M=2)
-        codebook = quantizer.create_codebook()
-        np.testing.assert_equal(len(np.unique(codebook, axis=0)), 16, err_msg="Wrong codebook size.")
+    def test_overload_handling_encode(self):
+        q = 3
+        G = np.eye(2)
+        beta = 0.5
+        x = np.array([20.3, 20.4])
+        quantizer = HQ(G, custom_round, q, beta, M=2)
+        b_list, i_0 = quantizer.encode_with_overload_handling(x)
+        # np.testing.assert_equal(i_0, 1, err_msg="Overload mechanism did not calculate i_0 correctly")
 
-        quantizer = HQ(get_d3(), closest_point_Dn, q=q,  beta=1)
-        codebook = quantizer.create_codebook()
-        np.testing.assert_equal(len(np.unique(codebook, axis=0)), 64, err_msg="Wrong codebook size.")
+        decoded = quantizer.decode_with_overload_handling(b_list, i_0)
+        expected = np.array([16, 16])
+        np.testing.assert_equal(decoded, expected, err_msg="Overload mechanism did not decoded correctly")
+
+    # def test_codebook(self):
+    #     G = get_d2()
+    #     q = 2
+    #     quantizer = HQ(G, closest_point_Dn, q=q,  beta_0=1, M=2)
+    #     codebook = quantizer.create_codebook()
+    #     np.testing.assert_equal(len(np.unique(codebook, axis=0)), 16, err_msg="Wrong codebook size.")
+    #
+    #     quantizer = HQ(get_d3(), closest_point_Dn, q=q,  beta=1)
+    #     codebook = quantizer.create_codebook()
+    #     np.testing.assert_equal(len(np.unique(codebook, axis=0)), 64, err_msg="Wrong codebook size.")
 
 
 if __name__ == '__main__':

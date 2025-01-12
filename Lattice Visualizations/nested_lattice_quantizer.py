@@ -39,14 +39,14 @@ class NestedLatticeQuantizer:
         enc, i_0 = self.encode(x)
         return self.decode(enc, i_0)
 
-    def create_codebook(self):
-        d = self.G.shape[0]
-        indices = np.array(np.meshgrid(*[range(self.q)] * d)).T.reshape(-1, d)
-        points = {}
-        for idx in indices:
-            l_p = np.dot(self.G, idx)
-            points[tuple(idx)] = self.quantize(l_p)
-        return points
+    # def create_codebook(self):
+    #     d = self.G.shape[0]
+    #     indices = np.array(np.meshgrid(*[range(self.q)] * d)).T.reshape(-1, d)
+    #     points = {}
+    #     for idx in indices:
+    #         l_p = np.dot(self.G, idx)
+    #         points[tuple(idx)] = self.quantize(l_p)
+    #     return points
 
 
 class HierarchicalNestedLatticeQuantizer:
@@ -98,18 +98,18 @@ class HierarchicalNestedLatticeQuantizer:
         return self._decode(b_list) * (2 ** i_0)
 
     def quantize(self, x):
-
-    def create_codebook(self):
-        d = self.G.shape[0]
-        indices = np.array(np.meshgrid(*[range(self.q)] * d)).T.reshape(-1, d)
-        all_combinations = np.array(np.meshgrid(*[indices] * self.M)).T.reshape(-1, self.M, d)
-
-        codebook = {}
-        for combination in all_combinations:
-            encoded_vectors = tuple(tuple(b) for b in combination)
-            quantized_point = self.decode(list(combination))
-            codebook[encoded_vectors] = quantized_point
-
-        return codebook        b_list, i_0 = self.encode(x)
         b_list, i_0 = self.encode(x)
         return self.decode(b_list, i_0)
+
+    # def create_codebook(self):
+    #     d = self.G.shape[0]
+    #     indices = np.array(np.meshgrid(*[range(self.q)] * d)).T.reshape(-1, d)
+    #     all_combinations = np.array(np.meshgrid(*[indices] * self.M)).T.reshape(-1, self.M, d)
+    #
+    #     codebook = {}
+    #     for combination in all_combinations:
+    #         encoded_vectors = tuple(tuple(b) for b in combination)
+    #         quantized_point = self.decode(list(combination))
+    #         codebook[encoded_vectors] = quantized_point
+    #
+    #     return codebook

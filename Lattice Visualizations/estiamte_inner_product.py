@@ -1,7 +1,7 @@
 import numpy as np
 from nested_lattice_quantizer import (NestedLatticeQuantizer as NQuantizer,
                                       HierarchicalNestedLatticeQuantizer as HQuantizer)
-from utils import get_d3, calculate_mse
+from utils import get_d4, calculate_mse
 from closest_point import closest_point_Dn
 
 def pad_vector(vec, lattice_dim):
@@ -12,16 +12,14 @@ def pad_vector(vec, lattice_dim):
         vec = np.concatenate([vec, np.zeros(padding)])
     return vec
 
-def precompute_inner_products(quantizer):
-    """Precompute the inner product for all combinations of encoding vectors."""
-    codebook = quantizer.create_codebook()
+def precompute_inner_products(G, Q_nn, q):
+    """Precompute the inner product for all combinations of encoding vectors (TO SIZE q!)."""
+    codebook = NQuantizer(G=G, Q_nn=Q_nn, q=q, beta=1).create_codebook()
     lookup_table = {}
-
     for b1, x1 in codebook.items():
         for b2, x2 in codebook.items():
             inner_product = np.dot(x1, x2)
             lookup_table[(b1, b2)] = inner_product
-
     return lookup_table
 
 def estimate_inner_product(a, b, quantizer, method="nested", lookup_table=None):
@@ -42,32 +40,40 @@ def estimate_inner_product(a, b, quantizer, method="nested", lookup_table=None):
         elif method == "hierarchical":
             a_enc = quantizer.encode(a_block)
             b_enc = quantizer.encode(b_block)
-            inner_product += lookup_table[(tuple(a_enc), tuple(b_enc))]
+            a_l, a_m = tuple(tuple(b.astype(int).tolist()) for b in a_enc)
+            b_l, b_m = tuple(tuple(b.astype(int).tolist()) for b in b_enc)
+
+            inner_product += lookup_table[(a_l, b_l)]
+            inner_product += quantizer.q * lookup_table[(a_m, b_l)]
+            inner_product += quantizer.q * lookup_table[(a_l, b_m)]
+            inner_product += quantizer.q ** 2 * lookup_table[(a_m, b_m)]
         else:
             raise ValueError("Unsupported method. Use 'nested' or 'hierarchical'.")
 
     return inner_product
 
 def main():
-    q = 3
+    q = 5
     vector_dim = 128
-    G = get_d3()
+    G = get_d4()
     q_nn = closest_point_Dn
-    var = 6
+    var = 3
 
     nested_quantizer = NQuantizer(G, q_nn, beta=1, q=q)
     hierarchical_quantizer = HQuantizer(G, q_nn, beta=1, q=q)
 
-    lookup_table = precompute_inner_products(hierarchical_quantizer)
+    lookup_table = precompute_inner_products(G, q_nn, q)
 
     a = np.random.normal(0, var, size=vector_dim)
     b = np.random.normal(0, var, size=vector_dim)
 
     nested_inner_product = estimate_inner_product(a, b, nested_quantizer, method="nested")
-    hierarchical_inner_product = estimate_inner_product(a, b, hierarchical_quantizer, method="hierarchical", lookup_table=lookup_table)
+    hierarchical_inner_product = estimate_inner_product(a, b, hierarchical_quantizer,
+                                                        method="hierarchical", lookup_table=lookup_table)
 
     print(f"Nested Quantizer Inner Product: {nested_inner_product}")
     print(f"Hierarchical Quantizer Inner Product: {hierarchical_inner_product}")
+    print(f"Actual Inner Product: {np.dot(a, b)}")
 
 if __name__ == "__main__":
     main()

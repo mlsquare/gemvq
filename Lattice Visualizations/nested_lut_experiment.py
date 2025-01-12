@@ -46,36 +46,38 @@ def compare_codebooks(G, closest_point, l_points, q, M, with_plot=True):
     matches = []
     alpha = int((q**M - q) / (q-1))
 
-    h_quantizer = HQuantizer(G, closest_point, q, beta=1, M=M)
+    h_quantizer = HQuantizer(G, closest_point, q, beta_0=1, M=M)
     n_quantizer = NQuantizer(G, closest_point, q**M - alpha, beta=1)
 
     point_map = {}
     duplicates = []
 
     d = 1e-9 * np.random.normal(0, 1, size=2)
-    for i, j in l_points:
-        l_p = np.array([i, j]) + d
+    # for i, j in l_points:
+    for i in range(q ** 2):
+        for j in range(q**2):
+            l_p = np.dot(G, np.array([i, j])) + d
 
-        b_list = h_quantizer.encode(l_p)
-        dec = h_quantizer.decode(b_list)
+            b_list = h_quantizer.encode(l_p)
+            dec = h_quantizer.decode(b_list)
 
-        enc = n_quantizer.encode(l_p)
-        l_dec = n_quantizer.decode(enc)
+            enc = n_quantizer.encode(l_p)
+            l_dec = n_quantizer.decode(enc)
 
-        if np.allclose(l_dec, l_p, atol=1e-7):
-            if not np.allclose(dec, l_dec, atol=1e-7):
-                mismatches.append((l_p, dec, l_dec))
+            if np.allclose(l_dec, l_p, atol=1e-7):
+                if not np.allclose(dec, l_dec, atol=1e-7):
+                    mismatches.append((l_p, dec, l_dec))
+                else:
+                    matches.append((l_p, dec))
+
+            dec_tuple = tuple(np.round(dec, decimals=9))
+            if dec_tuple in point_map:
+                duplicates.append((dec_tuple, point_map[dec_tuple], (i, j)))
             else:
-                matches.append((l_p, dec))
+                point_map[dec_tuple] = (i, j)
 
-        dec_tuple = tuple(np.round(dec, decimals=9))
-        if dec_tuple in point_map:
-            duplicates.append((dec_tuple, point_map[dec_tuple], (i, j)))
-        else:
-            point_map[dec_tuple] = (i, j)
-
-        lattice_points.append(dec)
-        labels.append((i, j))
+            lattice_points.append(dec)
+            labels.append((i, j))
 
     lattice_points = np.array(lattice_points)
 
@@ -141,8 +143,8 @@ def main():
     q = 4
     M = 2
 
-    points1 = np.unique(generate_codebook(G, closest_point, q ** M, with_plot=False), axis=0)
-    compare_codebooks(G, closest_point, q=q, l_points=points1, M=M, with_plot=True)
+    # points1 = np.unique(generate_codebook(G, closest_point, q ** M, with_plot=False), axis=0)
+    compare_codebooks(G, closest_point, q=q, l_points=[], M=M, with_plot=True)
 
     M = 3
     points1 = generate_codebook(G, closest_point, q ** M, with_plot=False)

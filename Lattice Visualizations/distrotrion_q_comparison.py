@@ -37,6 +37,9 @@ def calculate_rate_and_distortion(name, samples, quantizer, q, beta_min):
     optimal_H_i_0 = None
     optimal_R = None
     best_beta_idx = -1
+    best_p = None
+    opt_counts = None
+
     for beta_idx, beta in enumerate(betas):
         quantizer.beta = beta
         mse, i_0_values = calculate_mse_and_overload_for_samples(samples, quantizer)
@@ -55,9 +58,13 @@ def calculate_rate_and_distortion(name, samples, quantizer, q, beta_min):
             optimal_H_i_0 = H_i_0
             optimal_R = R
             best_beta_idx = beta_idx
+            best_p = (1 - (i_0_counts[0]/ sum(i_0_counts))) * 100
+            opt_counts = i_0_counts
 
-    print(f"For q={q} and scheme {name}: Optimal beta: {optimal_beta:.3f}, beta_idx:{best_beta_idx}, Minimum MSE: {optimal_mse:.3f}, "
-          f"Minimum f(beta)={min_f_beta:.3f}, optimal_H_i_0: {optimal_H_i_0}")
+    print(f"For q={q} and scheme {name}: Optimal beta: {optimal_beta:.3f}, beta_idx: {best_beta_idx}, "
+          f"Minimum MSE: {optimal_mse:.3f}, Minimum f(beta): {min_f_beta:.3f}, optimal_H_i_0: {optimal_H_i_0}, overload percent: {best_p}")
+    # print(f"i_0 counts for best beta: {opt_counts}")
+    # print(f"beta_0*q^M*sigma(L): {optimal_beta * (q ** 2) * (3/24)}")
     return optimal_R, optimal_mse, optimal_beta
 
 
@@ -95,7 +102,7 @@ def run_comparison_experiment(G, q_nn, q_values, n_samples, d, sigma_squared, M,
 
     plt.xlabel(r"$2 \log_2 (q) + H(i_0)/d$")
     plt.ylabel("Distortion (log scale)")
-    plt.title("Distortion-Rate Function with $D_4$ Lattice and Overload Mechanism")
+    plt.title("Distortion-Rate Function with $E_8$ Lattice and Overload Mechanism")
     plt.yscale("log")
     plt.legend()
     plt.grid()
@@ -107,10 +114,11 @@ def run_comparison_experiment(G, q_nn, q_values, n_samples, d, sigma_squared, M,
 def main():
     num_samples = 5000
     q_values = np.arange(3, 9)
+    # q_values = np.array([6])
     sigma_squared = 1
-    G = get_d4()
-    q_nn = closest_point_Dn
-    sig_l = np.sqrt(2) * 0.076602
+    G = get_e8()
+    q_nn = closest_point_E8
+    sig_l = (1/8) * (929/1620)
     M = 2
 
     schemes = [
