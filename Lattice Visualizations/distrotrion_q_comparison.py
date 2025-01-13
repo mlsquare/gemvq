@@ -112,7 +112,7 @@ def run_comparison_experiment(G, q_nn, q_values, n_samples, d, sigma_squared, M,
 
 
 def main():
-    num_samples = 5000
+    num_samples = 4000
     q_values = np.arange(3, 9)
     # q_values = np.array([6])
     sigma_squared = 1
