@@ -93,16 +93,23 @@ class TestQuantizer(unittest.TestCase):
         points = np.array(points)
         np.testing.assert_equal(len(np.unique(points, axis=0)), 16, err_msg="Wrong number of cosets")
 
-    # def test_codebook(self):
-    #     G = get_d2()
-    #     q = 4
-    #     quantizer = NQ(G, closest_point_Dn, q=q,  beta=1)
-    #     codebook = quantizer.create_codebook()
-    #     np.testing.assert_equal(len(np.unique(codebook, axis=0)), 16, err_msg="Wrong codebook size.")
-    #
-    #     quantizer = NQ(get_d3(), closest_point_Dn, q=q,  beta=1)
-    #     codebook = quantizer.create_codebook()
-    #     np.testing.assert_equal(len(np.unique(codebook, axis=0)), 64, err_msg="Wrong codebook size.")
+    def test_codebook(self):
+        q = 4
+        quantizer = NQ(get_d2(), closest_point_Dn, q=q, beta=1)
+        codebook = quantizer.create_codebook()
+
+        assert len(codebook) == q ** 2, "Wrong codebook size for 2D lattice."
+
+        lattice_points = np.array(list(codebook.values()))
+        assert len(np.unique(lattice_points, axis=0)) == q ** 2, "Lattice points are not unique for 2D lattice."
+
+        quantizer = NQ(get_d3(), closest_point_Dn, q=q, beta=1)
+        codebook = quantizer.create_codebook()
+
+        assert len(codebook) == q ** 3, "Wrong codebook size for 3D lattice."
+
+        lattice_points = np.array(list(codebook.values()))
+        assert len(np.unique(lattice_points, axis=0)) == q ** 3, "Lattice points are not unique for 3D lattice."
 
     def test_overload_handling_encode(self):
         q = 3
@@ -221,17 +228,6 @@ class TestHQuantizer(unittest.TestCase):
         decoded = quantizer.decode_with_overload_handling(b_list, i_0)
         expected = np.array([16, 16])
         np.testing.assert_equal(decoded, expected, err_msg="Overload mechanism did not decoded correctly")
-
-    # def test_codebook(self):
-    #     G = get_d2()
-    #     q = 2
-    #     quantizer = HQ(G, closest_point_Dn, q=q,  beta_0=1, M=2)
-    #     codebook = quantizer.create_codebook()
-    #     np.testing.assert_equal(len(np.unique(codebook, axis=0)), 16, err_msg="Wrong codebook size.")
-    #
-    #     quantizer = HQ(get_d3(), closest_point_Dn, q=q,  beta=1)
-    #     codebook = quantizer.create_codebook()
-    #     np.testing.assert_equal(len(np.unique(codebook, axis=0)), 64, err_msg="Wrong codebook size.")
 
 
 if __name__ == '__main__':
