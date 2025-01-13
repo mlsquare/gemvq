@@ -1,4 +1,3 @@
-import math
 
 import numpy as np
 
@@ -55,9 +54,9 @@ def closest_point_E8(x):
     """
     Find the closest point in the E_8 lattice for a given vector x.
     """
-    y_0 = np.round(x) if np.sum(np.round(x)) % 2 == 0 else g_x(x)
+    y_0 = custom_round(x) if np.sum(custom_round(x)) % 2 == 0 else g_x(x)
 
-    f_x_shifted = np.round(x - 0.5)
+    f_x_shifted = custom_round(x - 0.5)
     g_x_shifted = g_x(x - 0.5)
 
     y_1 = f_x_shifted + 0.5 if np.sum(f_x_shifted) % 2 == 0 else g_x_shifted + 0.5
