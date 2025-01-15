@@ -1,4 +1,3 @@
-import time
 from nested_lattice_quantizer import (NestedLatticeQuantizer as NQuantizer,
                                       HierarchicalNestedLatticeQuantizer as HQuantizer)
 from utils import get_a2, get_d3, get_d4, get_e8, calculate_mse
@@ -8,46 +7,42 @@ import matplotlib.pyplot as plt
 
 
 def calculate_mse_and_overload_for_samples(samples, quantizer):
-    """Calculate MSE for a given quantizer and set of samples."""
     mse = 0
-    i_0_count = []
+    T_count = []
     for x in samples:
-        encoding, i_0 = quantizer.encode(x)
-        x_hat = quantizer.decode(encoding, i_0)
+        encoding, t = quantizer.encode(x)
+        x_hat = quantizer.decode(encoding, t)
         mse += calculate_mse(x, x_hat)
-        i_0_count.append(i_0)
-    return mse / len(samples), i_0_count
+        T_count.append(t)
+    return mse / len(samples), T_count
 
 
 def calculate_slope(log_R, min_errors):
-    """Calculate the slope of the log-log plot."""
     log_min_errors = np.log2(min_errors)
     slope = np.polyfit(log_R, log_min_errors, 1)[0]
     return slope
 
 
 def calculate_rate_and_distortion(name, samples, quantizer, q, beta_min):
-    """Calculate rate-distortion for a given quantizer with updated optimization criterion."""
     betas = beta_min + 0.05 * beta_min * np.arange(0, 40)
     d = len(quantizer.G)
 
     min_f_beta = float("inf")
     optimal_beta = beta_min
     optimal_mse = None
-    optimal_H_i_0 = None
+    optimal_H_T = None
     optimal_R = None
-    best_beta_idx = -1
-    best_p = None
-    opt_counts = None
+    overload_percentage = None
 
     for beta_idx, beta in enumerate(betas):
+        quantizer.alpha = 1/3
         quantizer.beta = beta
-        mse, i_0_values = calculate_mse_and_overload_for_samples(samples, quantizer)
+        mse, T_values = calculate_mse_and_overload_for_samples(samples, quantizer)
 
-        i_0_counts = np.bincount(i_0_values)
-        i_0_probs = i_0_counts / np.sum(i_0_counts)
-        H_i_0 = -sum(p * np.log2(p) for p in i_0_probs if p > 0)
-        R = 2 * np.log2(q) + (H_i_0 / d)
+        T_counts = np.bincount(T_values, minlength=q**2)
+        T_probs = T_counts / np.sum(T_counts)
+        H_T = -sum(p * np.log2(p) for p in T_probs if p > 0)
+        R = 2 * np.log2(q) + (H_T / d)
 
         f_beta = mse / (2 ** (-2 * R))
 
@@ -55,16 +50,14 @@ def calculate_rate_and_distortion(name, samples, quantizer, q, beta_min):
             min_f_beta = f_beta
             optimal_beta = beta
             optimal_mse = mse
-            optimal_H_i_0 = H_i_0
+            optimal_H_T = H_T
             optimal_R = R
-            best_beta_idx = beta_idx
-            best_p = (1 - (i_0_counts[0]/ sum(i_0_counts))) * 100
-            opt_counts = i_0_counts
+            overload_percentage = (1 - (T_counts[0] / sum(T_counts))) * 100
 
-    print(f"For q={q} and scheme {name}: Optimal beta: {optimal_beta:.3f}, beta_idx: {best_beta_idx}, "
-          f"Minimum MSE: {optimal_mse:.3f}, Minimum f(beta): {min_f_beta:.3f}, optimal_H_i_0: {optimal_H_i_0}, overload percent: {best_p}")
-    # print(f"i_0 counts for best beta: {opt_counts}")
-    # print(f"beta_0*q^M*sigma(L): {optimal_beta * (q ** 2) * (3/24)}")
+
+    print(f"For q={q} and scheme {name}: Optimal beta: {optimal_beta:.3f}, "
+          f"Minimum MSE: {optimal_mse:.6f}, Minimum f(beta, alpha): {min_f_beta:.3f}, "
+          f"optimal_H_T: {optimal_H_T:.4f}, overload percent: {overload_percentage:.2f}%")
     return optimal_R, optimal_mse, optimal_beta
 
 
@@ -80,10 +73,10 @@ def run_comparison_experiment(G, q_nn, q_values, n_samples, d, sigma_squared, M,
     for q_idx, q in enumerate(q_values):
         print(f"Processing q={q} ({q_idx + 1}/{len(q_values)})...")
         beta_min = (1 / q ** M) * np.sqrt(1 / sig_l) * np.sqrt(d / (d + 2))
-        print(f"For q={q} the initial beta min: {beta_min}")
+
         for idx, scheme in enumerate(schemes):
             name, quantizer_class, nesting = scheme["name"], scheme["quantizer"], scheme["nesting"]
-            quantizer = quantizer_class(G, q_nn, q=nesting(q), beta=beta_min)
+            quantizer = quantizer_class(G, q_nn, q=nesting(q), beta=beta_min, alpha=1)
 
             R, min_error, optimal_beta = calculate_rate_and_distortion(name, samples, quantizer, q, beta_min)
             results[name]["R"].append(R)
@@ -97,34 +90,33 @@ def run_comparison_experiment(G, q_nn, q_values, n_samples, d, sigma_squared, M,
 
     q_2_rates = results[schemes[2]["name"]]["R"]
     benchmark_distortions = [2 ** (-2 * k) for k in q_2_rates]
-    plt.plot(q_2_rates, benchmark_distortions, label=f"Error benchmark for $q^2$ quantizer", color='red',
+    plt.plot(q_2_rates, benchmark_distortions, label=f"Theoretical benchmark", color='red',
              linestyle="--")
 
-    plt.xlabel(r"$2 \log_2 (q) + H(i_0)/d$")
-    plt.ylabel("Distortion (log scale)")
-    plt.title("Distortion-Rate Function with $E_8$ Lattice and Overload Mechanism")
+    plt.xlabel(r"$R = 2 \log_2 (q) + H(T)/d$")
+    plt.ylabel("$2 \log_2 (D)$")
+    plt.title("Distortion-Rate Function with $D_4$ Lattice")
     plt.yscale("log")
     plt.legend()
     plt.grid()
     plt.show()
-
     return results
 
 
 def main():
-    num_samples = 4000
+    num_samples = 5000
     q_values = np.arange(3, 9)
-    # q_values = np.array([6])
+
     sigma_squared = 1
-    G = get_e8()
-    q_nn = closest_point_E8
-    sig_l = (1/8) * (929/1620)
+    G = get_d4()
+    q_nn = closest_point_Dn
+    sig_l = np.sqrt(2) * 0.076602
     M = 2
 
     schemes = [
-        {"name": r"$q(q-1)$ Nested Quantizer", "quantizer": NQuantizer, "nesting": lambda q: int(np.ceil(q))*(int(np.ceil(q)) - 1)},
-        {"name": "Hierarchical Quantizer",  "quantizer": HQuantizer, "nesting": lambda q: int(np.ceil(q))},
-        {"name": r"$q^2$ Nested Quantizer", "quantizer": NQuantizer, "nesting": lambda q: int(np.ceil(q) ** 2)},
+        {"name": r"$q(q-1)$ Voronoi Code", "quantizer": NQuantizer, "nesting": lambda q: int(q * (q-1))},
+        {"name": "Tiered Quantizer",  "quantizer": HQuantizer, "nesting": lambda q: int(q)},
+        {"name": r"$q^2$ Voronoi Code", "quantizer": NQuantizer, "nesting": lambda q: int(q ** 2)},
     ]
 
     results = run_comparison_experiment(G, q_nn, q_values, num_samples, len(G), sigma_squared, M, sig_l, schemes)
