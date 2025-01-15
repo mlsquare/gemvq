@@ -1,22 +1,22 @@
 import numpy as np
 from matplotlib import pyplot as plt
-from scipy.spatial import Voronoi, voronoi_plot_2d
+from scipy.spatial import Voronoi
 
-from closest_point import closest_point_Dn, closest_point_A2
+from closest_point import closest_point_A2
 from nested_lattice_quantizer import (NestedLatticeQuantizer as NQuantizer,
                                       HierarchicalNestedLatticeQuantizer as HQuantizer)
-from utils import get_d2, get_a2
+from utils import get_a2
 
 
 def generate_codebook(G, closest_point, q, with_plot=True):
     points = []
-    quantizer = NQuantizer(G, closest_point, q=q, beta=1)
+    quantizer = NQuantizer(G, closest_point, q=q, beta=1, alpha=1)
 
     for i in range(q):
         for j in range(q):
             l_p = np.dot(G, np.array([i, j]))
-            enc = quantizer.encode(l_p)
-            dec = quantizer.decode(enc)
+            enc, _ = quantizer._encode(l_p)
+            dec = quantizer._decode(enc)
             points.append(dec)
 
     points = np.array(points)
@@ -29,7 +29,7 @@ def generate_codebook(G, closest_point, q, with_plot=True):
 
 def plot_lattice_points(points, q):
     plt.figure(figsize=(8, 8))
-    plt.scatter(points[:, 0], points[:, 1], color='blue', s=10, label='Lattice Points')
+    plt.scatter(points[:, 0], points[:, 1], color='blue', s=30, label='Lattice Points')
     plt.xlabel("X-axis")
     plt.ylabel("Y-axis")
     plt.legend()
@@ -39,30 +39,28 @@ def plot_lattice_points(points, q):
     plt.show()
 
 
-def compare_codebooks(G, closest_point, l_points, q, M, with_plot=True):
+def compare_codebooks(G, closest_point, q, M, with_plot=True):
     lattice_points = []
-    labels = []
     mismatches = []
     matches = []
-    alpha = int((q**M - q) / (q-1))
+    r_q = (1 - q**(1-M))/ (q- 1)
 
-    h_quantizer = HQuantizer(G, closest_point, q, beta_0=1, M=M)
-    n_quantizer = NQuantizer(G, closest_point, q**M - alpha, beta=1)
+    h_quantizer = HQuantizer(G, closest_point, q, beta=1, alpha=1, M=M)
+    n_quantizer = NQuantizer(G, closest_point, (q**M) * (1 - r_q), beta=1, alpha=1,)
 
     point_map = {}
     duplicates = []
 
     d = 1e-9 * np.random.normal(0, 1, size=2)
-    # for i, j in l_points:
-    for i in range(q ** 2):
-        for j in range(q**2):
+    for i in range(q ** M):
+        for j in range(q**M):
             l_p = np.dot(G, np.array([i, j])) + d
 
-            b_list = h_quantizer.encode(l_p)
-            dec = h_quantizer.decode(b_list)
+            b_list, _ = h_quantizer._encode(l_p)
+            dec = h_quantizer._decode(b_list)
 
-            enc = n_quantizer.encode(l_p)
-            l_dec = n_quantizer.decode(enc)
+            enc, _ = n_quantizer._encode(l_p)
+            l_dec = n_quantizer._decode(enc)
 
             if np.allclose(l_dec, l_p, atol=1e-7):
                 if not np.allclose(dec, l_dec, atol=1e-7):
@@ -77,9 +75,9 @@ def compare_codebooks(G, closest_point, l_points, q, M, with_plot=True):
                 point_map[dec_tuple] = (i, j)
 
             lattice_points.append(dec)
-            labels.append((i, j))
 
     lattice_points = np.array(lattice_points)
+    print(f"Number of unique points: {len(np.unique(lattice_points, axis=0))}")
 
     if duplicates:
         print("Duplicate points found:")
@@ -100,12 +98,12 @@ def compare_codebooks(G, closest_point, l_points, q, M, with_plot=True):
         print("All points matched correctly.")
 
     if with_plot:
-        plot_with_voronoi(lattice_points, q, alpha, M)
+        plot_with_voronoi(lattice_points, q, r_q, M)
 
 
-def plot_with_voronoi(lattice_points, q, alpha, M=2):
+def plot_with_voronoi(lattice_points, q, r_qM, M=2):
     plt.figure(figsize=(8, 8))
-    plt.scatter(lattice_points[:, 0], lattice_points[:, 1], c='blue', s=1, label='Nested Quantizer Points')
+    plt.scatter(lattice_points[:, 0], lattice_points[:, 1], c='blue', s=1, label='$\mathcal{C}_{L,q,M}$')
 
     vor = Voronoi(lattice_points)
 
@@ -113,8 +111,8 @@ def plot_with_voronoi(lattice_points, q, alpha, M=2):
     region_idx = vor.point_region[origin_idx]
     vertices = vor.vertices[vor.regions[region_idx]]
 
-    scaled_vertices_q_qm1 = (q ** M - alpha) * vertices
-    scaled_vertices_q_qp1 = (q ** M + alpha) * vertices
+    scaled_vertices_q_qm1 = (q**M) * (1 - r_qM) * vertices
+    scaled_vertices_q_qp1 = (q**M) * (1 + r_qM) * vertices
     scaled_vertices_q2 = q ** M * vertices
 
     scaled_vertices_q_qm1 = np.vstack([scaled_vertices_q_qm1, scaled_vertices_q_qm1[0]])
@@ -122,33 +120,31 @@ def plot_with_voronoi(lattice_points, q, alpha, M=2):
     scaled_vertices_q2 = np.vstack([scaled_vertices_q2, scaled_vertices_q2[0]])
 
     plt.plot(scaled_vertices_q_qm1[:, 0], scaled_vertices_q_qm1[:, 1],
-             color='green', linewidth=2, label=fr'Scaled Voronoi Cell $(q^{M} - \alpha)\mathcal{{V}}$')
-    plt.plot(scaled_vertices_q_qp1[:, 0], scaled_vertices_q_qp1[:, 1],
-             color='pink', linewidth=2, label=fr'Scaled Voronoi Cell $(q^{M} + \alpha)\mathcal{{V}}$')
+             color='green', linewidth=2, label=fr'$q^{{M}}(1 - r_{{q,M}})\mathcal{{V}}$')
     plt.plot(scaled_vertices_q2[:, 0], scaled_vertices_q2[:, 1],
-             color='orange', linewidth=2, label=rf'Scaled Voronoi Cell $q^{M} \mathcal{{V}}$')
+             color='orange', linewidth=2, label=rf'$q^{{M}} \mathcal{{V}}$')
+    plt.plot(scaled_vertices_q_qp1[:, 0], scaled_vertices_q_qp1[:, 1],
+             color='pink', linewidth=2, label=fr'$q^{{M}}(1 + r_{{q,M}})\mathcal{{V}}$')
 
     plt.xlabel("X-axis")
     plt.ylabel("Y-axis")
     plt.legend()
-    plt.title(rf'Hierarchical Nested $A_2$ Lattice Codebook for $q^{M}$ = {q ** M}')
+    plt.title(rf'Reconstructed Codebook for $A_2$ Lattice with $q^{M}$ = {q ** M}')
     plt.grid(True)
     plt.gca().set_aspect('equal', adjustable='box')
-    plt.show()
+    plt.savefig(f'A2q6M{M}.png')
 
 
 def main():
     G = get_a2()
     closest_point = closest_point_A2
     q = 4
-    M = 2
 
-    # points1 = np.unique(generate_codebook(G, closest_point, q ** M, with_plot=False), axis=0)
-    compare_codebooks(G, closest_point, q=q, l_points=[], M=M, with_plot=True)
+    M = 2
+    compare_codebooks(G, closest_point, q=q, M=M, with_plot=True)
 
     M = 3
-    points1 = generate_codebook(G, closest_point, q ** M, with_plot=False)
-    compare_codebooks(G, closest_point, q=q, l_points=points1, M=M, with_plot=True)
+    compare_codebooks(G, closest_point, q=q, M=M, with_plot=True)
 
 
 if __name__ == "__main__":
