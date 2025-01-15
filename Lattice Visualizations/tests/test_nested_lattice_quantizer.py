@@ -165,10 +165,23 @@ class TestHQuantizer(unittest.TestCase):
         quantizer = HQ(G, closest_point_Dn, q=5, beta=1, M=2)
 
         x = np.array([5.99, 8.32])
-        b_list, _ = quantizer.encode(x)
-        decoded = quantizer.decode(b_list)
+        b_list, i_0 = quantizer.encode(x)
+        decoded = quantizer.decode(b_list, i_0)
         expected = np.array([6, 8])
         np.testing.assert_almost_equal(decoded, expected, decimal=5, err_msg="D_2 lattice decode failed")
+
+    def test_D2_h_dec(self):
+        G = get_d2()
+        quantizer = HQ(G, closest_point_Dn, q=5, beta=1, M=2)
+        n_quantizer = NQ(G, closest_point_Dn, q=5, beta=1)
+
+        x = np.array([10.8, 20.3])
+        b_list, i_0 = quantizer.encode(x)
+        al, am = b_list[0], b_list[1]
+        decoded = quantizer.decode(b_list,i_0)
+        estimated = n_quantizer.decode(al,i_0) + quantizer.q * n_quantizer.decode(am,i_0)
+
+        np.testing.assert_almost_equal(estimated, decoded, decimal=5, err_msg="D_2 lattice decode failed")
 
     def test_decoder_uniqueness(self):
         q = 3

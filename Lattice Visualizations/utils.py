@@ -1,11 +1,17 @@
 import numpy as np
 
+SIG_D3 = 3/24
+SIG_D4 = (1/8) * (929/1620)
+SIG_E8 = 0
 
 def calculate_mse(x, x_hat):
-    """
-    Calculate the Mean Squared Error between the original vector x and the decoded vector decoded_x.
-    """
     return np.mean((x - x_hat) ** 2)
+
+
+def get_rho_correlated_vectors(rho, size):
+    vectors = np.random.normal(0, 1, size=(2, size))
+    u, z = vectors[0], vectors[1]
+    return u, rho * u + np.sqrt(1-(rho ** 2)) * z
 
 
 def get_z2():

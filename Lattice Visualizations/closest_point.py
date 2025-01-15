@@ -1,6 +1,10 @@
 
 import numpy as np
 
+"""
+Closest Point Algorithm for Z_n Lattice.
+"""
+
 def custom_round(x):
     if isinstance(x, np.ndarray):
         return np.array([custom_round(val) for val in x])
@@ -15,7 +19,6 @@ def custom_round(x):
 Closest Point Algorithm for the D_n Lattice.
 The lattice D_n consists of points where the sum of components is even.
 """
-
 
 def g_x(x):
     """
@@ -49,7 +52,6 @@ Closest Point Algorithm for the E_8 Lattice.
 The lattice E_8 is constructed from D_8 and a coset.
 """
 
-
 def closest_point_E8(x):
     """
     Find the closest point in the E_8 lattice for a given vector x.
@@ -80,6 +82,7 @@ def downscale(x):
 """
 Closest Point Algorithm for the A_2 Lattice.
 """
+
 def closest_point_A2(u):
     x = upscale(u)
     s = np.sum(x)
@@ -100,6 +103,3 @@ def closest_point_A2(u):
             f_x_p[sorted_indices[-i-1]] += 1
 
     return downscale(f_x_p)
-
-
-
