@@ -5,11 +5,11 @@ from closest_point import custom_round
 class NestedLatticeQuantizer:
     def __init__(self, G, Q_nn, q, beta, alpha):
         self.G = G
-        d = 1e-8 * np.random.normal(0, 1, size=len(G))
-        self.Q_nn = lambda x: Q_nn(x + d)
+        # d = 1e-8 * np.random.normal(0, 1, size=len(G))
+        self.Q_nn = lambda x: Q_nn(x)
         self.q = q
         self.beta = beta
-        self.alpha = 1/3
+        self.alpha = alpha
         self.G_inv = np.linalg.inv(G)
 
     def _encode(self, x):
@@ -46,13 +46,13 @@ class NestedLatticeQuantizer:
         codebook = {}
         encoding_vectors = np.array(np.meshgrid(*[range(self.q)] * d)).T.reshape(-1, d)
         for enc in encoding_vectors:
-            lattice_point = self.beta * self.decode(enc, 0)
+            lattice_point = self.decode(enc, 0)
             codebook[tuple(enc)] = lattice_point
         return codebook
 
 
 class HierarchicalNestedLatticeQuantizer:
-    def __init__(self, G, Q_nn, q, beta, alpha, M=2):
+    def __init__(self, G, Q_nn, q, beta, alpha, M):
         self.q = q
         self.G = G
         self.M = M
@@ -60,8 +60,8 @@ class HierarchicalNestedLatticeQuantizer:
         self.alpha = 1/3
         self.G_inv = np.linalg.inv(G)
 
-        d = 1e-8 * np.random.normal(0, 1, size=len(G))
-        self.Q_nn = lambda x: Q_nn(x + d)
+        # d = 1e-8 * np.random.normal(0, 1, size=len(G))
+        self.Q_nn = lambda x: Q_nn(x)
 
     def _encode(self, x):
         x = x / self.beta
@@ -70,7 +70,7 @@ class HierarchicalNestedLatticeQuantizer:
 
         for _ in range(self.M):
             x_l = self.Q_nn(x_l)
-            b_i = custom_round(np.mod(np.dot(self.G_inv, x_l), self.q))
+            b_i = custom_round(np.mod(np.dot(self.G_inv, x_l), self.q)).astype(int)
             encoding_vectors.append(b_i)
             x_l = x_l / self.q
 
@@ -98,7 +98,8 @@ class HierarchicalNestedLatticeQuantizer:
         return self.beta * x_hat
 
     def decode(self, b_list, T):
-        return self._decode(b_list) * (2 ** (self.alpha * T))
+        decoded = self._decode(b_list) * (2 ** (self.alpha * T))
+        return decoded
 
     def quantize(self, x):
         b_list, T = self.encode(x)
