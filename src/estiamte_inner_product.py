@@ -32,12 +32,17 @@ def find_best_beta(G, Q_nn, q, m, alpha, sig_l, eps):
     """Find the best beta for a quantizer by minimizing MSE."""
     d = len(G)
     beta_min  = (1 / q ** m) * np.sqrt(1 / sig_l) * np.sqrt(d / (d + 2))
-    betas = beta_min + 0.05 * beta_min * np.arange(0, 30)
+    betas = beta_min + 0.05 * beta_min * np.arange(0, 40)
+
     min_f_beta = float("inf")
     optimal_beta = beta_min
+    optimal_R = -1
     optimal_dx = -1
     vector_dim = len(G)
-    samples = [np.random.normal(0, 1, size=vector_dim) for _ in range(1000)]
+
+    overload_percentage = None
+
+    samples = [np.random.normal(0, 1, size=vector_dim) for _ in range(2000)]
     for idx, beta in enumerate(betas):
         quantizer = HQuantizer(G=G, Q_nn=Q_nn, q=q, beta=beta, alpha=alpha, M=m, d=eps)
         mse, T_values = calculate_mse_and_overload_for_samples(samples, quantizer)
@@ -52,9 +57,11 @@ def find_best_beta(G, Q_nn, q, m, alpha, sig_l, eps):
             min_f_beta = f_beta
             optimal_beta = beta
             optimal_dx = idx
+            optimal_R = R
+            overload_percentage = (1 - (T_counts[0] / sum(T_counts))) * 100
 
-    print(f"optimal beta index is :{optimal_dx}")
-    return R, optimal_beta
+    print(f"optimal beta index is: {optimal_dx}, overload percentage:{overload_percentage:.3f}")
+    return optimal_R, optimal_beta
 
 
 def precompute_hq_lut(G, Q_nn, q, m, eps):
@@ -139,7 +146,7 @@ def distortion_rate_theoretical(R):
 
 def main():
     q = 4
-    m_values = np.arange(3, 7)
+    m_values = np.arange(2, 6)
     G = get_d4()
     eps = 1e-8 * np.random.normal(0, 1, size=len(G))
     Q_nn = closest_point_Dn
@@ -147,7 +154,7 @@ def main():
     sig_l = np.sqrt(2) * 0.076602
 
     vector_dim = 128
-    sample_size = 30
+    sample_size = 50
     variance = 1
     samples = [np.random.normal(0, variance, size=vector_dim) for _ in range(sample_size)]
     nested_distortions = []
@@ -156,11 +163,10 @@ def main():
     R_values = []
 
     for m in m_values:
-        print(f"Calculating q={q}, m={m}...")
         rate, beta = find_best_beta(G, Q_nn, q, m, alpha, sig_l, eps)
         R_values.append(rate)
-
-        print(f"For q=4 and M={m} the best beta is: {beta:.4f}")
+        gamma = (beta ** 2) * q**(2*m) * sig_l
+        print(f"For q=4, M={m}, beta={beta:.4f}, R={rate:.4f}, gamma_0={gamma:.4f}")
 
         lookup_table = precompute_hq_lut(G, Q_nn, q, m, eps)
 
@@ -172,7 +178,6 @@ def main():
         hierarchical_distortions.append(hierarchical_distortion)
         theoretical_distortions.append(theoretical_distortion)
 
-        print(f"q={q}, R={rate:.2f}")
         print(f"Theoretical Distortion: {theoretical_distortion:.6f}")
         print(f"Nested Quantizer Distortion: {nested_distortion:.6f}")
         print(f"Hierarchical Quantizer Distortion: {hierarchical_distortion:.6f}")
@@ -183,11 +188,10 @@ def main():
     plt.plot(R_values, nested_distortions, label=f"$q^M$ Voronoi Code", marker="o", color="blue")
     plt.plot(R_values, hierarchical_distortions, label="Tiered Quantizer", marker="s", color="red")
 
-    plt.xscale("log", base=2)
     plt.yscale("log", base=2)
 
-    plt.xlabel("Rate R = M log2 (q)")
-    plt.ylabel("Distortion 2 log2 (D)")
+    plt.xlabel("R = M log2 (q) + H(T)/d")
+    plt.ylabel("D (logarithmic scale)")
     plt.title("Distortion-Rate Function for Inner Products")
     plt.legend()
     plt.grid()
