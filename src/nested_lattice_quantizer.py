@@ -3,10 +3,10 @@ from closest_point import custom_round
 
 # todo: add noise (dither)
 class NestedLatticeQuantizer:
-    def __init__(self, G, Q_nn, q, beta, alpha):
+    def __init__(self, G, Q_nn, q, beta, alpha, d, M=None):
         self.G = G
         # d = 1e-8 * np.random.normal(0, 1, size=len(G))
-        self.Q_nn = lambda x: Q_nn(x)
+        self.Q_nn = lambda x: Q_nn(x+d)
         self.q = q
         self.beta = beta
         self.alpha = alpha
@@ -52,16 +52,17 @@ class NestedLatticeQuantizer:
 
 
 class HierarchicalNestedLatticeQuantizer:
-    def __init__(self, G, Q_nn, q, beta, alpha, M):
+    def __init__(self, G, Q_nn, q, beta, alpha, M, d):
         self.q = q
         self.G = G
         self.M = M
         self.beta = beta
-        self.alpha = 1/3
+        self.alpha = alpha
+        self.eps = d
         self.G_inv = np.linalg.inv(G)
 
         # d = 1e-8 * np.random.normal(0, 1, size=len(G))
-        self.Q_nn = lambda x: Q_nn(x)
+        self.Q_nn = lambda x: Q_nn(x + d)
 
     def _encode(self, x):
         x = x / self.beta
@@ -106,5 +107,5 @@ class HierarchicalNestedLatticeQuantizer:
         return self.decode(b_list, T)
 
     def create_q_codebook(self):
-        nq = NestedLatticeQuantizer(self.G, self.Q_nn, self.q, self.beta, self.alpha)
+        nq = NestedLatticeQuantizer(self.G, self.Q_nn, self.q, self.beta, self.alpha, d=self.eps)
         return nq.create_codebook()

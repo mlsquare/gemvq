@@ -61,7 +61,7 @@ def calculate_rate_and_distortion(name, samples, quantizer, q, beta_min):
     return optimal_R, optimal_mse, optimal_beta
 
 
-def run_comparison_experiment(G, q_nn, q_values, n_samples, d, sigma_squared, M, sig_l, schemes):
+def run_comparison_experiment(G, q_nn, q_values, n_samples, d, sigma_squared, M, sig_l, schemes, eps):
     x_std = np.sqrt(sigma_squared)
     samples = np.random.normal(0, x_std, size=(n_samples, d))
 
@@ -76,7 +76,7 @@ def run_comparison_experiment(G, q_nn, q_values, n_samples, d, sigma_squared, M,
 
         for idx, scheme in enumerate(schemes):
             name, quantizer_class, nesting = scheme["name"], scheme["quantizer"], scheme["nesting"]
-            quantizer = quantizer_class(G, q_nn, q=nesting(q), beta=beta_min, alpha=1)
+            quantizer = quantizer_class(G, q_nn, q=nesting(q), beta=beta_min, alpha=1, d=eps, M=2)
 
             R, min_error, optimal_beta = calculate_rate_and_distortion(name, samples, quantizer, q, beta_min)
             results[name]["R"].append(R)
@@ -109,6 +109,7 @@ def main():
 
     sigma_squared = 1
     G = get_d4()
+    eps = 1e-8 * np.random.normal(0, 1, size=len(G))
     q_nn = closest_point_Dn
     sig_l = np.sqrt(2) * 0.076602
     M = 2
@@ -119,7 +120,7 @@ def main():
         {"name": r"$q^2$ Voronoi Code", "quantizer": NQuantizer, "nesting": lambda q: int(q ** 2)},
     ]
 
-    results = run_comparison_experiment(G, q_nn, q_values, num_samples, len(G), sigma_squared, M, sig_l, schemes)
+    results = run_comparison_experiment(G, q_nn, q_values, num_samples, len(G), sigma_squared, M, sig_l, schemes, eps)
 
     print("Comparison complete. Results:")
     print(results)
