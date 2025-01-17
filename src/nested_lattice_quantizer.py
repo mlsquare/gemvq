@@ -5,7 +5,6 @@ from closest_point import custom_round
 class NestedLatticeQuantizer:
     def __init__(self, G, Q_nn, q, beta, alpha, d, M=None):
         self.G = G
-        # d = 1e-8 * np.random.normal(0, 1, size=len(G))
         self.Q_nn = lambda x: Q_nn(x+d)
         self.q = q
         self.beta = beta
@@ -60,8 +59,6 @@ class HierarchicalNestedLatticeQuantizer:
         self.alpha = alpha
         self.eps = d
         self.G_inv = np.linalg.inv(G)
-
-        # d = 1e-8 * np.random.normal(0, 1, size=len(G))
         self.Q_nn = lambda x: Q_nn(x + d)
 
     def _encode(self, x):
