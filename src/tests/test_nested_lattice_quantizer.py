@@ -17,73 +17,74 @@ class TestQuantizer(unittest.TestCase):
     def test_Z2_lattice(self):
         """Test the Quantizer on Z² lattice (identity matrix)."""
         G = np.eye(2)
-        quantizer = NQ(G, closest_point_Zn, beta=1, q=4)
+        quantizer = NQ(G, closest_point_Zn, beta=1, q=4, alpha=1, eps= np.array([0,0]), r_cover=1)
 
         x = np.array([3.6, 3.3])
-        encoded, _ = quantizer.encode(x)
-        decoded = quantizer.decode(encoded)
+        encoded, _ = quantizer._encode(x)
+        decoded = quantizer._decode(encoded)
 
         np.testing.assert_almost_equal(decoded, [0, -1], decimal=5, err_msg="Z² lattice decode failed")
 
 
     def test_Z2_with_beta(self):
         G = get_z2()
-        quantizer = NQ(G, closest_point_Zn, beta=0.5, q=20)
+        quantizer = NQ(G, closest_point_Zn, beta=0.5, q=20, alpha=1, eps= np.array([0,0]), r_cover=1)
 
         x = np.array([3.6, 3.2])
-        encoded, _ = quantizer.encode(x)
-        decoded = quantizer.decode(encoded)
+        encoded, _ = quantizer._encode(x)
+        decoded = quantizer._decode(encoded)
 
         np.testing.assert_almost_equal(decoded, [3.5, 3], decimal=5, err_msg="Z² lattice decode failed")
 
     def test_z2_fundamental_cell(self):
         G = get_z2()
-        quantizer = NQ(G, closest_point_Zn, beta=1, q=3)
+        quantizer = NQ(G, closest_point_Zn, beta=1, q=3, alpha=1, eps= np.array([0,0]), r_cover=1)
 
         x = np.array([2,0])
-        encoded, _ = quantizer.encode(x)
-        decoded = quantizer.decode(encoded)
+        encoded, _ = quantizer._encode(x)
+        decoded = quantizer._decode(encoded)
 
         np.testing.assert_almost_equal(decoded, [-1, 0], decimal=5, err_msg="Z² lattice decode failed")
 
     def test_D3_lattice(self):
         """Test the Quantizer on D₃ lattice."""
         G = get_d3()
-        quantizer = NQ(G, closest_point_Dn, beta=1, q=4)
+        quantizer = NQ(G, closest_point_Dn, beta=1, q=4, alpha=1, eps= np.array([0,0, 0]), r_cover=1)
 
         x = np.array([1.5, 2.3, -1.8])
         np.testing.assert_almost_equal(closest_point_Dn(x), [2, 2, -2], decimal=5, err_msg="D₃ closest point failed")
-        encoded, _ = quantizer.encode(x)
+        encoded, _ = quantizer._encode(x)
         np.testing.assert_almost_equal(encoded, [2, 3, 1], decimal=5, err_msg="D₃ lattice encode failed")
-        decoded = quantizer.decode(encoded)
+        decoded = quantizer._decode(encoded)
 
         np.testing.assert_almost_equal(decoded, [2, 2, -2], decimal=5, err_msg="D₃ lattice decode failed")
 
     def test_D4_lattice(self):
         G = get_d4()
-        quantizer = NQ(G, closest_point_Dn, beta=1, q=4)
+        quantizer = NQ(G, closest_point_Dn, beta=1, q=4, alpha=1, eps= np.array([0,0,0,0]), r_cover=1)
         x = np.array([0.6, -1.1, 1.7, 0.1])
         expected = np.array([1, -1, 2, 0])
 
-        encoded, _ = quantizer.encode(x)
-        decoded = quantizer.decode(encoded)
+        encoded, _ = quantizer._encode(x)
+        decoded = quantizer._decode(encoded)
         np.testing.assert_almost_equal(decoded, expected, decimal=5, err_msg="D4 lattice decode failed")
 
     def test_E8_lattice(self):
         """Test the Quantizer on E₈ lattice."""
         G = get_e8()
-        quantizer = NQ(G, closest_point_E8, beta=1, q=4)
+        quantizer = NQ(G, closest_point_E8, beta=1, q=4, alpha=1, eps= np.array([0] * 8), r_cover=1)
 
         x = np.array([1.5, 2.3, -1.8, 1.1, 0.9, -0.5, 1.2, -0.7])
-        encoded, _ = quantizer.encode(x)
-        decoded = quantizer.decode(encoded)
+        encoded, _ = quantizer._encode(x)
+        decoded = quantizer._decode(encoded)
         expected = np.array([-0.5, 0.5, 0.5, -0.5, -0.5, -2.5, -0.5, 1.5])
         np.testing.assert_almost_equal(decoded, expected, decimal=5, err_msg="E₈ lattice decode failed")
 
     def test_has_all_cosets(self):
+        #todo: fix test
         G = get_d2()
         q = 4
-        quantizer = NQ(G, closest_point_Dn, q=q,  beta=1)
+        quantizer = NQ(G, closest_point_Dn, q=q,  beta=1, alpha=1, eps= np.array([0,0]), r_cover=1)
         points = []
         for i in range(q):
             for j in range(q):
@@ -95,7 +96,7 @@ class TestQuantizer(unittest.TestCase):
 
     def test_codebook(self):
         q = 4
-        quantizer = NQ(get_d2(), closest_point_Dn, q=q, beta=1)
+        quantizer = NQ(get_d2(), closest_point_Dn, q=q, beta=1, alpha=1, eps= np.array([0,0]), r_cover=1)
         codebook = quantizer.create_codebook()
 
         assert len(codebook) == q ** 2, "Wrong codebook size for 2D lattice."
@@ -103,7 +104,7 @@ class TestQuantizer(unittest.TestCase):
         lattice_points = np.array(list(codebook.values()))
         assert len(np.unique(lattice_points, axis=0)) == q ** 2, "Lattice points are not unique for 2D lattice."
 
-        quantizer = NQ(get_d3(), closest_point_Dn, q=q, beta=1)
+        quantizer = NQ(get_d3(), closest_point_Dn, q=q, beta=1, alpha=1, eps= np.array([0,0,0]), r_cover=1)
         codebook = quantizer.create_codebook()
 
         assert len(codebook) == q ** 3, "Wrong codebook size for 3D lattice."
@@ -117,11 +118,11 @@ class TestQuantizer(unittest.TestCase):
         G = np.eye(d)
         beta = d / (d + 2)
         x = np.array([20.3, 20.4])
-        quantizer = NQ(G, custom_round, q, beta)
-        enc, i_0 = quantizer.encode_with_overload_handling(x)
+        quantizer = NQ(G, custom_round, q, beta, alpha=1, eps= np.array([0,0]), r_cover=1)
+        enc, i_0 = quantizer.encode(x)
         np.testing.assert_equal(i_0, 5, err_msg="Overload mechanism did not calculate i_0 correctly")
 
-        decoded = quantizer.decode_with_overload_handling(enc, i_0)
+        decoded = quantizer.decode(enc, i_0)
         expected = np.array([16, 16])
         np.testing.assert_equal(decoded, expected, err_msg="Overload mechanism did not decoded correctly")
 
