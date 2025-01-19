@@ -94,7 +94,7 @@ def run_comparison_experiment(G, q_nn, q_values, n_samples, d, sigma_squared, M,
              linestyle="--")
 
     plt.xlabel(r"$R = 2 \log_2 (q) + H(T)/d$")
-    plt.ylabel("$2 \log_2 (D)$")
+    plt.ylabel("D (logarithmic scale)")
     plt.title("Distortion-Rate Function with $D_4$ Lattice")
     plt.yscale("log")
     plt.legend()
@@ -116,7 +116,7 @@ def main():
 
     schemes = [
         {"name": r"$q(q-1)$ Voronoi Code", "quantizer": NQuantizer, "nesting": lambda q: int(q * (q-1))},
-        {"name": "Tiered Quantizer",  "quantizer": HQuantizer, "nesting": lambda q: int(q)},
+        {"name": "Hierarchical Quantizer",  "quantizer": HQuantizer, "nesting": lambda q: int(q)},
         {"name": r"$q^2$ Voronoi Code", "quantizer": NQuantizer, "nesting": lambda q: int(q ** 2)},
     ]
 

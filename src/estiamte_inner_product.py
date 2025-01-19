@@ -153,8 +153,8 @@ def main():
     alpha = 1 / 3
     sig_l = np.sqrt(2) * 0.076602
 
-    vector_dim = 128
-    sample_size = 50
+    vector_dim = 512
+    sample_size = 100
     variance = 1
     samples = [np.random.normal(0, variance, size=vector_dim) for _ in range(sample_size)]
     nested_distortions = []
@@ -184,9 +184,9 @@ def main():
         print("-" * 40)
 
     plt.figure(figsize=(10, 6))
-    plt.plot(R_values, theoretical_distortions, label="Theoretical D(R)", linestyle="--", color="black")
+    plt.plot(R_values, theoretical_distortions, label=f"Theoretical $\\Gamma (R)$", linestyle="--", color="black")
     plt.plot(R_values, nested_distortions, label=f"$q^M$ Voronoi Code", marker="o", color="blue")
-    plt.plot(R_values, hierarchical_distortions, label="Tiered Quantizer", marker="s", color="red")
+    plt.plot(R_values, hierarchical_distortions, label="Hierarchical Quantizer", marker="s", color="red")
 
     plt.yscale("log", base=2)
 
