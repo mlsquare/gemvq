@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 from nested_lattice_quantizer import (NestedLatticeQuantizer as NQuantizer,
                                       HierarchicalNestedLatticeQuantizer as HQuantizer)
 from src.closest_point import custom_round
-from utils import get_a2, get_d4
+from utils import *
 from closest_point import closest_point_A2, closest_point_Dn
 
 
@@ -64,31 +64,7 @@ def find_best_beta(G, Q_nn, q, m, alpha, sig_l, eps):
     return optimal_R, optimal_beta
 
 
-def precompute_hq_lut(G, Q_nn, q, m, eps):
-    """Precompute a lookup table for hierarchical quantization."""
-    hq = HQuantizer(G=G, Q_nn=Q_nn, q=q, beta=1, alpha=1, M=m, d=eps)
-    codebook = hq.create_q_codebook()
-    lookup_table = {}
-    for enc1, lattice_point1 in codebook.items():
-        for enc2, lattice_point2 in codebook.items():
-            inner_product = np.dot(lattice_point1, lattice_point2)
-            lookup_table[(enc1, enc2)] = inner_product
-    return lookup_table
 
-
-def calculate_weighted_sum(a_list, b_list, lut, q):
-    """Calculate the weighted sum for given encoding vectors a_list, b_list, LUT, and scalar q."""
-    k = len(a_list)
-    if len(b_list) != k:
-        raise ValueError("a_list and b_list must have the same length.")
-
-    total_sum = 0
-    for i in range(k):
-        for j in range(k):
-            weight = q ** (i + j)
-            total_sum += weight * lut[(tuple(a_list[i]), tuple(b_list[j]))]
-
-    return total_sum
 
 
 def calculate_inner_product_distortion(G, Q_nn, q, m, beta, alpha, samples, eps, lut=None):
