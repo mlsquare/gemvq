@@ -120,9 +120,9 @@ def distortion_rate_theoretical(R):
     return 2 * 2 ** (-2 * R) - 2 ** (-4 * R)
 
 
-def main():
+def plot_distortion_rate():
     q = 4
-    m_values = np.arange(2, 6)
+    m_values = np.arange(1, 5)
     G = get_d4()
     eps = 1e-8 * np.random.normal(0, 1, size=len(G))
     Q_nn = closest_point_Dn
@@ -175,4 +175,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    plot_distortion_rate()
