@@ -2,8 +2,9 @@ import numpy as np
 from hierarchical_nested_lattice_quantizer import HierarchicalNestedLatticeQuantizer as HQuantizer
 
 SIG_D3 = 3/24
-SIG_D4 = (1/8) * (929/1620)
-SIG_E8 = 0
+SIG_D4 = np.sqrt(2) * 0.076602
+SIG_E8 = (1/8) * (929/1620)
+
 
 def calculate_mse(x, x_hat):
     return np.mean((x - x_hat) ** 2)
