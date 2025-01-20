@@ -5,7 +5,8 @@ import os
 from itertools import product
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-from nested_lattice_quantizer import NestedLatticeQuantizer as NQ, HierarchicalNestedLatticeQuantizer as HQ
+from nested_lattice_quantizer import NestedLatticeQuantizer as NQ
+from hierarchical_nested_lattice_quantizer import HierarchicalNestedLatticeQuantizer as HQ
 from closest_point import closest_point_Dn, closest_point_E8, closest_point_A2, custom_round
 from utils import *
 

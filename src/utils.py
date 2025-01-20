@@ -1,5 +1,5 @@
 import numpy as np
-from nested_lattice_quantizer import HierarchicalNestedLatticeQuantizer as HQuantizer
+from hierarchical_nested_lattice_quantizer import HierarchicalNestedLatticeQuantizer as HQuantizer
 
 SIG_D3 = 3/24
 SIG_D4 = (1/8) * (929/1620)

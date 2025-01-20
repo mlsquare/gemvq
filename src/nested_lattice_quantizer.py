@@ -1,5 +1,4 @@
 import numpy as np
-from closest_point import custom_round
 
 # todo: add noise (dither)
 class NestedLatticeQuantizer:
