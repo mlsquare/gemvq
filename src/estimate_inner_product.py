@@ -20,8 +20,8 @@ def calculate_mse_and_overload_for_samples(samples, quantizer):
     mse = 0
     overload_counts = []
     for sample in samples:
-        encoded, T_value = quantizer.encode(sample)
-        decoded = quantizer.decode(encoded, T_value)
+        encoded, T_value = quantizer.encode(sample, with_dither=False)
+        decoded = quantizer.decode(encoded, T_value, with_dither=False)
         mse += np.mean((sample - decoded) ** 2)
         overload_counts.append(T_value)
     mse /= len(samples)
@@ -68,8 +68,8 @@ def calculate_inner_product_distortion(G, Q_nn, q, m, beta, alpha, samples, eps,
     hierarchical_errors = []
     lattice_dim = len(G)
     n = len(samples[0])
-    nested_quantizer = NQuantizer(G, Q_nn, q=q **m, beta=beta, alpha=alpha, d=eps)
-    hierarchical_quantizer = HQuantizer(G, Q_nn=Q_nn, q=q, beta=beta, alpha=alpha, M=m, d=eps)
+    nested_quantizer = NQuantizer(G, Q_nn, q=q **m, beta=beta, alpha=alpha, eps=eps, dither=np.zeros(lattice_dim))
+    hierarchical_quantizer = HQuantizer(G, Q_nn=Q_nn, q=q, beta=beta, alpha=alpha, M=m, eps=eps, dither=np.zeros(lattice_dim))
 
     for i in range(len(samples)):
         for j in range(i + 1, len(samples)):
@@ -88,8 +88,8 @@ def calculate_inner_product_distortion(G, Q_nn, q, m, beta, alpha, samples, eps,
                 voronoi_res = calculate_inner_product_for_chunks(block1, block2, nested_quantizer)
                 voronoi_inner_product += voronoi_res
 
-                enc_hierarchical_1, t_h1 = hierarchical_quantizer.encode(block1)
-                enc_hierarchical_2, t_h2 = hierarchical_quantizer.encode(block2)
+                enc_hierarchical_1, t_h1 = hierarchical_quantizer.encode(block1, with_dither=False)
+                enc_hierarchical_2, t_h2 = hierarchical_quantizer.encode(block2, with_dither=False)
                 c = (2 ** (hierarchical_quantizer.alpha * (t_h1 + t_h2))) * (hierarchical_quantizer.beta ** 2)
                 hierarchical_res = calculate_weighted_sum(enc_hierarchical_1, enc_hierarchical_2, lut,
                                                           hierarchical_quantizer.q)
@@ -104,10 +104,10 @@ def calculate_inner_product_distortion(G, Q_nn, q, m, beta, alpha, samples, eps,
 
 
 def calculate_inner_product_for_chunks(block1, block2, quantizer):
-    enc1, t1 = quantizer.encode(block1)
-    enc2, t2 = quantizer.encode(block2)
-    decoded1 = quantizer.decode(enc1, t1)
-    decoded2 = quantizer.decode(enc2, t2)
+    enc1, t1 = quantizer.encode(block1, with_dither=False)
+    enc2, t2 = quantizer.encode(block2, with_dither=False)
+    decoded1 = quantizer.decode(enc1, t1, with_dither=False)
+    decoded2 = quantizer.decode(enc2, t2, with_dither=False)
     return np.dot(decoded1, decoded2)
 
 
