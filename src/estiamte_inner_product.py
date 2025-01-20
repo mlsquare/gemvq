@@ -44,7 +44,7 @@ def find_best_beta(G, Q_nn, q, m, alpha, sig_l, eps):
 
     samples = [np.random.normal(0, 1, size=vector_dim) for _ in range(2000)]
     for idx, beta in enumerate(betas):
-        quantizer = HQuantizer(G=G, Q_nn=Q_nn, q=q, beta=beta, alpha=alpha, M=m, d=eps)
+        quantizer = HQuantizer(G=G, Q_nn=Q_nn, q=q, beta=beta, alpha=alpha, M=m, eps=eps, dither= np.zeros(d))
         mse, T_values = calculate_mse_and_overload_for_samples(samples, quantizer)
 
         T_counts = np.bincount(T_values, minlength=q ** 2)
@@ -62,9 +62,6 @@ def find_best_beta(G, Q_nn, q, m, alpha, sig_l, eps):
 
     print(f"optimal beta index is: {optimal_dx}, overload percentage:{overload_percentage:.3f}")
     return optimal_R, optimal_beta
-
-
-
 
 
 def calculate_inner_product_distortion(G, Q_nn, q, m, beta, alpha, samples, eps, lut=None):

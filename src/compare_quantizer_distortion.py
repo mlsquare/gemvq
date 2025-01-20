@@ -10,8 +10,8 @@ def calculate_mse_and_overload_for_samples(samples, quantizer):
     mse = 0
     T_count = []
     for x in samples:
-        encoding, t = quantizer.encode(x)
-        x_hat = quantizer.decode(encoding, t)
+        encoding, t = quantizer.encode(x, with_dither=False)
+        x_hat = quantizer.decode(encoding, t, with_dither=False)
         mse += calculate_mse(x, x_hat)
         T_count.append(t)
     return mse / len(samples), T_count
@@ -76,7 +76,7 @@ def run_comparison_experiment(G, q_nn, q_values, n_samples, d, sigma_squared, M,
 
         for idx, scheme in enumerate(schemes):
             name, quantizer_class, nesting = scheme["name"], scheme["quantizer"], scheme["nesting"]
-            quantizer = quantizer_class(G, q_nn, q=nesting(q), beta=beta_min, alpha=1, d=eps, M=2)
+            quantizer = quantizer_class(G, q_nn, q=nesting(q), beta=beta_min, alpha=1, eps=eps, M=2, dither=np.zeros(d))
 
             R, min_error, optimal_beta = calculate_rate_and_distortion(name, samples, quantizer, q, beta_min)
             results[name]["R"].append(R)
