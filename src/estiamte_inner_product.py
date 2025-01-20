@@ -47,9 +47,7 @@ def find_best_beta(G, Q_nn, q, m, alpha, sig_l, eps):
         quantizer = HQuantizer(G=G, Q_nn=Q_nn, q=q, beta=beta, alpha=alpha, M=m, eps=eps, dither= np.zeros(d))
         mse, T_values = calculate_mse_and_overload_for_samples(samples, quantizer)
 
-        T_counts = np.bincount(T_values, minlength=q ** 2)
-        T_probs = T_counts / np.sum(T_counts)
-        H_T = -sum(p * np.log2(p) for p in T_probs if p > 0)
+        H_T, T_counts = calculate_t_entropy(T_values, q)
         R = m * np.log2(q) + (H_T / len(G))
 
         f_beta = mse / (2 ** (-2 * R))

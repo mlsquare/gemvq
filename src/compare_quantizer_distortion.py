@@ -39,9 +39,7 @@ def calculate_rate_and_distortion(name, samples, quantizer, q, beta_min):
         quantizer.beta = beta
         mse, T_values = calculate_mse_and_overload_for_samples(samples, quantizer)
 
-        T_counts = np.bincount(T_values, minlength=q**2)
-        T_probs = T_counts / np.sum(T_counts)
-        H_T = -sum(p * np.log2(p) for p in T_probs if p > 0)
+        H_T, T_counts = calculate_t_entropy(T_values, q)
         R = 2 * np.log2(q) + (H_T / d)
 
         f_beta = mse / (2 ** (-2 * R))

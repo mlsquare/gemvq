@@ -69,6 +69,11 @@ def get_e8():
 
 
 def precompute_hq_lut(G, Q_nn, q, m, eps):
+def calculate_t_entropy(T_values, q):
+    T_counts = np.bincount(T_values, minlength=q ** 2)
+    T_probs = T_counts / np.sum(T_counts)
+    H_T = -sum(p * np.log2(p) for p in T_probs if p > 0)
+    return H_T, T_counts
     """Precompute a lookup table for hierarchical quantization."""
     hq = HQuantizer(G=G, Q_nn=Q_nn, q=q, beta=1, alpha=1, M=m, d=eps)
     codebook = hq.create_q_codebook()
