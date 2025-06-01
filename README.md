@@ -15,14 +15,21 @@ There's also an [efficient C implementation](https://github.com/orimeirgit/Neste
 
 ## References
 
-[1] : I. Kaplan and O. Ordentlich, “High-Rate Nested-Lattice Quantized Matrix Multiplication with Small Lookup Tables”, to be presented in ISIT 2025, arXiv:2505.13164, 2025.
+### Ref1
+I. Kaplan and O. Ordentlich, “High-Rate Nested-Lattice Quantized Matrix Multiplication with Small Lookup Tables”, to be presented in ISIT 2025, [arXiv:2505.13164, 2025](https://arxiv.org/abs/2505.13164).
 
-[2] : O. Ordentlich and Y. Polyanskiy, “Optimal quantization for matrix multiplication”, arXiv preprint arXiv:2410.13780, 2024.
+### Ref2
+O. Ordentlich and Y. Polyanskiy, “Optimal quantization for matrix multiplication”, [arXiv preprint arXiv:2410.13780, 2024](https://arxiv.org/abs/2410.13780).
 
-[3] : J. Conway and N. Sloane, "Fast quantizing and decoding and algorithms for lattice quantizers and codes", in IEEE Transactions on Information Theory, vol. 28, no. 2, pp. 227-232, March 1982, doi: 10.1109/TIT.1982.1056484.
+### Ref3
+J. Conway and N. Sloane, "Fast quantizing and decoding and algorithms for lattice quantizers and codes", in IEEE Transactions on Information Theory, vol. 28, no. 2, pp. 227-232, March 1982, [doi: 10.1109/TIT.1982.1056484](https://doi.org/10.1109/TIT.1982.1056484).
 
 For a full list of references, please see the "References" section of our published work.
 
 ## Contributions
 Feel free to open issues or submit pull requests for any suggestions or improvements!
+
+
+
+
 
