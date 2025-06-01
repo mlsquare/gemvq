@@ -1,4 +1,4 @@
-# LatticeQuant
+# M-leveled Neseted-Lattice Quantizer
 
 ## Overview
 
