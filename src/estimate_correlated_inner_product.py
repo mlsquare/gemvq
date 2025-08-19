@@ -1,13 +1,38 @@
 import matplotlib.pyplot as plt
-from src.closest_point import custom_round
-from utils import *
-from closest_point import closest_point_A2, closest_point_Dn
-from hierarchical_nested_lattice_quantizer import HierarchicalNestedLatticeQuantizer as HQ
+from .closest_point import custom_round
+from .utils import *
+from .closest_point import closest_point_A2, closest_point_Dn
+from .hierarchical_nested_lattice_quantizer import HierarchicalNestedLatticeQuantizer as HQ
 import numpy as np
 
 
 def generate_rho_correlated_samples(rho, num_samples, vector_dim):
-    """Generate pairs of rho-correlated Gaussian samples."""
+    """
+    Generate pairs of rho-correlated Gaussian samples.
+    
+    This function generates pairs of vectors that are correlated with
+    correlation coefficient rho using Cholesky decomposition.
+    
+    Parameters:
+    -----------
+    rho : float
+        Correlation coefficient between -1 and 1.
+    num_samples : int
+        Number of sample pairs to generate.
+    vector_dim : int
+        Dimension of each vector.
+        
+    Returns:
+    --------
+    tuple
+        (x_samples, y_samples) where both are numpy arrays of shape
+        (num_samples, vector_dim) containing correlated samples.
+        
+    Notes:
+    ------
+    The function uses Cholesky decomposition of the correlation matrix
+    [[1, rho], [rho, 1]] to generate correlated Gaussian samples.
+    """
     cov_matrix = np.array([[1, rho], [rho, 1]])
     L = np.linalg.cholesky(cov_matrix)
     uncorrelated_samples = np.random.normal(size=(num_samples * vector_dim, 2))
@@ -20,6 +45,32 @@ def generate_rho_correlated_samples(rho, num_samples, vector_dim):
 def calculate_distortion(x_samples, y_samples, quantizer, lut=None, use_dithers=False):
     """
     Calculate the distortion of the inner product estimation for given samples.
+    
+    This function computes the mean squared error between true inner products
+    and estimated inner products using hierarchical quantization.
+    
+    Parameters:
+    -----------
+    x_samples : numpy.ndarray
+        First set of sample vectors.
+    y_samples : numpy.ndarray
+        Second set of sample vectors (correlated with x_samples).
+    quantizer : HierarchicalNestedLatticeQuantizer
+        Quantizer object for encoding/decoding.
+    lut : dict, optional
+        Lookup table for inner product estimation.
+    use_dithers : bool, optional
+        Whether to apply dithering during quantization.
+        
+    Returns:
+    --------
+    float
+        Mean squared error of inner product estimation.
+        
+    Notes:
+    ------
+    The function processes vectors in blocks according to the lattice dimension
+    and computes inner products using the hierarchical quantization method.
     """
     d = len(quantizer.G)
     n = len(x_samples[0])
@@ -49,6 +100,21 @@ def calculate_distortion(x_samples, y_samples, quantizer, lut=None, use_dithers=
 
 
 def plot_distortion_rho():
+    """
+    Plot distortion vs correlation coefficient for hierarchical quantization.
+    
+    This function analyzes how the performance of hierarchical quantization
+    varies with the correlation between input vectors. It generates a plot
+    showing distortion as a function of correlation coefficient.
+    
+    Notes:
+    ------
+    The function:
+    1. Sets up hierarchical quantization with D4 lattice
+    2. Generates correlated sample pairs for different correlation values
+    3. Computes distortion for each correlation level
+    4. Plots the results to show performance dependence on correlation
+    """
     G = get_d4()
     d = len(G)
     eps = 1e-8 * np.random.normal(0, 1, size=d)

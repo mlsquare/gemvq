@@ -1,12 +1,28 @@
-from nested_lattice_quantizer import NestedLatticeQuantizer as NQuantizer
-from hierarchical_nested_lattice_quantizer import HierarchicalNestedLatticeQuantizer as HQuantizer
-from utils import get_a2, get_d3, get_d4, get_e8, calculate_mse, calculate_t_entropy
-from closest_point import closest_point_A2, closest_point_Dn, closest_point_E8, custom_round
+from .nested_lattice_quantizer import NestedLatticeQuantizer as NQuantizer
+from .hierarchical_nested_lattice_quantizer import HierarchicalNestedLatticeQuantizer as HQuantizer
+from .utils import get_a2, get_d3, get_d4, get_e8, calculate_mse, calculate_t_entropy
+from .closest_point import closest_point_A2, closest_point_Dn, closest_point_E8, custom_round
 import numpy as np
 import matplotlib.pyplot as plt
 
 
 def calculate_mse_and_overload_for_samples(samples, quantizer):
+    """
+    Calculate the MSE and overload values for quantized samples.
+    
+    Parameters:
+    -----------
+    samples : numpy.ndarray
+        Array of sample vectors to be quantized.
+    quantizer : object
+        Quantizer object (NestedLatticeQuantizer or HierarchicalNestedLatticeQuantizer).
+        
+    Returns:
+    --------
+    tuple
+        (mse, T_count) where mse is the mean squared error and
+        T_count is a list of overload counts (T values).
+    """
     mse = 0
     T_count = []
     for x in samples:
@@ -18,12 +34,57 @@ def calculate_mse_and_overload_for_samples(samples, quantizer):
 
 
 def calculate_slope(log_R, min_errors):
+    """
+    Calculate the slope of the rate-distortion curve.
+    
+    Parameters:
+    -----------
+    log_R : numpy.ndarray
+        Logarithm of rate values.
+    min_errors : numpy.ndarray
+        Minimum error values.
+        
+    Returns:
+    --------
+    float
+        Slope of the rate-distortion curve.
+    """
     log_min_errors = np.log2(min_errors)
     slope = np.polyfit(log_R, log_min_errors, 1)[0]
     return slope
 
 
 def calculate_rate_and_distortion(name, samples, quantizer, q, beta_min):
+    """
+    Calculate rate and distortion for a given quantizer configuration.
+    
+    This function performs a grid search over beta values to find the
+    optimal rate-distortion performance for a given quantizer.
+    
+    Parameters:
+    -----------
+    name : str
+        Name of the quantization scheme for reporting.
+    samples : numpy.ndarray
+        Sample vectors for evaluation.
+    quantizer : object
+        Quantizer object to evaluate.
+    q : int
+        Quantization parameter.
+    beta_min : float
+        Minimum beta value for the grid search.
+        
+    Returns:
+    --------
+    tuple
+        (optimal_R, optimal_mse, optimal_beta) containing the optimal
+        rate, mean squared error, and beta parameter.
+        
+    Notes:
+    ------
+    The function evaluates the rate-distortion function f(beta) = MSE / 2^(-2*R)
+    and selects the beta value that minimizes this function.
+    """
     betas = beta_min + 0.05 * beta_min * np.arange(0, 40)
     d = len(quantizer.G)
 
@@ -60,6 +121,46 @@ def calculate_rate_and_distortion(name, samples, quantizer, q, beta_min):
 
 
 def run_comparison_experiment(G, q_nn, q_values, n_samples, d, sigma_squared, M, sig_l, schemes, eps):
+    """
+    Run a comprehensive comparison experiment between different quantization schemes.
+    
+    This function compares the rate-distortion performance of different
+    quantization methods across various quantization parameters.
+    
+    Parameters:
+    -----------
+    G : numpy.ndarray
+        Generator matrix for the lattice.
+    q_nn : function
+        Closest point function for the lattice.
+    q_values : numpy.ndarray
+        Array of quantization parameters to test.
+    n_samples : int
+        Number of sample vectors for evaluation.
+    d : int
+        Dimension of the vectors.
+    sigma_squared : float
+        Variance of the input distribution.
+    M : int
+        Number of hierarchical levels.
+    sig_l : float
+        Lattice parameter.
+    schemes : list
+        List of quantization schemes to compare.
+    eps : float
+        Small perturbation parameter.
+        
+    Returns:
+    --------
+    dict
+        Dictionary containing rate-distortion results for each scheme.
+        
+    Notes:
+    ------
+    The function generates random samples and evaluates each quantization
+    scheme across different quantization parameters, plotting the results
+    for comparison.
+    """
     x_std = np.sqrt(sigma_squared)
     samples = np.random.normal(0, x_std, size=(n_samples, d))
 
@@ -102,6 +203,21 @@ def run_comparison_experiment(G, q_nn, q_values, n_samples, d, sigma_squared, M,
 
 
 def main():
+    """
+    Main function to run the quantizer comparison experiment.
+    
+    This function sets up and runs a comprehensive comparison between
+    different quantization schemes using the D4 lattice.
+    
+    Notes:
+    ------
+    The experiment compares:
+    1. q(q-1) Voronoi Code
+    2. Hierarchical Quantizer
+    3. q² Voronoi Code
+    
+    Results are plotted showing the rate-distortion performance of each method.
+    """
     num_samples = 5000
     q_values = np.arange(3, 9)
 
