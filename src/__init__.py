@@ -7,13 +7,14 @@ efficient matrix multiplication with small lookup tables.
 Package Structure:
     - src.quantizers: Core quantizer implementations and lattice algorithms
     - src.applications: Matrix multiplication applications and analysis tools
-    - src.adaptive: Adaptive column-based matrix-vector multiplication
+    - src.adaptive: Adaptive matrix-vector multiplication with fixed encoding
     - src.utils: Utility functions and lattice generators
 
 Main Classes:
     - HierarchicalNestedLatticeQuantizer: Multi-level hierarchical quantization
     - NestedLatticeQuantizer: Classic nested lattice quantization
-    - AdaptiveColumnQuantizer: Column-wise adaptive quantization
+    - FixedMatrixQuantizer: Fixed matrix encoding with adaptive decoding
+    - AdaptiveMatVecProcessor: Adaptive matrix-vector processing
 
 Main Functions:
     - closest_point_Dn, closest_point_A2, closest_point_E8: Lattice algorithms
@@ -69,17 +70,19 @@ from .applications import (
 
 # Adaptive matrix-vector multiplication
 from .adaptive import (
-    AdaptiveColumnQuantizer,
-    AdaptiveLookupTable,
-    SparseMatVecProcessor,
+    FixedMatrixQuantizer,
+    AdaptiveMatVecProcessor,
     create_adaptive_matvec_processor,
     adaptive_matvec_multiply,
-    run_comprehensive_demo,
-    demo_basic_usage,
-    demo_lattice_comparison,
+    adaptive_matvec_multiply_sparse,
+    demo_basic_functionality,
+    demo_sparsity_handling,
     demo_hierarchical_levels,
-    demo_sparsity_impact,
-    demo_rate_allocation
+    demo_rate_distortion_tradeoff,
+    demo_lookup_table_efficiency,
+    demo_memory_usage,
+    plot_results,
+    run_demo
 )
 
 # Version information
@@ -129,15 +132,17 @@ __all__ = [
     "plot_with_voronoi",
     
     # Adaptive matrix-vector multiplication
-    "AdaptiveColumnQuantizer",
-    "AdaptiveLookupTable",
-    "SparseMatVecProcessor",
+    "FixedMatrixQuantizer",
+    "AdaptiveMatVecProcessor",
     "create_adaptive_matvec_processor",
     "adaptive_matvec_multiply",
-    "run_comprehensive_demo",
-    "demo_basic_usage",
-    "demo_lattice_comparison",
+    "adaptive_matvec_multiply_sparse",
+    "demo_basic_functionality",
+    "demo_sparsity_handling",
     "demo_hierarchical_levels",
-    "demo_sparsity_impact",
-    "demo_rate_allocation"
+    "demo_rate_distortion_tradeoff",
+    "demo_lookup_table_efficiency",
+    "demo_memory_usage",
+    "plot_results",
+    "run_demo"
 ]

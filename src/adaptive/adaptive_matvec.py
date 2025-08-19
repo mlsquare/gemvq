@@ -2,39 +2,40 @@
 Adaptive Matrix-Vector Multiplication with Hierarchical Nested Quantizers
 
 This module implements adaptive matrix-vector multiplication using hierarchical
-nested lattice quantizers with column-wise encoding. The approach interprets
-matrix-vector multiplication as a linear combination of column vectors, where
-each column can have different target bit rates and some vector elements are
-known to be zero a priori.
+nested lattice quantizers. The approach encodes matrix W once with maximum bit rate,
+then adaptively decodes columns based on bit budget for each input vector x,
+exploiting the hierarchical levels M for variable precision decoding.
 """
 
 import numpy as np
 from typing import List, Tuple, Dict, Optional, Union
 from ..quantizers.hierarchical_nested_lattice_quantizer import HierarchicalNestedLatticeQuantizer
-from ..utils import get_d4, get_a2, get_e8, get_z2, get_z3
+from ..utils import get_d4, get_a2, get_e8, get_z2, get_z3, precompute_hq_lut, calculate_weighted_sum
 from ..quantizers.closest_point import closest_point_Dn, closest_point_A2, closest_point_E8
 
 
-class AdaptiveColumnQuantizer:
+class FixedMatrixQuantizer:
     """
-    Adaptive column quantizer that handles different bit rates for each column.
+    Fixed matrix quantizer that encodes W once with maximum bit rate.
     
-    This class manages the quantization of individual matrix columns with
-    adaptive parameters based on target bit rates. It provides efficient
-    encoding and decoding operations for sparse matrix-vector multiplication.
+    This class encodes the entire matrix W using hierarchical nested quantization
+    with maximum precision, then provides adaptive decoding capabilities based
+    on bit budget requirements for different input vectors x.
     """
     
-    def __init__(self, target_rates: List[float], lattice_type: str = 'D4', 
-                 M: int = 2, alpha: float = 1/3, eps: float = 1e-8):
+    def __init__(self, matrix: np.ndarray, lattice_type: str = 'D4', 
+                 max_rate: float = 8.0, M: int = 4, alpha: float = 1/3, eps: float = 1e-8):
         """
-        Initialize the adaptive column quantizer.
+        Initialize the fixed matrix quantizer.
         
         Parameters:
         -----------
-        target_rates : List[float]
-            Target bit rates for each column (bits per dimension).
+        matrix : np.ndarray
+            Input matrix W to be encoded (m x n).
         lattice_type : str
             Type of lattice to use ('D4', 'A2', 'E8', 'Z2', 'Z3').
+        max_rate : float
+            Maximum bit rate for encoding (bits per dimension).
         M : int
             Number of hierarchical levels.
         alpha : float
@@ -42,8 +43,10 @@ class AdaptiveColumnQuantizer:
         eps : float
             Small perturbation parameter.
         """
-        self.target_rates = target_rates
+        self.matrix = matrix
+        self.m, self.n = matrix.shape
         self.lattice_type = lattice_type
+        self.max_rate = max_rate
         self.M = M
         self.alpha = alpha
         self.eps = eps
@@ -52,9 +55,26 @@ class AdaptiveColumnQuantizer:
         self.G, self.Q_nn = self._setup_lattice(lattice_type)
         self.dimension = self.G.shape[0]
         
-        # Initialize quantizers for each column
-        self.quantizers = {}
-        self._initialize_quantizers()
+        # Convert max rate to quantization parameters
+        self.q, self.beta = self._rate_to_parameters(max_rate)
+        
+        # Create dither vector
+        self.dither = np.zeros(self.dimension)
+        
+        # Initialize quantizer with max rate
+        self.quantizer = HierarchicalNestedLatticeQuantizer(
+            G=self.G, Q_nn=self.Q_nn, q=self.q, beta=self.beta,
+            alpha=self.alpha, eps=self.eps, dither=self.dither, M=self.M
+        )
+        
+        # Encode all columns
+        self.encoded_columns = {}
+        self.overload_scalings = {}
+        self._encode_matrix()
+        
+        # Precompute lookup tables for different hierarchical levels
+        self.lookup_tables = {}
+        self._precompute_lookup_tables()
     
     def _setup_lattice(self, lattice_type: str) -> Tuple[np.ndarray, callable]:
         """Setup lattice generator matrix and closest point function."""
@@ -70,21 +90,6 @@ class AdaptiveColumnQuantizer:
             return get_z3(), lambda x: np.round(x)
         else:
             raise ValueError(f"Unsupported lattice type: {lattice_type}")
-    
-    def _initialize_quantizers(self):
-        """Initialize quantizers for each column with adaptive parameters."""
-        for i, rate in enumerate(self.target_rates):
-            # Convert bit rate to quantization parameters
-            q, beta = self._rate_to_parameters(rate)
-            
-            # Create dither vector
-            dither = np.zeros(self.dimension)
-            
-            # Initialize quantizer
-            self.quantizers[i] = HierarchicalNestedLatticeQuantizer(
-                G=self.G, Q_nn=self.Q_nn, q=q, beta=beta,
-                alpha=self.alpha, eps=self.eps, dither=dither, M=self.M
-            )
     
     def _rate_to_parameters(self, rate: float) -> Tuple[int, float]:
         """
@@ -100,223 +105,281 @@ class AdaptiveColumnQuantizer:
         tuple
             (q, beta) where q is quantization parameter and beta is scaling.
         """
-        # Simple parameter mapping - can be optimized based on rate-distortion analysis
+        # Convert rate to quantization parameter
         q = max(2, int(2 ** (rate / self.M)))
         beta = 1.0 / (2 ** (rate / 4))  # Scaling based on rate
         
         return q, beta
     
-    def encode_column(self, column: np.ndarray, col_idx: int) -> Tuple[Tuple, int]:
-        """
-        Encode a single column with adaptive parameters.
-        
-        Parameters:
-        -----------
-        column : np.ndarray
-            Column vector to encode.
-        col_idx : int
-            Column index for parameter selection.
+    def _encode_matrix(self):
+        """Encode all matrix columns with maximum precision."""
+        for i in range(self.n):
+            column = self.matrix[:, i]
             
-        Returns:
-        --------
-        tuple
-            (encoding_vectors, overload_scaling) where encoding_vectors is a
-            tuple of M encoding vectors and overload_scaling is the scaling factor.
-        """
-        if col_idx not in self.quantizers:
-            raise ValueError(f"No quantizer initialized for column {col_idx}")
-        
-        quantizer = self.quantizers[col_idx]
-        return quantizer.encode(column, with_dither=False)
+            # Process column in blocks that match lattice dimension
+            encoded_blocks = []
+            scaling_blocks = []
+            
+            for j in range(0, self.m, self.dimension):
+                # Extract block of size dimension
+                end_idx = min(j + self.dimension, self.m)
+                block = column[j:end_idx]
+                
+                # Pad block if necessary to match lattice dimension
+                if len(block) < self.dimension:
+                    block = np.pad(block, (0, self.dimension - len(block)), mode='constant')
+                
+                # Encode block
+                encoding, scaling = self.quantizer.encode(block, with_dither=False)
+                encoded_blocks.append(encoding)
+                scaling_blocks.append(scaling)
+            
+            self.encoded_columns[i] = encoded_blocks
+            self.overload_scalings[i] = scaling_blocks
     
-    def decode_column(self, encoding: Tuple, col_idx: int, overload_scaling: int) -> np.ndarray:
+    def _precompute_lookup_tables(self):
+        """Precompute lookup tables for different hierarchical levels."""
+        # Precompute lookup table for the maximum rate
+        self.lookup_tables[self.max_rate] = precompute_hq_lut(
+            self.G, self.Q_nn, self.q, self.M, self.eps
+        )
+        
+        # Precompute lookup tables for lower rates (fewer hierarchical levels)
+        for m in range(1, self.M):
+            # Calculate effective rate for m levels
+            effective_rate = self.max_rate * m / self.M
+            self.lookup_tables[effective_rate] = precompute_hq_lut(
+                self.G, self.Q_nn, self.q, m, self.eps
+            )
+    
+    def decode_column_adaptive(self, col_idx: int, target_rate: float) -> np.ndarray:
         """
-        Decode a single column with adaptive parameters.
+        Decode a column adaptively based on target bit rate.
         
         Parameters:
         -----------
-        encoding : tuple
-            Tuple of M encoding vectors.
         col_idx : int
-            Column index for parameter selection.
-        overload_scaling : int
-            Scaling factor applied during encoding.
+            Column index to decode.
+        target_rate : float
+            Target bit rate for decoding (can be less than max_rate).
             
         Returns:
         --------
         np.ndarray
-            Decoded column vector.
+            Decoded column vector with precision based on target_rate.
         """
-        if col_idx not in self.quantizers:
-            raise ValueError(f"No quantizer initialized for column {col_idx}")
+        if col_idx >= self.n:
+            raise ValueError(f"Column index {col_idx} out of range [0, {self.n-1}]")
         
-        quantizer = self.quantizers[col_idx]
-        return quantizer.decode(encoding, overload_scaling, with_dither=False)
-
-
-class AdaptiveLookupTable:
-    """
-    Adaptive lookup table manager for different bit rates.
+        encoded_blocks = self.encoded_columns[col_idx]
+        scaling_blocks = self.overload_scalings[col_idx]
+        
+        # Determine how many hierarchical levels to use based on target rate
+        levels_to_use = self.M
+        if target_rate < self.max_rate:
+            levels_to_use = max(1, int(self.M * target_rate / self.max_rate))
+        
+        # Decode each block
+        decoded_blocks = []
+        for block_idx, (encoding, scaling) in enumerate(zip(encoded_blocks, scaling_blocks)):
+            if levels_to_use >= self.M:
+                # Use full precision (all M levels)
+                decoded_block = self.quantizer.decode(encoding, scaling, with_dither=False)
+            else:
+                # Use partial precision based on target rate
+                decoded_block = self._decode_partial(encoding, scaling, levels_to_use)
+            
+            decoded_blocks.append(decoded_block)
+        
+        # Combine blocks back into full column
+        full_column = np.concatenate(decoded_blocks)
+        return full_column[:self.m]  # Trim to original column size
     
-    This class manages precomputed lookup tables for efficient inner product
-    estimation with different quantization parameters.
-    """
-    
-    def __init__(self, lattice_type: str = 'D4', max_rate: float = 8.0, M: int = 2):
+    def _decode_partial(self, encoding: Tuple, scaling: int, levels: int) -> np.ndarray:
         """
-        Initialize the adaptive lookup table manager.
+        Decode using only a subset of hierarchical levels.
         
         Parameters:
         -----------
-        lattice_type : str
-            Type of lattice to use.
-        max_rate : float
-            Maximum bit rate to support.
-        M : int
-            Number of hierarchical levels.
-        """
-        self.lattice_type = lattice_type
-        self.max_rate = max_rate
-        self.M = M
-        
-        # Setup lattice
-        self.G, self.Q_nn = self._setup_lattice(lattice_type)
-        self.dimension = self.G.shape[0]
-        
-        # Precompute lookup tables for different rates
-        self.lookup_tables = {}
-        self._precompute_tables()
-    
-    def _setup_lattice(self, lattice_type: str) -> Tuple[np.ndarray, callable]:
-        """Setup lattice generator matrix and closest point function."""
-        if lattice_type == 'D4':
-            return get_d4(), closest_point_Dn
-        elif lattice_type == 'A2':
-            return get_a2(), closest_point_A2
-        elif lattice_type == 'E8':
-            return get_e8(), closest_point_E8
-        elif lattice_type == 'Z2':
-            return get_z2(), lambda x: np.round(x)
-        elif lattice_type == 'Z3':
-            return get_z3(), lambda x: np.round(x)
-        else:
-            raise ValueError(f"Unsupported lattice type: {lattice_type}")
-    
-    def _precompute_tables(self):
-        """Precompute lookup tables for different bit rates."""
-        # Generate rate points for table precomputation
-        rates = np.linspace(1.0, self.max_rate, 20)
-        
-        for rate in rates:
-            q, _ = self._rate_to_parameters(rate)
-            # Precompute lookup table for this rate
-            # This is a simplified version - actual implementation would use
-            # the precompute_hq_lut function from utils
-            self.lookup_tables[rate] = self._create_lookup_table(q)
-    
-    def _rate_to_parameters(self, rate: float) -> Tuple[int, float]:
-        """Convert bit rate to quantization parameters."""
-        q = max(2, int(2 ** (rate / self.M)))
-        beta = 1.0 / (2 ** (rate / 4))
-        return q, beta
-    
-    def _create_lookup_table(self, q: int) -> Dict:
-        """Create lookup table for given quantization parameter."""
-        # Simplified lookup table creation
-        # In practice, this would use the full hierarchical lookup table
-        table = {}
-        for i in range(q):
-            for j in range(q):
-                table[(i, j)] = i * j  # Simplified inner product
-        return table
-    
-    def get_table(self, rate: float) -> Dict:
-        """
-        Get lookup table for given bit rate.
-        
-        Parameters:
-        -----------
-        rate : float
-            Target bit rate.
+        encoding : tuple
+            Full encoding with M levels.
+        scaling : int
+            Overload scaling factor.
+        levels : int
+            Number of hierarchical levels to use.
             
         Returns:
         --------
-        dict
-            Lookup table for the specified rate.
+        np.ndarray
+            Partially decoded vector.
         """
-        # Find closest precomputed rate
-        rates = list(self.lookup_tables.keys())
-        closest_rate = min(rates, key=lambda x: abs(x - rate))
-        return self.lookup_tables[closest_rate]
+        # Take only the first 'levels' encoding vectors
+        partial_encoding = encoding[:levels]
+        
+        # Create a temporary quantizer with fewer levels
+        temp_quantizer = HierarchicalNestedLatticeQuantizer(
+            G=self.G, Q_nn=self.Q_nn, q=self.q, beta=self.beta,
+            alpha=self.alpha, eps=self.eps, dither=self.dither, M=levels
+        )
+        
+        return temp_quantizer.decode(partial_encoding, scaling, with_dither=False)
+    
+    def estimate_inner_product_adaptive(self, col_idx: int, weight: float, 
+                                      target_rate: float) -> np.ndarray:
+        """
+        Estimate inner product adaptively using lookup tables.
+        
+        Parameters:
+        -----------
+        col_idx : int
+            Column index.
+        weight : float
+            Weight from input vector x.
+        target_rate : float
+            Target bit rate for estimation.
+            
+        Returns:
+        --------
+        np.ndarray
+            Estimated column contribution.
+        """
+        encoded_blocks = self.encoded_columns[col_idx]
+        scaling_blocks = self.overload_scalings[col_idx]
+        
+        # Find appropriate lookup table
+        if target_rate >= self.max_rate:
+            lookup_table = self.lookup_tables[self.max_rate]
+            levels_to_use = self.M
+        else:
+            # Find closest precomputed rate
+            rates = list(self.lookup_tables.keys())
+            closest_rate = min(rates, key=lambda x: abs(x - target_rate))
+            lookup_table = self.lookup_tables[closest_rate]
+            levels_to_use = max(1, int(self.M * closest_rate / self.max_rate))
+        
+        # Process each block
+        estimated_blocks = []
+        for encoding, scaling in zip(encoded_blocks, scaling_blocks):
+            # Use only the first 'levels_to_use' encoding vectors
+            partial_encoding = encoding[:levels_to_use]
+            
+            # Estimate inner product using lookup table
+            estimated_block = calculate_weighted_sum(
+                partial_encoding, weight, lookup_table, self.G, self.Q_nn, 
+                self.q, self.beta, self.alpha, scaling, levels_to_use, self.eps
+            )
+            estimated_blocks.append(estimated_block)
+        
+        # Combine blocks
+        full_contribution = np.concatenate(estimated_blocks)
+        return full_contribution[:self.m]  # Trim to original column size
 
 
-class SparseMatVecProcessor:
+class AdaptiveMatVecProcessor:
     """
-    Sparse matrix-vector multiplication processor with adaptive quantization.
+    Adaptive matrix-vector multiplication processor.
     
-    This class implements efficient matrix-vector multiplication for sparse
-    vectors using adaptive hierarchical nested quantization with column-wise
-    encoding.
+    This class implements efficient matrix-vector multiplication where W is
+    encoded once with maximum precision, and columns are decoded adaptively
+    based on bit budget for each input vector x.
     """
     
-    def __init__(self, matrix: np.ndarray, target_rates: List[float], 
-                 sparsity_pattern: Optional[List[int]] = None,
-                 lattice_type: str = 'D4', M: int = 2):
+    def __init__(self, matrix: np.ndarray, lattice_type: str = 'D4', 
+                 max_rate: float = 8.0, M: int = 4):
         """
-        Initialize the sparse matrix-vector processor.
+        Initialize the adaptive matrix-vector processor.
         
         Parameters:
         -----------
         matrix : np.ndarray
-            Input matrix A (m x n).
-        target_rates : List[float]
-            Target bit rates for each column.
-        sparsity_pattern : List[int], optional
-            Indices of non-zero elements in the vector.
+            Input matrix W (m x n).
         lattice_type : str
             Type of lattice to use.
+        max_rate : float
+            Maximum bit rate for encoding W.
         M : int
             Number of hierarchical levels.
         """
         self.matrix = matrix
         self.m, self.n = matrix.shape
-        self.target_rates = target_rates
-        self.sparsity_pattern = sparsity_pattern or list(range(self.n))
         self.lattice_type = lattice_type
+        self.max_rate = max_rate
         self.M = M
         
-        # Initialize components
-        self.column_quantizer = AdaptiveColumnQuantizer(
-            target_rates, lattice_type, M
+        # Initialize fixed matrix quantizer
+        self.quantizer = FixedMatrixQuantizer(
+            matrix, lattice_type, max_rate, M
         )
-        self.lookup_manager = AdaptiveLookupTable(lattice_type, max(target_rates), M)
-        
-        # Pre-encode matrix columns
-        self.encoded_columns = {}
-        self.overload_scalings = {}
-        self._encode_matrix()
     
-    def _encode_matrix(self):
-        """Encode all matrix columns with adaptive parameters."""
-        for i in range(self.n):
-            column = self.matrix[:, i]
-            encoding, scaling = self.column_quantizer.encode_column(column, i)
-            self.encoded_columns[i] = encoding
-            self.overload_scalings[i] = scaling
-    
-    def compute_matvec(self, sparse_vector: np.ndarray) -> np.ndarray:
+    def compute_matvec(self, vector: np.ndarray, column_rates: List[float],
+                      use_lookup: bool = False) -> np.ndarray:
         """
-        Compute matrix-vector product using encoded columns.
+        Compute matrix-vector product with adaptive column decoding.
+        
+        Parameters:
+        -----------
+        vector : np.ndarray
+            Input vector x.
+        column_rates : List[float]
+            Target bit rates for each column (can be less than max_rate).
+        use_lookup : bool
+            Whether to use lookup tables for computation.
+            
+        Returns:
+        --------
+        np.ndarray
+            Result vector y = Wx.
+        """
+        if len(vector) != self.n:
+            raise ValueError(f"Vector dimension {len(vector)} != matrix columns {self.n}")
+        
+        if len(column_rates) != self.n:
+            raise ValueError(f"Column rates length {len(column_rates)} != matrix columns {self.n}")
+        
+        # Initialize result vector
+        result = np.zeros(self.m)
+        
+        # Process each column with its target rate
+        for i in range(self.n):
+            if abs(vector[i]) > 1e-10:  # Check for non-zero
+                if use_lookup:
+                    # Use lookup table for efficient computation
+                    contribution = self.quantizer.estimate_inner_product_adaptive(
+                        i, vector[i], column_rates[i]
+                    )
+                else:
+                    # Decode column and multiply
+                    decoded_column = self.quantizer.decode_column_adaptive(
+                        i, column_rates[i]
+                    )
+                    contribution = vector[i] * decoded_column
+                
+                result += contribution
+        
+        return result
+    
+    def compute_matvec_sparse(self, sparse_vector: np.ndarray, 
+                            non_zero_indices: List[int],
+                            column_rates: List[float],
+                            use_lookup: bool = False) -> np.ndarray:
+        """
+        Compute matrix-vector product for sparse vectors efficiently.
         
         Parameters:
         -----------
         sparse_vector : np.ndarray
             Sparse input vector x.
+        non_zero_indices : List[int]
+            Indices of non-zero elements in x.
+        column_rates : List[float]
+            Target bit rates for each column.
+        use_lookup : bool
+            Whether to use lookup tables for computation.
             
         Returns:
         --------
         np.ndarray
-            Result vector y = Ax.
+            Result vector y = Wx.
         """
         if len(sparse_vector) != self.n:
             raise ValueError(f"Vector dimension {len(sparse_vector)} != matrix columns {self.n}")
@@ -325,84 +388,25 @@ class SparseMatVecProcessor:
         result = np.zeros(self.m)
         
         # Process only non-zero elements
-        for i in self.sparsity_pattern:
-            if abs(sparse_vector[i]) > 1e-10:  # Check for non-zero
-                # Decode column
-                decoded_column = self.column_quantizer.decode_column(
-                    self.encoded_columns[i], i, self.overload_scalings[i]
-                )
+        for i in non_zero_indices:
+            if i >= self.n:
+                continue
                 
-                # Add weighted column to result
-                result += sparse_vector[i] * decoded_column
+            if use_lookup:
+                # Use lookup table for efficient computation
+                contribution = self.quantizer.estimate_inner_product_adaptive(
+                    i, sparse_vector[i], column_rates[i]
+                )
+            else:
+                # Decode column and multiply
+                decoded_column = self.quantizer.decode_column_adaptive(
+                    i, column_rates[i]
+                )
+                contribution = sparse_vector[i] * decoded_column
+            
+            result += contribution
         
         return result
-    
-    def compute_matvec_with_lookup(self, sparse_vector: np.ndarray) -> np.ndarray:
-        """
-        Compute matrix-vector product using lookup tables for efficiency.
-        
-        Parameters:
-        -----------
-        sparse_vector : np.ndarray
-            Sparse input vector x.
-            
-        Returns:
-        --------
-        np.ndarray
-            Result vector y = Ax.
-        """
-        if len(sparse_vector) != self.n:
-            raise ValueError(f"Vector dimension {len(sparse_vector)} != matrix columns {self.n}")
-        
-        # Initialize result vector
-        result = np.zeros(self.m)
-        
-        # Process only non-zero elements using lookup tables
-        for i in self.sparsity_pattern:
-            if abs(sparse_vector[i]) > 1e-10:
-                # Get lookup table for this column's rate
-                lookup_table = self.lookup_manager.get_table(self.target_rates[i])
-                
-                # Estimate inner product using lookup table
-                # This is a simplified version - actual implementation would use
-                # the full hierarchical lookup table computation
-                estimated_contribution = self._estimate_column_contribution(
-                    i, sparse_vector[i], lookup_table
-                )
-                result += estimated_contribution
-        
-        return result
-    
-    def _estimate_column_contribution(self, col_idx: int, weight: float, 
-                                    lookup_table: Dict) -> np.ndarray:
-        """
-        Estimate column contribution using lookup table.
-        
-        Parameters:
-        -----------
-        col_idx : int
-            Column index.
-        weight : float
-            Weight from sparse vector.
-        lookup_table : dict
-            Lookup table for inner product estimation.
-            
-        Returns:
-        --------
-        np.ndarray
-            Estimated column contribution.
-        """
-        # Simplified estimation - in practice, this would use the full
-        # hierarchical lookup table computation from the paper
-        encoding = self.encoded_columns[col_idx]
-        
-        # For now, decode the column and multiply by weight
-        # This can be optimized using the actual lookup table computation
-        decoded_column = self.column_quantizer.decode_column(
-            encoding, col_idx, self.overload_scalings[col_idx]
-        )
-        
-        return weight * decoded_column
     
     def get_compression_ratio(self) -> float:
         """
@@ -418,11 +422,11 @@ class SparseMatVecProcessor:
         
         # Calculate encoded storage
         encoded_bits = 0
-        for i in range(self.n):
-            encoding = self.encoded_columns[i]
-            # Count bits in encoding vectors
-            for level_encoding in encoding:
-                encoded_bits += len(level_encoding) * np.log2(self.column_quantizer.quantizers[i].q)
+        for encoded_blocks in self.encoded_columns.values():
+            # Count bits in encoding vectors for all blocks
+            for block_encoding in encoded_blocks:
+                for level_encoding in block_encoding:
+                    encoded_bits += len(level_encoding) * np.log2(self.q)
         
         return original_bits / encoded_bits if encoded_bits > 0 else float('inf')
     
@@ -435,76 +439,68 @@ class SparseMatVecProcessor:
         dict
             Dictionary with memory usage information.
         """
-        # Calculate various memory components
+        # Calculate encoded matrix size
         encoded_size = sum(
-            sum(len(level_encoding) for level_encoding in encoding)
-            for encoding in self.encoded_columns.values()
+            sum(sum(len(level_encoding) for level_encoding in block_encoding)
+                for block_encoding in encoded_blocks)
+            for encoded_blocks in self.encoded_columns.values()
         )
         
+        # Calculate lookup table sizes
         lookup_size = sum(
-            len(table) for table in self.lookup_manager.lookup_tables.values()
+            len(table) for table in self.lookup_tables.values()
         )
         
         return {
-            'encoded_columns_mb': encoded_size * 4 / (1024 * 1024),  # Assuming 4 bytes per element
+            'encoded_matrix_mb': encoded_size * 4 / (1024 * 1024),  # Assuming 4 bytes per element
             'lookup_tables_mb': lookup_size * 8 / (1024 * 1024),    # Assuming 8 bytes per entry
             'total_mb': (encoded_size * 4 + lookup_size * 8) / (1024 * 1024)
         }
 
 
-def create_adaptive_matvec_processor(matrix: np.ndarray, target_rates: List[float],
-                                   sparsity_pattern: Optional[List[int]] = None,
-                                   lattice_type: str = 'D4', M: int = 2) -> SparseMatVecProcessor:
+def create_adaptive_matvec_processor(matrix: np.ndarray, lattice_type: str = 'D4',
+                                   max_rate: float = 8.0, M: int = 4) -> AdaptiveMatVecProcessor:
     """
     Factory function to create an adaptive matrix-vector processor.
     
     Parameters:
     -----------
     matrix : np.ndarray
-        Input matrix A.
-    target_rates : List[float]
-        Target bit rates for each column.
-    sparsity_pattern : List[int], optional
-        Indices of non-zero elements in the vector.
+        Input matrix W.
     lattice_type : str
         Type of lattice to use.
+    max_rate : float
+        Maximum bit rate for encoding W.
     M : int
         Number of hierarchical levels.
         
     Returns:
     --------
-    SparseMatVecProcessor
+    AdaptiveMatVecProcessor
         Configured processor for adaptive matrix-vector multiplication.
     """
-    return SparseMatVecProcessor(
-        matrix=matrix,
-        target_rates=target_rates,
-        sparsity_pattern=sparsity_pattern,
-        lattice_type=lattice_type,
-        M=M
-    )
+    return AdaptiveMatVecProcessor(matrix, lattice_type, max_rate, M)
 
 
 def adaptive_matvec_multiply(matrix: np.ndarray, vector: np.ndarray,
-                           target_rates: List[float],
-                           sparsity_pattern: Optional[List[int]] = None,
-                           lattice_type: str = 'D4', M: int = 2,
-                           use_lookup: bool = False) -> np.ndarray:
+                           column_rates: List[float],
+                           lattice_type: str = 'D4', max_rate: float = 8.0, 
+                           M: int = 4, use_lookup: bool = False) -> np.ndarray:
     """
     Perform adaptive matrix-vector multiplication.
     
     Parameters:
     -----------
     matrix : np.ndarray
-        Input matrix A.
+        Input matrix W.
     vector : np.ndarray
         Input vector x.
-    target_rates : List[float]
+    column_rates : List[float]
         Target bit rates for each column.
-    sparsity_pattern : List[int], optional
-        Indices of non-zero elements in the vector.
     lattice_type : str
         Type of lattice to use.
+    max_rate : float
+        Maximum bit rate for encoding W.
     M : int
         Number of hierarchical levels.
     use_lookup : bool
@@ -513,18 +509,52 @@ def adaptive_matvec_multiply(matrix: np.ndarray, vector: np.ndarray,
     Returns:
     --------
     np.ndarray
-        Result vector y = Ax.
+        Result vector y = Wx.
     """
     # Create processor
-    processor = create_adaptive_matvec_processor(
-        matrix, target_rates, sparsity_pattern, lattice_type, M
-    )
+    processor = create_adaptive_matvec_processor(matrix, lattice_type, max_rate, M)
     
     # Perform multiplication
-    if use_lookup:
-        return processor.compute_matvec_with_lookup(vector)
-    else:
-        return processor.compute_matvec(vector)
+    return processor.compute_matvec(vector, column_rates, use_lookup)
+
+
+def adaptive_matvec_multiply_sparse(matrix: np.ndarray, sparse_vector: np.ndarray,
+                                  non_zero_indices: List[int],
+                                  column_rates: List[float],
+                                  lattice_type: str = 'D4', max_rate: float = 8.0,
+                                  M: int = 4, use_lookup: bool = False) -> np.ndarray:
+    """
+    Perform adaptive matrix-vector multiplication for sparse vectors.
+    
+    Parameters:
+    -----------
+    matrix : np.ndarray
+        Input matrix W.
+    sparse_vector : np.ndarray
+        Sparse input vector x.
+    non_zero_indices : List[int]
+        Indices of non-zero elements in x.
+    column_rates : List[float]
+        Target bit rates for each column.
+    lattice_type : str
+        Type of lattice to use.
+    max_rate : float
+        Maximum bit rate for encoding W.
+    M : int
+        Number of hierarchical levels.
+    use_lookup : bool
+        Whether to use lookup tables for computation.
+        
+    Returns:
+    --------
+    np.ndarray
+        Result vector y = Wx.
+    """
+    # Create processor
+    processor = create_adaptive_matvec_processor(matrix, lattice_type, max_rate, M)
+    
+    # Perform multiplication
+    return processor.compute_matvec_sparse(sparse_vector, non_zero_indices, column_rates, use_lookup)
 
 
 # Example usage and testing functions
@@ -535,22 +565,17 @@ def example_usage():
     matrix = np.random.randn(m, n)
     vector = np.random.randn(n)
     
-    # Make vector sparse (only 10 non-zero elements)
-    sparsity_pattern = np.random.choice(n, 10, replace=False)
-    sparse_vector = np.zeros(n)
-    sparse_vector[sparsity_pattern] = vector[sparsity_pattern]
-    
-    # Define target rates (different for each column)
-    target_rates = np.random.uniform(2.0, 6.0, n)
+    # Define column rates (can be less than max_rate)
+    max_rate = 8.0
+    column_rates = np.random.uniform(2.0, max_rate, n)
     
     # Perform adaptive matrix-vector multiplication
     result = adaptive_matvec_multiply(
-        matrix, sparse_vector, target_rates, 
-        sparsity_pattern.tolist(), 'D4', 2
+        matrix, vector, column_rates.tolist(), 'D4', max_rate, 4, use_lookup=False
     )
     
     # Compare with exact computation
-    exact_result = matrix @ sparse_vector
+    exact_result = matrix @ vector
     error = np.linalg.norm(result - exact_result) / np.linalg.norm(exact_result)
     
     print(f"Relative error: {error:.6f}")
@@ -559,7 +584,44 @@ def example_usage():
     return result, exact_result, error
 
 
+def example_sparse_usage():
+    """Example usage with sparse vectors."""
+    # Create test matrix and sparse vector
+    m, n = 100, 50
+    matrix = np.random.randn(m, n)
+    
+    # Create sparse vector (only 10 non-zero elements)
+    sparsity = 10
+    non_zero_indices = np.random.choice(n, sparsity, replace=False)
+    sparse_vector = np.zeros(n)
+    sparse_vector[non_zero_indices] = np.random.randn(sparsity)
+    
+    # Define column rates
+    max_rate = 8.0
+    column_rates = np.random.uniform(2.0, max_rate, n)
+    
+    # Perform adaptive sparse matrix-vector multiplication
+    result = adaptive_matvec_multiply_sparse(
+        matrix, sparse_vector, non_zero_indices.tolist(), 
+        column_rates.tolist(), 'D4', max_rate, 4, use_lookup=False
+    )
+    
+    # Compare with exact computation
+    exact_result = matrix @ sparse_vector
+    error = np.linalg.norm(result - exact_result) / np.linalg.norm(exact_result)
+    
+    print(f"Sparse relative error: {error:.6f}")
+    print(f"Sparsity: {sparsity}/{n} = {sparsity/n:.2f}")
+    
+    return result, exact_result, error
+
+
 if __name__ == "__main__":
-    # Run example
-    result, exact_result, error = example_usage()
-    print("Example completed successfully!") 
+    # Run examples
+    print("=== Dense Vector Example ===")
+    result1, exact1, error1 = example_usage()
+    
+    print("\n=== Sparse Vector Example ===")
+    result2, exact2, error2 = example_sparse_usage()
+    
+    print("\nExamples completed successfully!") 

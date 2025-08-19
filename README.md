@@ -44,6 +44,13 @@ The library provides efficient implementations of both classic nested lattice qu
 - **Fast closest point algorithms**: Optimized implementations from Conway & Sloane
 - **Efficient codebook generation**: Precomputed lookup tables for acceleration
 
+### 🚀 **Adaptive Matrix-Vector Multiplication**
+- **Fixed matrix encoding**: Encode W once with maximum bit rate
+- **Adaptive column decoding**: Decode columns based on bit budget for each x
+- **Hierarchical precision control**: Exploit M levels for variable precision
+- **Sparsity exploitation**: Efficient handling of sparse vectors
+- **Memory efficiency**: Single encoding shared across all computations
+
 ### 📊 **Comprehensive Analysis Tools**
 - **Rate-distortion analysis**: Compare quantization methods against theoretical bounds
 - **Correlation analysis**: Study performance with correlated data
@@ -94,7 +101,7 @@ The LatticeQuant library is organized into logical modules for better maintainab
 
 - **`src.quantizers/`**: Core quantizer implementations (NestedLatticeQuantizer, HierarchicalNestedLatticeQuantizer, lattice algorithms)
 - **`src.applications/`**: Matrix multiplication applications and analysis tools
-- **`src.adaptive/`**: Adaptive column-based matrix-vector multiplication
+- **`src.adaptive/`**: Adaptive matrix-vector multiplication with fixed encoding
 - **`src.utils/`**: Utility functions and lattice generators
 
 For detailed information about the reorganization, see [REORGANIZATION_SUMMARY.md](REORGANIZATION_SUMMARY.md).
@@ -225,23 +232,46 @@ plot_distortion_rho()
 
 ### Adaptive Matrix-Vector Multiplication
 
+The new adaptive approach encodes matrix W once with maximum bit rate, then adaptively decodes columns based on bit budget for each input vector x.
+
 ```python
-from src.adaptive import adaptive_matvec_multiply, create_adaptive_matvec_processor
+from src.adaptive import (
+    adaptive_matvec_multiply, 
+    adaptive_matvec_multiply_sparse,
+    create_adaptive_matvec_processor
+)
 
 # Create test data
-matrix = np.random.randn(4, 8)
-sparse_vector = np.zeros(8)
-sparse_vector[[0, 4, 7]] = [1.5, 2.0, -1.0]
-target_rates = [2.5, 3.0, 3.5, 2.0, 4.0, 3.2, 2.8, 3.6]
-sparsity_pattern = [0, 4, 7]
+matrix = np.random.randn(64, 32)
+vector = np.random.randn(32)
+column_rates = np.random.uniform(2.0, 8.0, 32)  # Different bit budgets per column
 
-# Perform adaptive matrix-vector multiplication
-result = adaptive_matvec_multiply(
-    matrix, sparse_vector, target_rates, sparsity_pattern, 'D4', 2
+# Create processor with W encoded once
+processor = create_adaptive_matvec_processor(matrix, 'D4', max_rate=8.0, M=4)
+
+# Compute Wx with adaptive column decoding
+result = processor.compute_matvec(vector, column_rates.tolist(), use_lookup=False)
+
+# For sparse vectors
+sparse_vector = np.zeros(32)
+sparse_vector[[0, 4, 7, 15]] = [1.5, 2.0, -1.0, 0.8]
+non_zero_indices = [0, 4, 7, 15]
+
+result_sparse = adaptive_matvec_multiply_sparse(
+    matrix, sparse_vector, non_zero_indices, column_rates.tolist(), 
+    'D4', max_rate=8.0, M=4
 )
 
 print(f"Adaptive result: {result}")
+print(f"Sparse result: {result_sparse}")
 ```
+
+**Key Features:**
+- **Fixed Encoding**: W encoded once with maximum precision
+- **Adaptive Decoding**: Variable precision based on bit budget
+- **Hierarchical Exploitation**: Use M levels for natural rate-distortion tradeoff
+- **Sparsity Handling**: Efficient processing of sparse vectors
+- **Memory Efficiency**: Single encoding shared across all computations
 
 ## Import Structure
 
@@ -258,8 +288,14 @@ from src.applications import plot_distortion_rate, find_best_beta
 from src.applications import run_comparison_experiment, generate_codebook
 
 # Adaptive methods
-from src.adaptive import adaptive_matvec_multiply, AdaptiveColumnQuantizer
-from src.adaptive import run_comprehensive_demo
+from src.adaptive import (
+    adaptive_matvec_multiply, 
+    adaptive_matvec_multiply_sparse,
+    FixedMatrixQuantizer,
+    AdaptiveMatVecProcessor,
+    demo_basic_functionality,
+    run_demo
+)
 
 # Utilities
 from src.utils import get_d4, get_a2, get_e8, precompute_hq_lut
@@ -319,19 +355,33 @@ Classic nested lattice quantizer for comparison.
 
 ### Adaptive Methods (`src.adaptive`)
 
-#### `AdaptiveColumnQuantizer`
-Column-wise adaptive quantization for matrix operations.
+#### `FixedMatrixQuantizer`
+Fixed matrix encoding with adaptive decoding capabilities.
 
-#### `AdaptiveLookupTable`
-Efficient lookup table management for adaptive methods.
+**Methods:**
+- `decode_column_adaptive(col_idx, target_rate)`: Decode column with variable precision
+- `estimate_inner_product_adaptive(col_idx, weight, target_rate)`: Estimate inner product using lookup tables
 
-#### `SparseMatVecProcessor`
-Sparse matrix-vector processing with adaptive quantization.
+#### `AdaptiveMatVecProcessor`
+Adaptive matrix-vector processing with fixed encoding.
+
+**Methods:**
+- `compute_matvec(vector, column_rates, use_lookup)`: Compute Wx with adaptive column decoding
+- `compute_matvec_sparse(sparse_vector, non_zero_indices, column_rates)`: Efficient sparse computation
+- `get_compression_ratio()`: Calculate compression ratio
+- `get_memory_usage()`: Get memory usage statistics
 
 #### Functions
 - `adaptive_matvec_multiply()`: Main adaptive multiplication function
+- `adaptive_matvec_multiply_sparse()`: Sparse vector multiplication
 - `create_adaptive_matvec_processor()`: Processor factory function
-- `run_comprehensive_demo()`: Complete demonstration suite
+- `demo_basic_functionality()`: Basic functionality demonstration
+- `demo_sparsity_handling()`: Sparsity handling demonstration
+- `demo_hierarchical_levels()`: Hierarchical level analysis
+- `demo_rate_distortion_tradeoff()`: Rate-distortion analysis
+- `demo_lookup_table_efficiency()`: Lookup table efficiency
+- `demo_memory_usage()`: Memory usage analysis
+- `run_demo()`: Complete demonstration suite
 
 ### Utilities (`src.utils`)
 

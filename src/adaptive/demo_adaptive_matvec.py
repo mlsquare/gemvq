@@ -1,511 +1,434 @@
+#!/usr/bin/env python3
 """
-Demo script for adaptive matrix-vector multiplication.
+Demo script for Adaptive Matrix-Vector Multiplication
 
-This script demonstrates the adaptive matrix-vector multiplication functionality
-using hierarchical nested quantizers with column-wise encoding. It includes
-examples, performance analysis, and comparison with exact computation.
+This script demonstrates the new adaptive approach where:
+1. Matrix W is encoded once with maximum bit rate
+2. Columns are decoded adaptively based on bit budget for each x
+3. Hierarchical levels M are exploited for variable precision decoding
+4. Sparsity of x is handled efficiently
 """
 
 import numpy as np
-import time
 import matplotlib.pyplot as plt
+import time
 from typing import List, Tuple, Dict
+
 from .adaptive_matvec import (
-    SparseMatVecProcessor,
+    AdaptiveMatVecProcessor,
+    create_adaptive_matvec_processor,
     adaptive_matvec_multiply,
-    create_adaptive_matvec_processor
+    adaptive_matvec_multiply_sparse
 )
-from ..utils import get_d4, get_a2, get_e8
 
 
-def create_test_data(m: int, n: int, sparsity_ratio: float = 0.2) -> Tuple[np.ndarray, np.ndarray, List[int], List[float]]:
-    """
-    Create test data for adaptive matrix-vector multiplication.
+def demo_basic_functionality():
+    """Demonstrate basic functionality of the adaptive approach."""
+    print("🚀 Basic Functionality Demo")
+    print("=" * 50)
     
-    Parameters:
-    -----------
-    m : int
-        Number of rows in matrix.
-    n : int
-        Number of columns in matrix.
-    sparsity_ratio : float
-        Ratio of non-zero elements in vector.
-        
-    Returns:
-    --------
-    tuple
-        (matrix, sparse_vector, sparsity_pattern, target_rates)
-    """
-    # Create random matrix
+    # Setup parameters
+    m, n = 64, 32
+    max_rate = 8.0
+    M = 4
+    
+    # Create test matrix and vector
+    np.random.seed(42)
     matrix = np.random.randn(m, n)
-    
-    # Create sparse vector
-    num_nonzero = max(1, int(n * sparsity_ratio))
-    sparsity_pattern = np.random.choice(n, num_nonzero, replace=False)
-    sparse_vector = np.zeros(n)
-    sparse_vector[sparsity_pattern] = np.random.randn(num_nonzero)
-    
-    # Create target rates (different for each column)
-    # Higher rates for columns with larger magnitude
-    column_norms = np.linalg.norm(matrix, axis=0)
-    target_rates = 2.0 + 4.0 * (column_norms / np.max(column_norms))
-    
-    return matrix, sparse_vector, sparsity_pattern.tolist(), target_rates.tolist()
-
-
-def performance_comparison(matrix: np.ndarray, sparse_vector: np.ndarray,
-                          target_rates: List[float], sparsity_pattern: List[int],
-                          lattice_type: str = 'D4', M: int = 2) -> Dict:
-    """
-    Compare performance of adaptive vs exact matrix-vector multiplication.
-    
-    Parameters:
-    -----------
-    matrix : np.ndarray
-        Input matrix.
-    sparse_vector : np.ndarray
-        Sparse input vector.
-    target_rates : List[float]
-        Target bit rates for each column.
-    sparsity_pattern : List[int]
-        Indices of non-zero elements.
-    lattice_type : str
-        Type of lattice to use.
-    M : int
-        Number of hierarchical levels.
-        
-    Returns:
-    --------
-    dict
-        Performance comparison results.
-    """
-    results = {}
-    
-    # Exact computation
-    start_time = time.time()
-    exact_result = matrix @ sparse_vector
-    exact_time = time.time() - start_time
-    
-    # Adaptive computation without lookup tables
-    start_time = time.time()
-    adaptive_result = adaptive_matvec_multiply(
-        matrix, sparse_vector, target_rates, sparsity_pattern, lattice_type, M, False
-    )
-    adaptive_time = time.time() - start_time
-    
-    # Adaptive computation with lookup tables
-    start_time = time.time()
-    adaptive_lookup_result = adaptive_matvec_multiply(
-        matrix, sparse_vector, target_rates, sparsity_pattern, lattice_type, M, True
-    )
-    adaptive_lookup_time = time.time() - start_time
-    
-    # Calculate errors
-    error_adaptive = np.linalg.norm(adaptive_result - exact_result) / np.linalg.norm(exact_result)
-    error_lookup = np.linalg.norm(adaptive_lookup_result - exact_result) / np.linalg.norm(exact_result)
-    
-    # Get compression statistics
-    processor = create_adaptive_matvec_processor(
-        matrix, target_rates, sparsity_pattern, lattice_type, M
-    )
-    compression_ratio = processor.get_compression_ratio()
-    memory_usage = processor.get_memory_usage()
-    
-    results = {
-        'exact_time': exact_time,
-        'adaptive_time': adaptive_time,
-        'adaptive_lookup_time': adaptive_lookup_time,
-        'error_adaptive': error_adaptive,
-        'error_lookup': error_lookup,
-        'compression_ratio': compression_ratio,
-        'memory_usage': memory_usage,
-        'sparsity_ratio': len(sparsity_pattern) / len(sparse_vector)
-    }
-    
-    return results
-
-
-def plot_performance_analysis(results_list: List[Dict], labels: List[str]):
-    """
-    Plot performance analysis results.
-    
-    Parameters:
-    -----------
-    results_list : List[Dict]
-        List of performance results.
-    labels : List[str]
-        Labels for each result set.
-    """
-    fig, axes = plt.subplots(2, 2, figsize=(15, 12))
-    
-    # Plot computation times
-    ax1 = axes[0, 0]
-    times_adaptive = [r['adaptive_time'] for r in results_list]
-    times_lookup = [r['adaptive_lookup_time'] for r in results_list]
-    times_exact = [r['exact_time'] for r in results_list]
-    
-    x = np.arange(len(labels))
-    width = 0.25
-    
-    ax1.bar(x - width, times_exact, width, label='Exact', alpha=0.8)
-    ax1.bar(x, times_adaptive, width, label='Adaptive', alpha=0.8)
-    ax1.bar(x + width, times_lookup, width, label='Adaptive + Lookup', alpha=0.8)
-    
-    ax1.set_xlabel('Configuration')
-    ax1.set_ylabel('Time (seconds)')
-    ax1.set_title('Computation Time Comparison')
-    ax1.set_xticks(x)
-    ax1.set_xticklabels(labels)
-    ax1.legend()
-    ax1.grid(True, alpha=0.3)
-    
-    # Plot relative errors
-    ax2 = axes[0, 1]
-    errors_adaptive = [r['error_adaptive'] for r in results_list]
-    errors_lookup = [r['error_lookup'] for r in results_list]
-    
-    ax2.bar(x - width/2, errors_adaptive, width, label='Adaptive', alpha=0.8)
-    ax2.bar(x + width/2, errors_lookup, width, label='Adaptive + Lookup', alpha=0.8)
-    
-    ax2.set_xlabel('Configuration')
-    ax2.set_ylabel('Relative Error')
-    ax2.set_title('Accuracy Comparison')
-    ax2.set_xticks(x)
-    ax2.set_xticklabels(labels)
-    ax2.legend()
-    ax2.grid(True, alpha=0.3)
-    
-    # Plot compression ratios
-    ax3 = axes[1, 0]
-    compression_ratios = [r['compression_ratio'] for r in results_list]
-    
-    ax3.bar(x, compression_ratios, alpha=0.8, color='green')
-    ax3.set_xlabel('Configuration')
-    ax3.set_ylabel('Compression Ratio')
-    ax3.set_title('Compression Performance')
-    ax3.set_xticks(x)
-    ax3.set_xticklabels(labels)
-    ax3.grid(True, alpha=0.3)
-    
-    # Plot memory usage
-    ax4 = axes[1, 1]
-    memory_usage = [r['memory_usage']['total_mb'] for r in results_list]
-    
-    ax4.bar(x, memory_usage, alpha=0.8, color='orange')
-    ax4.set_xlabel('Configuration')
-    ax4.set_ylabel('Memory Usage (MB)')
-    ax4.set_title('Memory Requirements')
-    ax4.set_xticks(x)
-    ax4.set_xticklabels(labels)
-    ax4.grid(True, alpha=0.3)
-    
-    plt.tight_layout()
-    plt.show()
-
-
-def demo_basic_usage():
-    """Demonstrate basic usage of adaptive matrix-vector multiplication."""
-    print("=== Basic Usage Demo ===")
-    
-    # Create test data
-    m, n = 50, 20
-    matrix, sparse_vector, sparsity_pattern, target_rates = create_test_data(m, n, 0.3)
+    vector = np.random.randn(n)
     
     print(f"Matrix shape: {matrix.shape}")
-    print(f"Vector sparsity: {len(sparsity_pattern)}/{len(sparse_vector)} = {len(sparsity_pattern)/len(sparse_vector):.2f}")
-    print(f"Target rates range: {min(target_rates):.2f} - {max(target_rates):.2f} bits/dimension")
+    print(f"Vector shape: {vector.shape}")
+    print(f"Max rate: {max_rate}")
+    print(f"Hierarchical levels: {M}")
     
-    # Perform adaptive multiplication
-    result = adaptive_matvec_multiply(
-        matrix, sparse_vector, target_rates, sparsity_pattern, 'D4', 2
+    # Create processor
+    processor = create_adaptive_matvec_processor(
+        matrix, 'D4', max_rate, M
     )
     
-    # Compare with exact computation
-    exact_result = matrix @ sparse_vector
-    error = np.linalg.norm(result - exact_result) / np.linalg.norm(exact_result)
+    # Test with different column rates
+    print(f"\n📊 Testing with different column rates:")
     
-    print(f"Result shape: {result.shape}")
-    print(f"Relative error: {error:.6f}")
-    print(f"Result norm: {np.linalg.norm(result):.6f}")
-    print(f"Exact norm: {np.linalg.norm(exact_result):.6f}")
+    # Case 1: All columns at max rate
+    column_rates_max = [max_rate] * n
+    result_max = processor.compute_matvec(vector, column_rates_max, use_lookup=False)
+    exact_result = matrix @ vector
+    error_max = np.linalg.norm(result_max - exact_result) / np.linalg.norm(exact_result)
+    print(f"   Max rate (all columns): {error_max:.6f}")
     
-    return matrix, sparse_vector, target_rates, sparsity_pattern, result, exact_result
+    # Case 2: Variable rates
+    column_rates_var = np.random.uniform(2.0, max_rate, n)
+    result_var = processor.compute_matvec(vector, column_rates_var.tolist(), use_lookup=False)
+    error_var = np.linalg.norm(result_var - exact_result) / np.linalg.norm(exact_result)
+    print(f"   Variable rates: {error_var:.6f}")
+    
+    # Case 3: Low rates
+    column_rates_low = np.random.uniform(1.0, 3.0, n)
+    result_low = processor.compute_matvec(vector, column_rates_low.tolist(), use_lookup=False)
+    error_low = np.linalg.norm(result_low - exact_result) / np.linalg.norm(exact_result)
+    print(f"   Low rates: {error_low:.6f}")
+    
+    return processor, exact_result
 
 
-def demo_lattice_comparison():
-    """Compare performance across different lattice types."""
-    print("\n=== Lattice Type Comparison ===")
+def demo_sparsity_handling():
+    """Demonstrate handling of sparse vectors."""
+    print(f"\n🔍 Sparsity Handling Demo")
+    print("=" * 50)
     
-    # Create test data
-    m, n = 40, 15
-    matrix, sparse_vector, sparsity_pattern, target_rates = create_test_data(m, n, 0.4)
+    # Setup parameters
+    m, n = 64, 32
+    max_rate = 8.0
+    M = 4
     
-    lattice_types = ['D4', 'A2', 'E8']
+    # Create test matrix
+    np.random.seed(42)
+    matrix = np.random.randn(m, n)
+    
+    # Test different sparsity levels
+    sparsity_levels = [0.1, 0.2, 0.5, 0.8, 1.0]  # 10%, 20%, 50%, 80%, 100%
+    
+    print(f"Testing sparsity levels: {[f'{s*100:.0f}%' for s in sparsity_levels]}")
+    
     results = {}
     
-    for lattice_type in lattice_types:
-        print(f"\nTesting {lattice_type} lattice...")
+    for sparsity in sparsity_levels:
+        # Create sparse vector
+        num_nonzero = int(n * sparsity)
+        non_zero_indices = np.random.choice(n, num_nonzero, replace=False)
+        sparse_vector = np.zeros(n)
+        sparse_vector[non_zero_indices] = np.random.randn(num_nonzero)
         
-        # Perform multiplication
-        start_time = time.time()
-        result = adaptive_matvec_multiply(
-            matrix, sparse_vector, target_rates, sparsity_pattern, lattice_type, 2
+        # Define column rates
+        column_rates = np.random.uniform(2.0, max_rate, n)
+        
+        # Perform computation
+        result = adaptive_matvec_multiply_sparse(
+            matrix, sparse_vector, non_zero_indices.tolist(),
+            column_rates.tolist(), 'D4', max_rate, M, use_lookup=False
         )
-        computation_time = time.time() - start_time
         
-        # Calculate error
+        # Compare with exact
         exact_result = matrix @ sparse_vector
         error = np.linalg.norm(result - exact_result) / np.linalg.norm(exact_result)
         
-        # Get compression stats
-        processor = create_adaptive_matvec_processor(
-            matrix, target_rates, sparsity_pattern, lattice_type, 2
-        )
-        compression_ratio = processor.get_compression_ratio()
-        
-        results[lattice_type] = {
-            'time': computation_time,
+        results[sparsity] = {
             'error': error,
-            'compression_ratio': compression_ratio
+            'num_nonzero': num_nonzero,
+            'result': result,
+            'exact': exact_result
         }
         
-        print(f"  Time: {computation_time:.6f}s")
-        print(f"  Error: {error:.6f}")
-        print(f"  Compression: {compression_ratio:.2f}x")
+        print(f"   Sparsity {sparsity*100:.0f}%: error = {error:.6f}")
     
     return results
 
 
 def demo_hierarchical_levels():
-    """Compare performance with different hierarchical levels."""
-    print("\n=== Hierarchical Levels Comparison ===")
+    """Demonstrate the effect of hierarchical levels M."""
+    print(f"\n📈 Hierarchical Levels Demo")
+    print("=" * 50)
     
-    # Create test data
-    m, n = 30, 12
-    matrix, sparse_vector, sparsity_pattern, target_rates = create_test_data(m, n, 0.5)
+    # Setup parameters
+    m, n = 64, 32
+    max_rate = 8.0
     
-    M_values = [1, 2, 3]
+    # Create test matrix and vector
+    np.random.seed(42)
+    matrix = np.random.randn(m, n)
+    vector = np.random.randn(n)
+    column_rates = np.random.uniform(2.0, max_rate, n)
+    
+    # Test different M values
+    M_values = [1, 2, 3, 4, 5]
+    
+    print(f"Testing hierarchical levels: {M_values}")
+    
     results = {}
     
     for M in M_values:
-        print(f"\nTesting M={M} hierarchical levels...")
-        
-        # Perform multiplication
-        start_time = time.time()
-        result = adaptive_matvec_multiply(
-            matrix, sparse_vector, target_rates, sparsity_pattern, 'D4', M
+        # Create processor with this M
+        processor = create_adaptive_matvec_processor(
+            matrix, 'D4', max_rate, M
         )
-        computation_time = time.time() - start_time
         
-        # Calculate error
-        exact_result = matrix @ sparse_vector
+        # Perform computation
+        result = processor.compute_matvec(vector, column_rates.tolist(), use_lookup=False)
+        
+        # Compare with exact
+        exact_result = matrix @ vector
         error = np.linalg.norm(result - exact_result) / np.linalg.norm(exact_result)
         
-        # Get compression stats
-        processor = create_adaptive_matvec_processor(
-            matrix, target_rates, sparsity_pattern, 'D4', M
-        )
-        compression_ratio = processor.get_compression_ratio()
+        # Get memory usage
         memory_usage = processor.get_memory_usage()
         
         results[M] = {
-            'time': computation_time,
             'error': error,
-            'compression_ratio': compression_ratio,
-            'memory_mb': memory_usage['total_mb']
+            'memory_mb': memory_usage['total_mb'],
+            'compression_ratio': processor.get_compression_ratio()
         }
         
-        print(f"  Time: {computation_time:.6f}s")
-        print(f"  Error: {error:.6f}")
-        print(f"  Compression: {compression_ratio:.2f}x")
-        print(f"  Memory: {memory_usage['total_mb']:.2f} MB")
+        print(f"   M={M}: error={error:.6f}, memory={memory_usage['total_mb']:.2f}MB, "
+              f"compression={processor.get_compression_ratio():.2f}x")
     
     return results
 
 
-def demo_sparsity_impact():
-    """Demonstrate the impact of sparsity on performance."""
-    print("\n=== Sparsity Impact Analysis ===")
+def demo_rate_distortion_tradeoff():
+    """Demonstrate rate-distortion tradeoff."""
+    print(f"\n⚖️ Rate-Distortion Tradeoff Demo")
+    print("=" * 50)
     
-    # Create test data
-    m, n = 60, 25
+    # Setup parameters
+    m, n = 64, 32
+    max_rate = 8.0
+    M = 4
+    
+    # Create test matrix and vector
+    np.random.seed(42)
     matrix = np.random.randn(m, n)
-    target_rates = np.random.uniform(2.0, 5.0, n).tolist()
+    vector = np.random.randn(n)
     
-    sparsity_ratios = [0.1, 0.2, 0.3, 0.4, 0.5]
-    results = []
+    # Test different rate levels
+    rate_levels = np.linspace(1.0, max_rate, 10)
     
-    for sparsity_ratio in sparsity_ratios:
-        print(f"\nTesting sparsity ratio: {sparsity_ratio:.1f}")
-        
-        # Create sparse vector
-        num_nonzero = max(1, int(n * sparsity_ratio))
-        sparsity_pattern = np.random.choice(n, num_nonzero, replace=False).tolist()
-        sparse_vector = np.zeros(n)
-        sparse_vector[sparsity_pattern] = np.random.randn(num_nonzero)
-        
-        # Perform multiplication
-        start_time = time.time()
-        result = adaptive_matvec_multiply(
-            matrix, sparse_vector, target_rates, sparsity_pattern, 'D4', 2
-        )
-        computation_time = time.time() - start_time
-        
-        # Calculate error
-        exact_result = matrix @ sparse_vector
-        error = np.linalg.norm(result - exact_result) / np.linalg.norm(exact_result)
-        
-        # Get compression stats
-        processor = create_adaptive_matvec_processor(
-            matrix, target_rates, sparsity_pattern, 'D4', 2
-        )
-        compression_ratio = processor.get_compression_ratio()
-        
-        results.append({
-            'sparsity_ratio': sparsity_ratio,
-            'time': computation_time,
-            'error': error,
-            'compression_ratio': compression_ratio
-        })
-        
-        print(f"  Time: {computation_time:.6f}s")
-        print(f"  Error: {error:.6f}")
-        print(f"  Compression: {compression_ratio:.2f}x")
-    
-    return results
-
-
-def demo_rate_allocation():
-    """Demonstrate different rate allocation strategies."""
-    print("\n=== Rate Allocation Strategies ===")
-    
-    # Create test data
-    m, n = 50, 20
-    matrix, sparse_vector, sparsity_pattern, _ = create_test_data(m, n, 0.3)
-    
-    # Different rate allocation strategies
-    strategies = {
-        'Uniform': [3.0] * n,
-        'Energy-based': 2.0 + 4.0 * (np.linalg.norm(matrix, axis=0) / np.max(np.linalg.norm(matrix, axis=0))),
-        'Random': np.random.uniform(2.0, 6.0, n),
-        'Inverse-energy': 6.0 - 4.0 * (np.linalg.norm(matrix, axis=0) / np.max(np.linalg.norm(matrix, axis=0)))
-    }
+    print(f"Testing rate levels: {rate_levels}")
     
     results = {}
     
-    for strategy_name, target_rates in strategies.items():
-        print(f"\nTesting {strategy_name} rate allocation...")
+    for rate in rate_levels:
+        # Use same rate for all columns
+        column_rates = [rate] * n
         
-        if isinstance(target_rates, np.ndarray):
-            target_rates = target_rates.tolist()
-        
-        # Perform multiplication
-        start_time = time.time()
-        result = adaptive_matvec_multiply(
-            matrix, sparse_vector, target_rates, sparsity_pattern, 'D4', 2
+        # Create processor
+        processor = create_adaptive_matvec_processor(
+            matrix, 'D4', max_rate, M
         )
-        computation_time = time.time() - start_time
         
-        # Calculate error
-        exact_result = matrix @ sparse_vector
+        # Perform computation
+        result = processor.compute_matvec(vector, column_rates, use_lookup=False)
+        
+        # Compare with exact
+        exact_result = matrix @ vector
         error = np.linalg.norm(result - exact_result) / np.linalg.norm(exact_result)
         
-        # Get compression stats
-        processor = create_adaptive_matvec_processor(
-            matrix, target_rates, sparsity_pattern, 'D4', 2
-        )
-        compression_ratio = processor.get_compression_ratio()
+        # Calculate effective bit rate (average)
+        effective_rate = np.mean(column_rates)
         
-        results[strategy_name] = {
-            'time': computation_time,
+        results[rate] = {
             'error': error,
-            'compression_ratio': compression_ratio,
-            'avg_rate': np.mean(target_rates)
+            'effective_rate': effective_rate
         }
         
-        print(f"  Average rate: {np.mean(target_rates):.2f} bits/dimension")
-        print(f"  Time: {computation_time:.6f}s")
-        print(f"  Error: {error:.6f}")
-        print(f"  Compression: {compression_ratio:.2f}x")
+        print(f"   Rate {rate:.1f}: error={error:.6f}")
     
     return results
 
 
-def run_comprehensive_demo():
-    """Run comprehensive demonstration of adaptive matrix-vector multiplication."""
-    print("Adaptive Matrix-Vector Multiplication Demo")
+def demo_lookup_table_efficiency():
+    """Demonstrate efficiency of lookup table approach."""
+    print(f"\n⚡ Lookup Table Efficiency Demo")
     print("=" * 50)
     
-    # Basic usage demo
-    basic_results = demo_basic_usage()
+    # Setup parameters
+    m, n = 128, 64
+    max_rate = 8.0
+    M = 4
     
-    # Lattice comparison
-    lattice_results = demo_lattice_comparison()
+    # Create test matrix and vector
+    np.random.seed(42)
+    matrix = np.random.randn(m, n)
+    vector = np.random.randn(n)
+    column_rates = np.random.uniform(2.0, max_rate, n)
     
-    # Hierarchical levels comparison
-    hierarchical_results = demo_hierarchical_levels()
+    # Create processor
+    processor = create_adaptive_matvec_processor(
+        matrix, 'D4', max_rate, M
+    )
     
-    # Sparsity impact
-    sparsity_results = demo_sparsity_impact()
+    # Test both approaches
+    print("Comparing direct decoding vs lookup table approach:")
     
-    # Rate allocation strategies
-    rate_results = demo_rate_allocation()
+    # Direct decoding
+    start_time = time.time()
+    result_direct = processor.compute_matvec(vector, column_rates.tolist(), use_lookup=False)
+    time_direct = time.time() - start_time
     
-    # Summary
-    print("\n" + "=" * 50)
-    print("DEMO SUMMARY")
-    print("=" * 50)
+    # Lookup table approach
+    start_time = time.time()
+    result_lookup = processor.compute_matvec(vector, column_rates.tolist(), use_lookup=True)
+    time_lookup = time.time() - start_time
     
-    print(f"Basic demo completed with relative error: {np.linalg.norm(basic_results[4] - basic_results[5]) / np.linalg.norm(basic_results[5]):.6f}")
+    # Compare results
+    exact_result = matrix @ vector
+    error_direct = np.linalg.norm(result_direct - exact_result) / np.linalg.norm(exact_result)
+    error_lookup = np.linalg.norm(result_lookup - exact_result) / np.linalg.norm(exact_result)
     
-    best_lattice = min(lattice_results.keys(), key=lambda x: lattice_results[x]['error'])
-    print(f"Best performing lattice: {best_lattice} (error: {lattice_results[best_lattice]['error']:.6f})")
-    
-    best_M = min(hierarchical_results.keys(), key=lambda x: hierarchical_results[x]['error'])
-    print(f"Best hierarchical levels: M={best_M} (error: {hierarchical_results[best_M]['error']:.6f})")
-    
-    best_strategy = min(rate_results.keys(), key=lambda x: rate_results[x]['error'])
-    print(f"Best rate allocation: {best_strategy} (error: {rate_results[best_strategy]['error']:.6f})")
-    
-    print("\nDemo completed successfully!")
+    print(f"   Direct decoding: {time_direct:.4f}s, error={error_direct:.6f}")
+    print(f"   Lookup table: {time_lookup:.4f}s, error={error_lookup:.6f}")
+    print(f"   Speedup: {time_direct/time_lookup:.2f}x")
     
     return {
-        'basic': basic_results,
-        'lattice': lattice_results,
-        'hierarchical': hierarchical_results,
-        'sparsity': sparsity_results,
-        'rate_allocation': rate_results
+        'direct': {'time': time_direct, 'error': error_direct},
+        'lookup': {'time': time_lookup, 'error': error_lookup}
     }
 
 
-if __name__ == "__main__":
-    # Run the comprehensive demo
-    results = run_comprehensive_demo()
+def demo_memory_usage():
+    """Demonstrate memory usage characteristics."""
+    print(f"\n💾 Memory Usage Demo")
+    print("=" * 50)
     
-    # Optionally plot results
+    # Test different matrix sizes
+    sizes = [(32, 16), (64, 32), (128, 64), (256, 128)]
+    max_rate = 8.0
+    M = 4
+    
+    print(f"Testing matrix sizes: {sizes}")
+    
+    results = {}
+    
+    for m, n in sizes:
+        # Create test matrix
+        np.random.seed(42)
+        matrix = np.random.randn(m, n)
+        
+        # Create processor
+        processor = create_adaptive_matvec_processor(
+            matrix, 'D4', max_rate, M
+        )
+        
+        # Get memory usage
+        memory_usage = processor.get_memory_usage()
+        compression_ratio = processor.get_compression_ratio()
+        
+        # Calculate original matrix size
+        original_mb = m * n * 4 / (1024 * 1024)  # 4 bytes per float
+        
+        results[(m, n)] = {
+            'original_mb': original_mb,
+            'encoded_mb': memory_usage['encoded_matrix_mb'],
+            'lookup_mb': memory_usage['lookup_tables_mb'],
+            'total_mb': memory_usage['total_mb'],
+            'compression_ratio': compression_ratio
+        }
+        
+        print(f"   Size {m}x{n}: original={original_mb:.2f}MB, "
+              f"encoded={memory_usage['encoded_matrix_mb']:.2f}MB, "
+              f"lookup={memory_usage['lookup_tables_mb']:.2f}MB, "
+              f"compression={compression_ratio:.2f}x")
+    
+    return results
+
+
+def plot_results(hierarchical_results, rate_distortion_results, memory_results):
+    """Create plots to visualize the results."""
+    print(f"\n📊 Creating visualization plots...")
+    
+    fig, axes = plt.subplots(2, 2, figsize=(12, 10))
+    
+    # Plot 1: Hierarchical levels vs error
+    M_values = list(hierarchical_results.keys())
+    errors = [hierarchical_results[M]['error'] for M in M_values]
+    memory_mb = [hierarchical_results[M]['memory_mb'] for M in M_values]
+    
+    ax1 = axes[0, 0]
+    ax1.plot(M_values, errors, 'bo-', linewidth=2, markersize=8)
+    ax1.set_xlabel('Hierarchical Levels (M)')
+    ax1.set_ylabel('Relative Error')
+    ax1.set_title('Error vs Hierarchical Levels')
+    ax1.grid(True, alpha=0.3)
+    
+    # Plot 2: Rate-distortion curve
+    rates = list(rate_distortion_results.keys())
+    errors_rd = [rate_distortion_results[rate]['error'] for rate in rates]
+    
+    ax2 = axes[0, 1]
+    ax2.semilogy(rates, errors_rd, 'ro-', linewidth=2, markersize=8)
+    ax2.set_xlabel('Bit Rate (bits/dimension)')
+    ax2.set_ylabel('Relative Error')
+    ax2.set_title('Rate-Distortion Curve')
+    ax2.grid(True, alpha=0.3)
+    
+    # Plot 3: Memory usage vs matrix size
+    sizes = list(memory_results.keys())
+    original_mb = [memory_results[size]['original_mb'] for size in sizes]
+    encoded_mb = [memory_results[size]['encoded_mb'] for size in sizes]
+    total_mb = [memory_results[size]['total_mb'] for size in sizes]
+    
+    ax3 = axes[1, 0]
+    x_pos = np.arange(len(sizes))
+    width = 0.25
+    
+    ax3.bar(x_pos - width, original_mb, width, label='Original', alpha=0.8)
+    ax3.bar(x_pos, encoded_mb, width, label='Encoded', alpha=0.8)
+    ax3.bar(x_pos + width, total_mb, width, label='Total (with lookup)', alpha=0.8)
+    
+    ax3.set_xlabel('Matrix Size')
+    ax3.set_ylabel('Memory (MB)')
+    ax3.set_title('Memory Usage vs Matrix Size')
+    ax3.set_xticks(x_pos)
+    ax3.set_xticklabels([f'{m}x{n}' for m, n in sizes])
+    ax3.legend()
+    ax3.grid(True, alpha=0.3)
+    
+    # Plot 4: Compression ratio vs matrix size
+    compression_ratios = [memory_results[size]['compression_ratio'] for size in sizes]
+    
+    ax4 = axes[1, 1]
+    ax4.bar(range(len(sizes)), compression_ratios, alpha=0.8, color='green')
+    ax4.set_xlabel('Matrix Size')
+    ax4.set_ylabel('Compression Ratio')
+    ax4.set_title('Compression Ratio vs Matrix Size')
+    ax4.set_xticks(range(len(sizes)))
+    ax4.set_xticklabels([f'{m}x{n}' for m, n in sizes])
+    ax4.grid(True, alpha=0.3)
+    
+    plt.tight_layout()
+    plt.savefig('adaptive_matvec_demo_results.png', dpi=300, bbox_inches='tight')
+    print(f"   Plots saved to 'adaptive_matvec_demo_results.png'")
+    
+    return fig
+
+
+def main():
+    """Run the complete demo."""
+    print("🎯 Adaptive Matrix-Vector Multiplication Demo")
+    print("=" * 60)
+    print("This demo showcases the new approach where:")
+    print("1. Matrix W is encoded once with maximum bit rate")
+    print("2. Columns are decoded adaptively based on bit budget for each x")
+    print("3. Hierarchical levels M are exploited for variable precision")
+    print("4. Sparsity of x is handled efficiently")
+    print("=" * 60)
+    
     try:
-        # Create performance comparison plot
-        performance_results = [
-            results['lattice']['D4'],
-            results['lattice']['A2'],
-            results['lattice']['E8']
-        ]
-        labels = ['D4', 'A2', 'E8']
+        # Run all demos
+        processor, exact_result = demo_basic_functionality()
+        sparsity_results = demo_sparsity_handling()
+        hierarchical_results = demo_hierarchical_levels()
+        rate_distortion_results = demo_rate_distortion_tradeoff()
+        lookup_results = demo_lookup_table_efficiency()
+        memory_results = demo_memory_usage()
         
-        # Convert to list format for plotting
-        plot_data = []
-        for label, result in zip(labels, performance_results):
-            plot_data.append({
-                'adaptive_time': result['time'],
-                'adaptive_lookup_time': result['time'] * 0.8,  # Approximate
-                'exact_time': 0.001,  # Approximate
-                'error_adaptive': result['error'],
-                'error_lookup': result['error'] * 1.1,  # Approximate
-                'compression_ratio': result['compression_ratio'],
-                'memory_usage': {'total_mb': 1.0}  # Approximate
-            })
+        # Create plots
+        fig = plot_results(hierarchical_results, rate_distortion_results, memory_results)
         
-        plot_performance_analysis(plot_data, labels)
+        print(f"\n✅ All demos completed successfully!")
+        print(f"📈 Results have been plotted and saved.")
         
-    except ImportError:
-        print("Matplotlib not available for plotting. Install matplotlib to see performance plots.") 
+        # Summary statistics
+        print(f"\n📋 Summary:")
+        print(f"   - Best hierarchical level: M={min(hierarchical_results.keys(), key=lambda x: hierarchical_results[x]['error'])}")
+        print(f"   - Lookup table speedup: {lookup_results['direct']['time']/lookup_results['lookup']['time']:.2f}x")
+        print(f"   - Best compression ratio: {max(memory_results.values(), key=lambda x: x['compression_ratio'])['compression_ratio']:.2f}x")
+        
+    except Exception as e:
+        print(f"❌ Error during demo: {e}")
+        import traceback
+        traceback.print_exc()
+
+
+if __name__ == "__main__":
+    main() 
