@@ -9,7 +9,7 @@ known to be zero a priori.
 """
 
 import numpy as np
-from typing import List, Tuple, Dict, Optional, Union
+from typing import List, Tuple, Dict, Optional
 from ..quantizers.hierarchical_nested_lattice_quantizer import HierarchicalNestedLatticeQuantizer
 from ..utils import get_d4, get_a2, get_e8, get_z2, get_z3
 from ..quantizers.closest_point import closest_point_Dn, closest_point_A2, closest_point_E8

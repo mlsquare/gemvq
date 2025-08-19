@@ -105,9 +105,9 @@ For detailed information about the reorganization, see [REORGANIZATION_SUMMARY.m
 
 ```python
 import numpy as np
-from src.quantizers import HierarchicalNestedLatticeQuantizer
+from src.quantizers.hierarchical_nested_lattice_quantizer import HierarchicalNestedLatticeQuantizer
 from src.utils import get_d4
-from src.quantizers import closest_point_Dn
+from src.quantizers.closest_point import closest_point_Dn
 
 # Setup parameters
 G = get_d4()  # D4 lattice
@@ -165,11 +165,10 @@ print(f"Relative error: {abs(estimated_ip - true_ip)/abs(true_ip)*100:.2f}%")
 ### Rate-Distortion Analysis
 
 ```python
-from src.applications import plot_rate_distortion_curves
+from src.applications.estimate_inner_product import plot_distortion_rate
 
 # Generate comprehensive rate-distortion comparison
 plot_distortion_rate()
-```
 
 ## Advanced Usage
 
@@ -177,7 +176,7 @@ plot_distortion_rate()
 
 ```python
 from src.utils import get_a2, get_e8
-from src.quantizers import closest_point_A2, closest_point_E8
+from src.quantizers.closest_point import closest_point_A2, closest_point_E8
 
 # A2 lattice (hexagonal)
 G_a2 = get_a2()
@@ -197,7 +196,7 @@ quantizer_e8 = HierarchicalNestedLatticeQuantizer(
 ### Parameter Optimization
 
 ```python
-from src.applications import find_best_beta
+from src.applications.estimate_inner_product import find_best_beta
 
 # Find optimal beta for given parameters
 G = get_d4()
@@ -217,16 +216,15 @@ print(f"Optimal rate: {optimal_R:.4f} bits/dimension")
 ### Correlation Analysis
 
 ```python
-from src.applications import estimate_correlated_inner_product
+from src.applications.estimate_correlated_inner_product import plot_distortion_rho
 
 # Analyze performance with correlated data
 plot_distortion_rho()
-```
 
 ### Adaptive Matrix-Vector Multiplication
 
 ```python
-from src.adaptive import adaptive_matvec_multiply, create_adaptive_matvec_processor
+from src.adaptive.adaptive_matvec import adaptive_matvec_multiply, create_adaptive_matvec_processor
 
 # Create test data
 matrix = np.random.randn(4, 8)
@@ -243,39 +241,75 @@ result = adaptive_matvec_multiply(
 print(f"Adaptive result: {result}")
 ```
 
+### Layer-Wise Histogram MatVec
+
+The layer-wise histogram technique efficiently computes matrix-vector multiplication when matrix columns are stored using hierarchical nested-lattice quantization by pooling identical codewords at each layer.
+
+```python
+from src.adaptive.layer_wise_histogram_matvec import LayerWiseHistogramMatVec, run_paper_example
+
+# Run the paper example
+y_histogram, y_direct = run_paper_example()
+
+# Or use the standalone version (no parameter optimization)
+from src.adaptive.standalone_layer_wise_histogram import StandaloneLayerWiseHistogramMatVec
+
+# Create matvec object
+matvec_obj = StandaloneLayerWiseHistogramMatVec(n=4, q=3, M=3)
+
+# Define code indices and layer counts
+b_matrix = [[0, 2, 1], [1, 0, 1], [2, 2, 2], [0, 1, 0], [1, 1, 0]]
+M_j = [3, 2, 1, 2, 3]
+x = np.array([0.7, -1.2, 0.0, 0.5, 2.0])
+
+# Compute using layer-wise histogram method
+y = matvec_obj.matvec(x, b_matrix, M_j)
+
+# Verify with direct reconstruction
+y_direct = matvec_obj.matvec_direct(x, b_matrix, M_j)
+print(f"Methods agree: {np.allclose(y, y_direct, atol=1e-10)}")
+```
+
+The algorithm computes:
+```
+y = sum_{m=0}^{M-1} q^m * sum_k s_{m,k} * lambda(k)
+```
+
+where `s_{m,k} = sum_{j: m<M_j, b_{j,m}=k} x_j` is the layer-wise histogram. This approach is more efficient when many columns share the same code indices.
+
 ## Import Structure
 
-The library provides both module-specific and convenience imports:
+The library uses explicit imports to avoid namespace pollution and unnecessary module loading:
 
-### Module-Specific Imports (Recommended)
+### Recommended Import Pattern
 ```python
 # Core quantizers
-from src.quantizers import HierarchicalNestedLatticeQuantizer, NestedLatticeQuantizer
-from src.quantizers import closest_point_Dn, closest_point_A2, closest_point_E8
+from src.quantizers.hierarchical_nested_lattice_quantizer import HierarchicalNestedLatticeQuantizer
+from src.quantizers.nested_lattice_quantizer import NestedLatticeQuantizer
+from src.quantizers.closest_point import closest_point_Dn, closest_point_A2, closest_point_E8
 
 # Applications and analysis
-from src.applications import plot_distortion_rate, find_best_beta
-from src.applications import run_comparison_experiment, generate_codebook
+from src.applications.estimate_inner_product import plot_distortion_rate, find_best_beta
+from src.applications.compare_quantizer_distortion import run_comparison_experiment
+from src.applications.plot_reconstructed_codebook import generate_codebook
 
 # Adaptive methods
-from src.adaptive import adaptive_matvec_multiply, AdaptiveColumnQuantizer
-from src.adaptive import run_comprehensive_demo
+from src.adaptive.adaptive_matvec import adaptive_matvec_multiply, AdaptiveColumnQuantizer
+from src.adaptive.demo_adaptive_matvec import run_comprehensive_demo
+
+# Layer-wise histogram implementation
+from src.adaptive.layer_wise_histogram_matvec import LayerWiseHistogramMatVec, run_paper_example
+from src.adaptive.standalone_layer_wise_histogram import StandaloneLayerWiseHistogramMatVec
 
 # Utilities
 from src.utils import get_d4, get_a2, get_e8, precompute_hq_lut
 ```
 
-### Convenience Imports (Backward Compatible)
-```python
-# Import everything from main module
-from src import (
-    HierarchicalNestedLatticeQuantizer,
-    closest_point_Dn,
-    plot_distortion_rate,
-    adaptive_matvec_multiply,
-    get_d4
-)
-```
+This approach:
+- Avoids namespace pollution
+- Prevents unnecessary module loading
+- Makes dependencies explicit
+- Improves code maintainability
 
 ## API Reference
 
@@ -332,6 +366,12 @@ Sparse matrix-vector processing with adaptive quantization.
 - `adaptive_matvec_multiply()`: Main adaptive multiplication function
 - `create_adaptive_matvec_processor()`: Processor factory function
 - `run_comprehensive_demo()`: Complete demonstration suite
+
+#### Layer-Wise Histogram MatVec
+- `LayerWiseHistogramMatVec`: Main implementation using hierarchical quantizer
+- `StandaloneLayerWiseHistogramMatVec`: Standalone implementation without dependencies
+- `run_paper_example()`: Run the example from ada_matmul.md
+- `create_example_from_paper()`: Create example data from the paper
 
 ### Utilities (`src.utils`)
 
