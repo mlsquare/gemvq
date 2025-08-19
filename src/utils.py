@@ -1,5 +1,30 @@
+"""
+Utility Functions Module
+
+This module provides utility functions and lattice generator matrices for the
+LatticeQuant library. It contains common functions used across all modules
+for lattice operations, analysis, and computation.
+
+Lattice Generators:
+    - get_d4(), get_a2(), get_e8(): High-dimensional lattice matrices
+    - get_z2(), get_z3(): Integer lattice matrices
+    - get_d2(), get_d3(): D-series lattice matrices
+
+Analysis Functions:
+    - calculate_mse(): Mean squared error calculation
+    - calculate_t_entropy(): Entropy calculation for overload handling
+    - precompute_hq_lut(): Lookup table generation
+    - calculate_weighted_sum(): Weighted inner product estimation
+
+Constants:
+    - SIG_D3, SIG_D4, SIG_E8: Lattice-specific parameters
+
+This module serves as a central repository for common functionality used
+by the quantizers, applications, and adaptive modules.
+"""
+
 import numpy as np
-from .hierarchical_nested_lattice_quantizer import HierarchicalNestedLatticeQuantizer as HQuantizer
+from .quantizers.hierarchical_nested_lattice_quantizer import HierarchicalNestedLatticeQuantizer as HQuantizer
 
 # Constants for lattice parameters
 SIG_D3 = 3/24

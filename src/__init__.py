@@ -4,31 +4,36 @@ LatticeQuant: High-Rate Nested-Lattice Quantized Matrix Multiplication
 A Python library implementing hierarchical nested lattice quantization for
 efficient matrix multiplication with small lookup tables.
 
+Package Structure:
+    - src.quantizers: Core quantizer implementations and lattice algorithms
+    - src.applications: Matrix multiplication applications and analysis tools
+    - src.adaptive: Adaptive column-based matrix-vector multiplication
+    - src.utils: Utility functions and lattice generators
+
 Main Classes:
     - HierarchicalNestedLatticeQuantizer: Multi-level hierarchical quantization
     - NestedLatticeQuantizer: Classic nested lattice quantization
+    - AdaptiveColumnQuantizer: Column-wise adaptive quantization
 
 Main Functions:
     - closest_point_Dn, closest_point_A2, closest_point_E8: Lattice algorithms
     - get_d4, get_a2, get_e8: Lattice generator matrices
     - precompute_hq_lut: Lookup table generation
     - calculate_weighted_sum: Inner product estimation
+    - adaptive_matvec_multiply: Adaptive matrix-vector multiplication
 
 For detailed usage examples, see the README.md file.
+For reorganization details, see REORGANIZATION_SUMMARY.md.
 """
 
 # Core quantizer classes
-from .hierarchical_nested_lattice_quantizer import HierarchicalNestedLatticeQuantizer
-from .nested_lattice_quantizer import NestedLatticeQuantizer
-
-# Lattice algorithms
-from .closest_point import (
+from .quantizers import (
+    HierarchicalNestedLatticeQuantizer,
+    NestedLatticeQuantizer,
     closest_point_Dn,
     closest_point_A2, 
     closest_point_E8,
-    custom_round,
-    upscale,
-    downscale
+    custom_round
 )
 
 # Utility functions
@@ -47,28 +52,34 @@ from .utils import (
 )
 
 # Analysis modules
-from .estimate_inner_product import (
+from .applications import (
+    calculate_inner_product_distortion,
     plot_distortion_rate,
     find_best_beta,
-    calculate_inner_product_distortion,
-    distortion_rate_theoretical
-)
-
-from .estimate_correlated_inner_product import (
+    calculate_mse_and_overload_for_samples,
     plot_distortion_rho,
     generate_rho_correlated_samples,
-    calculate_distortion
-)
-
-from .compare_quantizer_distortion import (
+    calculate_distortion,
     run_comparison_experiment,
-    calculate_rate_and_distortion
-)
-
-from .plot_reconstructed_codebook import (
+    calculate_rate_and_distortion,
     generate_codebook,
     compare_codebooks,
     plot_with_voronoi
+)
+
+# Adaptive matrix-vector multiplication
+from .adaptive import (
+    AdaptiveColumnQuantizer,
+    AdaptiveLookupTable,
+    SparseMatVecProcessor,
+    create_adaptive_matvec_processor,
+    adaptive_matvec_multiply,
+    run_comprehensive_demo,
+    demo_basic_usage,
+    demo_lattice_comparison,
+    demo_hierarchical_levels,
+    demo_sparsity_impact,
+    demo_rate_allocation
 )
 
 # Version information
@@ -87,8 +98,6 @@ __all__ = [
     "closest_point_A2", 
     "closest_point_E8",
     "custom_round",
-    "upscale",
-    "downscale",
     
     # Lattice generators
     "get_d4",
@@ -106,10 +115,10 @@ __all__ = [
     "calculate_t_entropy",
     
     # Analysis functions
+    "calculate_inner_product_distortion",
     "plot_distortion_rate",
     "find_best_beta",
-    "calculate_inner_product_distortion",
-    "distortion_rate_theoretical",
+    "calculate_mse_and_overload_for_samples",
     "plot_distortion_rho",
     "generate_rho_correlated_samples",
     "calculate_distortion",
@@ -117,5 +126,18 @@ __all__ = [
     "calculate_rate_and_distortion",
     "generate_codebook",
     "compare_codebooks",
-    "plot_with_voronoi"
+    "plot_with_voronoi",
+    
+    # Adaptive matrix-vector multiplication
+    "AdaptiveColumnQuantizer",
+    "AdaptiveLookupTable",
+    "SparseMatVecProcessor",
+    "create_adaptive_matvec_processor",
+    "adaptive_matvec_multiply",
+    "run_comprehensive_demo",
+    "demo_basic_usage",
+    "demo_lattice_comparison",
+    "demo_hierarchical_levels",
+    "demo_sparsity_impact",
+    "demo_rate_allocation"
 ]

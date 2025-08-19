@@ -1,10 +1,10 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from .nested_lattice_quantizer import NestedLatticeQuantizer as NQuantizer
-from .hierarchical_nested_lattice_quantizer import HierarchicalNestedLatticeQuantizer as HQuantizer
-from .closest_point import custom_round
-from .utils import *
-from .closest_point import closest_point_A2, closest_point_Dn
+from ..quantizers.nested_lattice_quantizer import NestedLatticeQuantizer as NQuantizer
+from ..quantizers.hierarchical_nested_lattice_quantizer import HierarchicalNestedLatticeQuantizer as HQuantizer
+from ..quantizers.closest_point import custom_round
+from ..utils import *
+from ..quantizers.closest_point import closest_point_A2, closest_point_Dn
 
 
 def pad_vector(vec, lattice_dim):

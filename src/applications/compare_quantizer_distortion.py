@@ -1,7 +1,7 @@
-from .nested_lattice_quantizer import NestedLatticeQuantizer as NQuantizer
-from .hierarchical_nested_lattice_quantizer import HierarchicalNestedLatticeQuantizer as HQuantizer
-from .utils import get_a2, get_d3, get_d4, get_e8, calculate_mse, calculate_t_entropy
-from .closest_point import closest_point_A2, closest_point_Dn, closest_point_E8, custom_round
+from ..quantizers.nested_lattice_quantizer import NestedLatticeQuantizer as NQuantizer
+from ..quantizers.hierarchical_nested_lattice_quantizer import HierarchicalNestedLatticeQuantizer as HQuantizer
+from ..utils import get_a2, get_d3, get_d4, get_e8, calculate_mse, calculate_t_entropy
+from ..quantizers.closest_point import closest_point_A2, closest_point_Dn, closest_point_E8, custom_round
 import numpy as np
 import matplotlib.pyplot as plt
 

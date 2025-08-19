@@ -2,10 +2,10 @@ import numpy as np
 from matplotlib import pyplot as plt
 from scipy.spatial import Voronoi
 
-from .closest_point import closest_point_A2
-from .nested_lattice_quantizer import NestedLatticeQuantizer as NQuantizer
-from .hierarchical_nested_lattice_quantizer import HierarchicalNestedLatticeQuantizer as HQuantizer
-from .utils import get_a2
+from ..quantizers.closest_point import closest_point_A2
+from ..quantizers.nested_lattice_quantizer import NestedLatticeQuantizer as NQuantizer
+from ..quantizers.hierarchical_nested_lattice_quantizer import HierarchicalNestedLatticeQuantizer as HQuantizer
+from ..utils import get_a2
 
 
 def generate_codebook(G, closest_point, q, with_plot=True):

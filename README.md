@@ -88,15 +88,26 @@ source venv/bin/activate  # On Windows: venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
+## Package Structure
+
+The LatticeQuant library is organized into logical modules for better maintainability and clarity:
+
+- **`src.quantizers/`**: Core quantizer implementations (NestedLatticeQuantizer, HierarchicalNestedLatticeQuantizer, lattice algorithms)
+- **`src.applications/`**: Matrix multiplication applications and analysis tools
+- **`src.adaptive/`**: Adaptive column-based matrix-vector multiplication
+- **`src.utils/`**: Utility functions and lattice generators
+
+For detailed information about the reorganization, see [REORGANIZATION_SUMMARY.md](REORGANIZATION_SUMMARY.md).
+
 ## Quick Start
 
 ### Basic Quantization
 
 ```python
 import numpy as np
-from src.hierarchical_nested_lattice_quantizer import HierarchicalNestedLatticeQuantizer
+from src.quantizers import HierarchicalNestedLatticeQuantizer
 from src.utils import get_d4
-from src.closest_point import closest_point_Dn
+from src.quantizers import closest_point_Dn
 
 # Setup parameters
 G = get_d4()  # D4 lattice
@@ -154,7 +165,7 @@ print(f"Relative error: {abs(estimated_ip - true_ip)/abs(true_ip)*100:.2f}%")
 ### Rate-Distortion Analysis
 
 ```python
-from src.estimate_inner_product import plot_distortion_rate
+from src.applications import plot_rate_distortion_curves
 
 # Generate comprehensive rate-distortion comparison
 plot_distortion_rate()
@@ -166,7 +177,7 @@ plot_distortion_rate()
 
 ```python
 from src.utils import get_a2, get_e8
-from src.closest_point import closest_point_A2, closest_point_E8
+from src.quantizers import closest_point_A2, closest_point_E8
 
 # A2 lattice (hexagonal)
 G_a2 = get_a2()
@@ -186,7 +197,7 @@ quantizer_e8 = HierarchicalNestedLatticeQuantizer(
 ### Parameter Optimization
 
 ```python
-from src.estimate_inner_product import find_best_beta
+from src.applications import find_best_beta
 
 # Find optimal beta for given parameters
 G = get_d4()
@@ -206,15 +217,69 @@ print(f"Optimal rate: {optimal_R:.4f} bits/dimension")
 ### Correlation Analysis
 
 ```python
-from src.estimate_correlated_inner_product import plot_distortion_rho
+from src.applications import estimate_correlated_inner_product
 
 # Analyze performance with correlated data
 plot_distortion_rho()
 ```
 
+### Adaptive Matrix-Vector Multiplication
+
+```python
+from src.adaptive import adaptive_matvec_multiply, create_adaptive_matvec_processor
+
+# Create test data
+matrix = np.random.randn(4, 8)
+sparse_vector = np.zeros(8)
+sparse_vector[[0, 4, 7]] = [1.5, 2.0, -1.0]
+target_rates = [2.5, 3.0, 3.5, 2.0, 4.0, 3.2, 2.8, 3.6]
+sparsity_pattern = [0, 4, 7]
+
+# Perform adaptive matrix-vector multiplication
+result = adaptive_matvec_multiply(
+    matrix, sparse_vector, target_rates, sparsity_pattern, 'D4', 2
+)
+
+print(f"Adaptive result: {result}")
+```
+
+## Import Structure
+
+The library provides both module-specific and convenience imports:
+
+### Module-Specific Imports (Recommended)
+```python
+# Core quantizers
+from src.quantizers import HierarchicalNestedLatticeQuantizer, NestedLatticeQuantizer
+from src.quantizers import closest_point_Dn, closest_point_A2, closest_point_E8
+
+# Applications and analysis
+from src.applications import plot_distortion_rate, find_best_beta
+from src.applications import run_comparison_experiment, generate_codebook
+
+# Adaptive methods
+from src.adaptive import adaptive_matvec_multiply, AdaptiveColumnQuantizer
+from src.adaptive import run_comprehensive_demo
+
+# Utilities
+from src.utils import get_d4, get_a2, get_e8, precompute_hq_lut
+```
+
+### Convenience Imports (Backward Compatible)
+```python
+# Import everything from main module
+from src import (
+    HierarchicalNestedLatticeQuantizer,
+    closest_point_Dn,
+    plot_distortion_rate,
+    adaptive_matvec_multiply,
+    get_d4
+)
+```
+
 ## API Reference
 
-### Core Classes
+### Core Quantizers (`src.quantizers`)
 
 #### `HierarchicalNestedLatticeQuantizer`
 The main quantizer implementing multi-level hierarchical quantization.
@@ -234,18 +299,47 @@ Classic nested lattice quantizer for comparison.
 - `quantize(x)`: Complete quantization
 - `create_codebook(with_dither)`: Generate codebook
 
-### Utility Functions
+#### Lattice Algorithms
+- `closest_point_Dn(x)`: Dₙ lattice closest point
+- `closest_point_A2(u)`: A₂ lattice closest point
+- `closest_point_E8(x)`: E₈ lattice closest point
+
+### Applications (`src.applications`)
+
+#### Analysis Functions
+- `calculate_inner_product_distortion()`: Rate-distortion analysis
+- `plot_distortion_rate()`: Visualization of performance curves
+- `find_best_beta()`: Parameter optimization
+- `run_comparison_experiment()`: Quantizer comparison
+
+#### Visualization
+- `generate_codebook()`: Generate and visualize codebooks
+- `compare_codebooks()`: Compare different quantization methods
+- `plot_with_voronoi()`: Voronoi diagram visualization
+
+### Adaptive Methods (`src.adaptive`)
+
+#### `AdaptiveColumnQuantizer`
+Column-wise adaptive quantization for matrix operations.
+
+#### `AdaptiveLookupTable`
+Efficient lookup table management for adaptive methods.
+
+#### `SparseMatVecProcessor`
+Sparse matrix-vector processing with adaptive quantization.
+
+#### Functions
+- `adaptive_matvec_multiply()`: Main adaptive multiplication function
+- `create_adaptive_matvec_processor()`: Processor factory function
+- `run_comprehensive_demo()`: Complete demonstration suite
+
+### Utilities (`src.utils`)
 
 #### Lattice Generation
 - `get_d4()`: D4 lattice generator matrix
 - `get_a2()`: A2 lattice generator matrix
 - `get_e8()`: E8 lattice generator matrix
 - `get_z2()`, `get_z3()`: Z², Z³ lattice matrices
-
-#### Closest Point Algorithms
-- `closest_point_Dn(x)`: Dₙ lattice closest point
-- `closest_point_A2(u)`: A₂ lattice closest point
-- `closest_point_E8(x)`: E₈ lattice closest point
 
 #### Analysis Tools
 - `precompute_hq_lut(G, Q_nn, q, m, eps)`: Precompute lookup table

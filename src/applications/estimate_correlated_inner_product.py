@@ -1,8 +1,8 @@
 import matplotlib.pyplot as plt
-from .closest_point import custom_round
-from .utils import *
-from .closest_point import closest_point_A2, closest_point_Dn
-from .hierarchical_nested_lattice_quantizer import HierarchicalNestedLatticeQuantizer as HQ
+from ..quantizers.closest_point import custom_round
+from ..utils import *
+from ..quantizers.closest_point import closest_point_A2, closest_point_Dn
+from ..quantizers.hierarchical_nested_lattice_quantizer import HierarchicalNestedLatticeQuantizer as HQ
 import numpy as np
 
 
