@@ -9,6 +9,23 @@ LatticeQuant is a Python library implementing high-rate nested-lattice quantizat
 
 The library provides efficient implementations of both classic nested lattice quantization and a novel hierarchical approach that achieves superior rate-distortion performance while enabling fast inner product estimation using compact lookup tables.
 
+### 🚀 **Three Implementation Options**
+
+1. **Python Implementation** (this repository): 
+   - Perfect for research, prototyping, and educational purposes
+   - Easy to understand and modify
+   - Comprehensive documentation and examples
+
+2. **Fast C Library** ([orimeirgit/NestedLatticeLut](https://github.com/orimeirgit/NestedLatticeLut)):
+   - High-performance C implementation for production applications
+   - Significant speed improvements for large-scale computations
+   - Achieves ~3x speedup on modern CPUs with 7.11:1 compression ratio
+
+3. **C Library with Python Bindings** ([mlsquare/NestedLatticeLut](https://github.com/mlsquare/NestedLatticeLut)):
+   - Python bindings for the fast C implementation
+   - Easy integration with Python workflows
+   - Best of both worlds: high performance + Python convenience
+
 ## Key Features
 
 ### 🏗️ **Hierarchical Nested Lattice Quantizer**
@@ -285,6 +302,12 @@ Classic nested lattice quantizer for comparison.
 - **Small lookup tables**: q^(2M) entries for inner product estimation
 - **Scalable storage**: Memory grows polynomially with parameters
 
+### Performance Considerations
+- **Python Implementation** (this repository): Optimized for research, prototyping, and educational purposes
+- **Fast C Library** ([orimeirgit/NestedLatticeLut](https://github.com/orimeirgit/NestedLatticeLut)): Optimized for production applications requiring maximum performance (~3x speedup)
+- **C Library with Python Bindings** ([mlsquare/NestedLatticeLut](https://github.com/mlsquare/NestedLatticeLut)): High performance with Python convenience
+- **Choose based on your needs**: Use Python for development/research, C for production deployment, Python bindings for best of both worlds
+
 ## Contributing
 
 We welcome contributions! Please see our [Contributing Guidelines](CONTRIBUTING.md) for details.
@@ -333,7 +356,8 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## Acknowledgments
 
-- **Efficient C Implementation**: Check out the [NestedLatticeLut](https://github.com/orimeirgit/NestedLatticeLut) repository for a high-performance C implementation.
+- **Fast C Library**: The [orimeirgit/NestedLatticeLut](https://github.com/orimeirgit/NestedLatticeLut) repository provides a high-performance C implementation achieving ~3x speedup with 7.11:1 compression ratio.
+- **Python Bindings**: The [mlsquare/NestedLatticeLut](https://github.com/mlsquare/NestedLatticeLut) repository adds Python bindings to the C library for easy integration.
 - **Research Community**: Thanks to the information theory and quantization research communities for foundational work.
 
 ## Support
