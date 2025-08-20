@@ -7,7 +7,7 @@ multiplication functionality using hierarchical nested quantizers.
 
 import numpy as np
 import pytest
-from ..adaptive.adaptive_matvec import (
+from src.adaptive.adaptive_matvec import (
     AdaptiveColumnQuantizer,
     AdaptiveLookupTable,
     SparseMatVecProcessor,

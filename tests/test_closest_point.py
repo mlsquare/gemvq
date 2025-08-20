@@ -5,7 +5,7 @@ import sys
 import os
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-from quantizers.closest_point import closest_point_Dn, closest_point_E8, upscale, downscale, closest_point_A2
+from src.quantizers.closest_point import closest_point_Dn, closest_point_E8, upscale, downscale, closest_point_A2
 
 
 class TestClosestPointAlgorithms(unittest.TestCase):
