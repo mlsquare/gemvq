@@ -232,14 +232,16 @@ class HierarchicalNestedLatticeQuantizer:
         numpy.ndarray
             Reconstructed vector.
         """
-        x_hat_list = []
-        for b in b_list:
-            x_i_hat = np.dot(self.G, b) - self.q_Q(np.dot(self.G, b))
-            x_hat_list.append(x_i_hat)
-        # Correct weight assignment: coarsest level (index 0) gets highest weight q^(M-1)
-        x_hat = sum([np.power(self.q, self.M - 1 - i) * x_i for i, x_i in enumerate(x_hat_list)])
+        x_hat = np.zeros_like(self.G[0])
+        
+        # Reconstruct by reversing the encoding process
+        for i, b in enumerate(b_list):
+            # Each level contributes q^i * G * b
+            x_hat += (self.q ** i) * np.dot(self.G, b)
+        
         if with_dither:
             x_hat = x_hat - self.dither
+            
         return self.beta * x_hat
 
     def decode(self, b_list, T, with_dither):

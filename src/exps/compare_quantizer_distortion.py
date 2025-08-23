@@ -59,7 +59,7 @@ def calculate_slope(log_R, min_errors):
     return slope
 
 
-def calculate_rate_and_distortion(name, samples, quantizer, q, beta_min):
+def calculate_rate_and_distortion(name, samples, quantizer, q, beta_min, M=2):
     """
     Calculate rate and distortion for a given quantizer configuration.
 
@@ -78,6 +78,8 @@ def calculate_rate_and_distortion(name, samples, quantizer, q, beta_min):
         Quantization parameter.
     beta_min : float
         Minimum beta value for the grid search.
+    M : int
+        Number of hierarchical levels (for hierarchical quantizer).
 
     Returns:
     --------
@@ -106,7 +108,12 @@ def calculate_rate_and_distortion(name, samples, quantizer, q, beta_min):
         mse, T_values = calculate_mse_and_overload_for_samples(samples, quantizer)
 
         H_T, T_counts = calculate_t_entropy(T_values, q)
-        R = 2 * np.log2(q) + (H_T / d)
+        
+        # Fix rate calculation: for hierarchical quantizer, use M * log2(q)
+        if "Hierarchical" in name:
+            R = M * np.log2(q) + (H_T / d)
+        else:
+            R = 2 * np.log2(q) + (H_T / d)
 
         f_beta = mse / (2 ** (-2 * R))
 
@@ -179,16 +186,28 @@ def run_comparison_experiment(
 
     for q_idx, q in enumerate(q_values):
         print(f"Processing q={q} ({q_idx + 1}/{len(q_values)})...")
-        beta_min = (1 / q**M) * np.sqrt(1 / sig_l) * np.sqrt(d / (d + 2))
-
+        
         for idx, scheme in enumerate(schemes):
             name, quantizer_class, nesting = scheme["name"], scheme["quantizer"], scheme["nesting"]
-            quantizer = quantizer_class(
-                G, q_nn, q=nesting(q), beta=beta_min, alpha=1, eps=eps, M=2, dither=np.zeros(d)
-            )
+            
+            # Calculate beta_min based on the quantization scheme
+            if "Hierarchical" in name:
+                # For hierarchical quantizer, use q^M scaling
+                effective_q = q**M
+                beta_min = (1 / effective_q) * np.sqrt(1 / sig_l) * np.sqrt(d / (d + 2))
+                quantizer = quantizer_class(
+                    G, q_nn, q=q, beta=beta_min, alpha=1/3, eps=eps, M=M, dither=np.zeros(d)
+                )
+            else:
+                # For other quantizers, use the nesting function
+                effective_q = nesting(q)
+                beta_min = (1 / effective_q) * np.sqrt(1 / sig_l) * np.sqrt(d / (d + 2))
+                quantizer = quantizer_class(
+                    G, q_nn, q=effective_q, beta=beta_min, alpha=1/3, eps=eps, dither=np.zeros(d)
+                )
 
             R, min_error, optimal_beta = calculate_rate_and_distortion(
-                name, samples, quantizer, q, beta_min
+                name, samples, quantizer, q, beta_min, M
             )
             results[name]["R"].append(R)
             results[name]["min_errors"].append(min_error)
@@ -199,17 +218,29 @@ def run_comparison_experiment(
         min_errors = scheme_results["min_errors"]
         plt.plot(R, min_errors, label=name, marker=markers[idx], color=colors[idx])
 
+    # Add theoretical limits
     q_2_rates = results[schemes[2]["name"]]["R"]
     benchmark_distortions = [2 ** (-2 * k) for k in q_2_rates]
     plt.plot(
         q_2_rates,
         benchmark_distortions,
-        label=f"Theoretical benchmark",
+        label=f"Theoretical benchmark (q²)",
         color="red",
         linestyle="--",
     )
+    
+    # Add q(q-1) theoretical limit
+    q_qm1_rates = results[schemes[0]["name"]]["R"]
+    q_qm1_distortions = [2 ** (-2 * k) for k in q_qm1_rates]
+    plt.plot(
+        q_qm1_rates,
+        q_qm1_distortions,
+        label=f"Theoretical benchmark (q(q-1))",
+        color="purple",
+        linestyle="--",
+    )
 
-    plt.xlabel(r"$R = 2 \log_2 (q) + H(T)/d$")
+    plt.xlabel(r"$R = M \log_2 (q) + H(T)/d$")
     plt.ylabel("D (logarithmic scale)")
     plt.title("Distortion-Rate Function with $D_4$ Lattice")
     plt.yscale("log")
