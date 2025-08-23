@@ -1,23 +1,26 @@
-import numpy as np
 import matplotlib.pyplot as plt
-from ..quantizers.nested_lattice_quantizer import NestedLatticeQuantizer as NQuantizer
-from ..quantizers.hierarchical_nested_lattice_quantizer import HierarchicalNestedLatticeQuantizer as HQuantizer
-from ..quantizers.closest_point import custom_round
+import numpy as np
+
+from ..quantizers.closest_point import (closest_point_A2, closest_point_Dn,
+                                        custom_round)
+from ..quantizers.hierarchical_nested_lattice_quantizer import \
+    HierarchicalNestedLatticeQuantizer as HQuantizer
+from ..quantizers.nested_lattice_quantizer import \
+    NestedLatticeQuantizer as NQuantizer
 from ..utils import *
-from ..quantizers.closest_point import closest_point_A2, closest_point_Dn
 
 
 def pad_vector(vec, lattice_dim):
     """
     Pad the vector with zeros to make its length a multiple of lattice_dim.
-    
+
     Parameters:
     -----------
     vec : numpy.ndarray
         Input vector to be padded.
     lattice_dim : int
         The lattice dimension to pad to.
-        
+
     Returns:
     --------
     numpy.ndarray
@@ -29,17 +32,18 @@ def pad_vector(vec, lattice_dim):
         vec = np.concatenate([vec, np.zeros(padding)])
     return vec
 
+
 def calculate_mse_and_overload_for_samples(samples, quantizer):
     """
     Calculate the MSE and overload values for quantized samples.
-    
+
     Parameters:
     -----------
     samples : list
         List of input vectors to be quantized.
     quantizer : object
         Quantizer object (NestedLatticeQuantizer or HierarchicalNestedLatticeQuantizer).
-        
+
     Returns:
     --------
     tuple
@@ -60,10 +64,10 @@ def calculate_mse_and_overload_for_samples(samples, quantizer):
 def find_best_beta(G, Q_nn, q, m, alpha, sig_l, eps):
     """
     Find the best beta parameter for a quantizer by minimizing MSE.
-    
+
     This function performs a grid search over beta values to find the
     optimal scaling parameter that minimizes the rate-distortion function.
-    
+
     Parameters:
     -----------
     G : numpy.ndarray
@@ -80,13 +84,13 @@ def find_best_beta(G, Q_nn, q, m, alpha, sig_l, eps):
         Lattice parameter.
     eps : float
         Small perturbation parameter.
-        
+
     Returns:
     --------
     tuple
         (optimal_R, optimal_beta) where optimal_R is the optimal rate
         and optimal_beta is the optimal beta parameter.
-        
+
     Notes:
     ------
     The function evaluates the rate-distortion performance for different
@@ -94,7 +98,7 @@ def find_best_beta(G, Q_nn, q, m, alpha, sig_l, eps):
     function f(beta) = MSE / 2^(-2*R).
     """
     d = len(G)
-    beta_min  = (1 / q ** m) * np.sqrt(1 / sig_l) * np.sqrt(d / (d + 2))
+    beta_min = (1 / q**m) * np.sqrt(1 / sig_l) * np.sqrt(d / (d + 2))
     betas = beta_min + 0.05 * beta_min * np.arange(0, 40)
 
     min_f_beta = float("inf")
@@ -107,7 +111,9 @@ def find_best_beta(G, Q_nn, q, m, alpha, sig_l, eps):
 
     samples = [np.random.normal(0, 1, size=vector_dim) for _ in range(2000)]
     for idx, beta in enumerate(betas):
-        quantizer = HQuantizer(G=G, Q_nn=Q_nn, q=q, beta=beta, alpha=alpha, M=m, eps=eps, dither= np.zeros(d))
+        quantizer = HQuantizer(
+            G=G, Q_nn=Q_nn, q=q, beta=beta, alpha=alpha, M=m, eps=eps, dither=np.zeros(d)
+        )
         mse, T_values = calculate_mse_and_overload_for_samples(samples, quantizer)
 
         H_T, T_counts = calculate_t_entropy(T_values, q)
@@ -128,10 +134,10 @@ def find_best_beta(G, Q_nn, q, m, alpha, sig_l, eps):
 def calculate_inner_product_distortion(G, Q_nn, q, m, beta, alpha, samples, eps, lut=None):
     """
     Calculate the distortion for inner products between different pairs of samples.
-    
+
     This function compares the distortion of inner product estimation between
     nested lattice quantization and hierarchical quantization methods.
-    
+
     Parameters:
     -----------
     G : numpy.ndarray
@@ -152,14 +158,14 @@ def calculate_inner_product_distortion(G, Q_nn, q, m, beta, alpha, samples, eps,
         Small perturbation parameter.
     lut : dict, optional
         Lookup table for hierarchical quantization.
-        
+
     Returns:
     --------
     tuple
         (voronoi_mse, hierarchical_mse) where voronoi_mse is the MSE for
         nested lattice quantization and hierarchical_mse is the MSE for
         hierarchical quantization.
-        
+
     Notes:
     ------
     The function computes inner products between all pairs of samples and
@@ -170,8 +176,12 @@ def calculate_inner_product_distortion(G, Q_nn, q, m, beta, alpha, samples, eps,
     hierarchical_errors = []
     lattice_dim = len(G)
     n = len(samples[0])
-    nested_quantizer = NQuantizer(G, Q_nn, q=q **m, beta=beta, alpha=alpha, eps=eps, dither=np.zeros(lattice_dim))
-    hierarchical_quantizer = HQuantizer(G, Q_nn=Q_nn, q=q, beta=beta, alpha=alpha, M=m, eps=eps, dither=np.zeros(lattice_dim))
+    nested_quantizer = NQuantizer(
+        G, Q_nn, q=q**m, beta=beta, alpha=alpha, eps=eps, dither=np.zeros(lattice_dim)
+    )
+    hierarchical_quantizer = HQuantizer(
+        G, Q_nn=Q_nn, q=q, beta=beta, alpha=alpha, M=m, eps=eps, dither=np.zeros(lattice_dim)
+    )
 
     for i in range(len(samples)):
         for j in range(i + 1, len(samples)):
@@ -184,17 +194,20 @@ def calculate_inner_product_distortion(G, Q_nn, q, m, beta, alpha, samples, eps,
             hierarchical_inner_product = 0
 
             for k in range(0, len(vec1), lattice_dim):
-                block1 = vec1[k:k + lattice_dim]
-                block2 = vec2[k:k + lattice_dim]
+                block1 = vec1[k : k + lattice_dim]
+                block2 = vec2[k : k + lattice_dim]
 
                 voronoi_res = calculate_inner_product_for_chunks(block1, block2, nested_quantizer)
                 voronoi_inner_product += voronoi_res
 
                 enc_hierarchical_1, t_h1 = hierarchical_quantizer.encode(block1, with_dither=False)
                 enc_hierarchical_2, t_h2 = hierarchical_quantizer.encode(block2, with_dither=False)
-                c = (2 ** (hierarchical_quantizer.alpha * (t_h1 + t_h2))) * (hierarchical_quantizer.beta ** 2)
-                hierarchical_res = calculate_weighted_sum(enc_hierarchical_1, enc_hierarchical_2, lut,
-                                                          hierarchical_quantizer.q)
+                c = (2 ** (hierarchical_quantizer.alpha * (t_h1 + t_h2))) * (
+                    hierarchical_quantizer.beta**2
+                )
+                hierarchical_res = calculate_weighted_sum(
+                    enc_hierarchical_1, enc_hierarchical_2, lut, hierarchical_quantizer.q
+                )
                 hierarchical_inner_product += hierarchical_res * c
 
             voronoi_errors.append((voronoi_inner_product - true_inner_product) ** 2)
@@ -208,7 +221,7 @@ def calculate_inner_product_distortion(G, Q_nn, q, m, beta, alpha, samples, eps,
 def calculate_inner_product_for_chunks(block1, block2, quantizer):
     """
     Calculate inner product between two blocks using a quantizer.
-    
+
     Parameters:
     -----------
     block1 : numpy.ndarray
@@ -217,7 +230,7 @@ def calculate_inner_product_for_chunks(block1, block2, quantizer):
         Second block vector.
     quantizer : object
         Quantizer object.
-        
+
     Returns:
     --------
     float
@@ -233,17 +246,17 @@ def calculate_inner_product_for_chunks(block1, block2, quantizer):
 def distortion_rate_theoretical(R):
     """
     Calculate the theoretical distortion-rate function.
-    
+
     Parameters:
     -----------
     R : float
         Rate in bits per dimension.
-        
+
     Returns:
     --------
     float
         Theoretical distortion for the given rate.
-        
+
     Notes:
     ------
     This implements the theoretical distortion-rate function for
@@ -255,11 +268,11 @@ def distortion_rate_theoretical(R):
 def plot_distortion_rate():
     """
     Plot the distortion-rate function comparing different quantization methods.
-    
+
     This function generates a comprehensive comparison of the distortion-rate
     performance between theoretical bounds, nested lattice quantization,
     and hierarchical quantization for inner product estimation.
-    
+
     Notes:
     ------
     The function:
@@ -289,13 +302,14 @@ def plot_distortion_rate():
     for m in m_values:
         rate, beta = find_best_beta(G, Q_nn, q, m, alpha, sig_l, eps)
         R_values.append(rate)
-        gamma = (beta ** 2) * q**(2*m) * sig_l
+        gamma = (beta**2) * q ** (2 * m) * sig_l
         print(f"For q=4, M={m}, beta={beta:.4f}, R={rate:.4f}, gamma_0={gamma:.4f}")
 
         lookup_table = precompute_hq_lut(G, Q_nn, q, m, eps)
 
-        nested_distortion, hierarchical_distortion = calculate_inner_product_distortion(G, Q_nn, q, m, beta, alpha,
-                                                                                        samples, eps=eps, lut=lookup_table)
+        nested_distortion, hierarchical_distortion = calculate_inner_product_distortion(
+            G, Q_nn, q, m, beta, alpha, samples, eps=eps, lut=lookup_table
+        )
         theoretical_distortion = distortion_rate_theoretical(rate)
 
         nested_distortions.append(nested_distortion)
@@ -308,9 +322,17 @@ def plot_distortion_rate():
         print("-" * 40)
 
     plt.figure(figsize=(10, 6))
-    plt.plot(R_values, theoretical_distortions, label=f"Theoretical $\\Gamma (R)$", linestyle="--", color="black")
+    plt.plot(
+        R_values,
+        theoretical_distortions,
+        label=f"Theoretical $\\Gamma (R)$",
+        linestyle="--",
+        color="black",
+    )
     plt.plot(R_values, nested_distortions, label=f"$q^M$ Voronoi Code", marker="o", color="blue")
-    plt.plot(R_values, hierarchical_distortions, label="Hierarchical Quantizer", marker="s", color="red")
+    plt.plot(
+        R_values, hierarchical_distortions, label="Hierarchical Quantizer", marker="s", color="red"
+    )
 
     plt.yscale("log", base=2)
 

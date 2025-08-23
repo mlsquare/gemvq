@@ -16,4 +16,4 @@ For usage examples, see the individual module files:
 - standalone_layer_wise_histogram.py
 - adaptive_matvec.py
 - demo_adaptive_matvec.py
-""" 
+"""

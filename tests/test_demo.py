@@ -5,15 +5,10 @@ This script shows basic usage of the hierarchical nested lattice quantizer.
 """
 
 import numpy as np
-from src import (
-    HierarchicalNestedLatticeQuantizer, 
-    NestedLatticeQuantizer,
-    get_d4, 
-    closest_point_Dn,
-    precompute_hq_lut,
-    calculate_weighted_sum,
-    calculate_mse
-)
+from src.quantizers.hierarchical_nested_lattice_quantizer import HierarchicalNestedLatticeQuantizer
+from src.quantizers.nested_lattice_quantizer import NestedLatticeQuantizer
+from src.utils import get_d4, precompute_hq_lut, calculate_weighted_sum, calculate_mse
+from src.quantizers.closest_point import closest_point_Dn
 
 def main():
     print("🚀 LatticeQuant Demo")

@@ -1,4 +1,5 @@
 import numpy as np
+
 from .closest_point import custom_round
 from .nested_lattice_quantizer import NestedLatticeQuantizer as NQ
 
@@ -6,12 +7,12 @@ from .nested_lattice_quantizer import NestedLatticeQuantizer as NQ
 class HierarchicalNestedLatticeQuantizer:
     """
     Hierarchical Nested Lattice Quantizer implementing multi-level quantization.
-    
+
     This class implements a hierarchical quantization approach that uses multiple
     levels of quantization to achieve better rate-distortion performance. The
     hierarchical structure allows for successive refinement and efficient inner
     product estimation using small lookup tables.
-    
+
     Attributes:
     -----------
     G : numpy.ndarray
@@ -32,7 +33,7 @@ class HierarchicalNestedLatticeQuantizer:
         Number of hierarchical levels.
     G_inv : numpy.ndarray
         Inverse of the generator matrix.
-        
+
     Notes:
     ------
     The hierarchical quantizer uses M levels of quantization, where each level
@@ -40,11 +41,11 @@ class HierarchicalNestedLatticeQuantizer:
     inner product estimation and achieves better rate-distortion performance
     compared to single-level quantization.
     """
-    
-    def __init__(self, G, Q_nn, q, beta, alpha, eps, dither, M):
+
+    def __init__(self, G, Q_nn, q, beta, alpha, eps, dither, M, decoding="full"):
         """
         Initialize the Hierarchical Nested Lattice Quantizer.
-        
+
         Parameters:
         -----------
         G : numpy.ndarray
@@ -63,6 +64,9 @@ class HierarchicalNestedLatticeQuantizer:
             Dither vector for randomized quantization.
         M : int
             Number of hierarchical levels.
+        decoding : str, optional
+            Default decoding method to use ('full', 'coarse_to_fine', 'progressive').
+            Default is 'full'.
         """
         self.G = G
         self.Q_nn = lambda x: Q_nn(x + eps)
@@ -72,22 +76,77 @@ class HierarchicalNestedLatticeQuantizer:
         self.eps = eps
         self.dither = dither
         self.M = M
+        self.decoding = decoding
         self.G_inv = np.linalg.inv(G)
+
+    def get_default_decoding(self, b_list, T, with_dither, max_level=None):
+        """
+        Get the default decoding based on the decoding parameter.
+
+        Parameters:
+        -----------
+        b_list : tuple
+            Tuple of M encoding vectors.
+        T : int
+            Number of scaling operations that were applied during encoding.
+        with_dither : bool
+            Whether dithering was applied during encoding.
+        max_level : int, optional
+            Maximum level for coarse-to-fine decoding.
+
+        Returns:
+        --------
+        numpy.ndarray or list
+            Decoded result based on the decoding parameter.
+        """
+        if self.decoding == "full":
+            return self.decode(b_list, T, with_dither)
+        elif self.decoding == "coarse_to_fine":
+            return self.decode_coarse_to_fine(b_list, T, with_dither, max_level)
+        elif self.decoding == "progressive":
+            return self.decode_progressive(b_list, T, with_dither)
+        else:
+            raise ValueError(f"Unknown decoding method: {self.decoding}")
+
+    def decode_with_depth(self, b_list, T, with_dither, depth):
+        """
+        Decode with a specific depth level.
+
+        Parameters:
+        -----------
+        b_list : tuple
+            Tuple of M encoding vectors.
+        T : int
+            Number of scaling operations that were applied during encoding.
+        with_dither : bool
+            Whether dithering was applied during encoding.
+        depth : int
+            Decoding depth (0 to M-1). Higher depth means finer reconstruction.
+
+        Returns:
+        --------
+        numpy.ndarray
+            Decoded result at the specified depth.
+        """
+        if depth < 0 or depth >= self.M:
+            raise ValueError(f"Depth must be between 0 and {self.M-1}, got {depth}")
+
+        return self.decode_coarse_to_fine(b_list, T, with_dither, max_level=depth)
 
     def _encode(self, x, with_dither):
         """
         Internal encoding function that performs hierarchical quantization.
-        
+
         This method implements the core hierarchical encoding algorithm,
         producing M levels of encoding vectors.
-        
+
         Parameters:
         -----------
         x : numpy.ndarray
             Input vector to be quantized.
         with_dither : bool
             Whether to apply dithering during quantization.
-            
+
         Returns:
         --------
         tuple
@@ -95,7 +154,7 @@ class HierarchicalNestedLatticeQuantizer:
             tuple of M encoding vectors and overload_error indicates if
             overload occurred.
         """
-        x = (x / self.beta)
+        x = x / self.beta
         if with_dither:
             x = x + self.dither
         x_l = x
@@ -113,17 +172,17 @@ class HierarchicalNestedLatticeQuantizer:
     def encode(self, x, with_dither):
         """
         Encode a vector using hierarchical nested lattice quantization.
-        
+
         This method quantizes the input vector using M hierarchical levels
         and handles overload by scaling the vector until quantization succeeds.
-        
+
         Parameters:
         -----------
         x : numpy.ndarray
             Input vector to be quantized.
         with_dither : bool
             Whether to apply dithering during quantization.
-            
+
         Returns:
         --------
         tuple
@@ -134,19 +193,19 @@ class HierarchicalNestedLatticeQuantizer:
         t = 0
         while did_overload:
             t += 1
-            x = x / (2 ** self.alpha)
+            x = x / (2**self.alpha)
             b_list, did_overload = self._encode(x, with_dither)
         return b_list, t
 
     def q_Q(self, x):
         """
         Quantization function that maps x to the nearest lattice point.
-        
+
         Parameters:
         -----------
         x : numpy.ndarray
             Input vector.
-            
+
         Returns:
         --------
         numpy.ndarray
@@ -157,17 +216,17 @@ class HierarchicalNestedLatticeQuantizer:
     def _decode(self, b_list, with_dither):
         """
         Internal decoding function that performs hierarchical reconstruction.
-        
+
         This method reconstructs the original vector from M levels of
         encoding vectors using the hierarchical decoding algorithm.
-        
+
         Parameters:
         -----------
         b_list : tuple
             Tuple of M encoding vectors.
         with_dither : bool
             Whether dithering was applied during encoding.
-            
+
         Returns:
         --------
         numpy.ndarray
@@ -177,7 +236,8 @@ class HierarchicalNestedLatticeQuantizer:
         for b in b_list:
             x_i_hat = np.dot(self.G, b) - self.q_Q(np.dot(self.G, b))
             x_hat_list.append(x_i_hat)
-        x_hat = sum([np.power(self.q, i) * x_i for i, x_i in enumerate(x_hat_list)])
+        # Correct weight assignment: coarsest level (index 0) gets highest weight q^(M-1)
+        x_hat = sum([np.power(self.q, self.M - 1 - i) * x_i for i, x_i in enumerate(x_hat_list)])
         if with_dither:
             x_hat = x_hat - self.dither
         return self.beta * x_hat
@@ -185,10 +245,10 @@ class HierarchicalNestedLatticeQuantizer:
     def decode(self, b_list, T, with_dither):
         """
         Decode hierarchical encoding vectors back to the original space.
-        
+
         This method reconstructs the original vector from its hierarchical
         encoding, accounting for any scaling that was applied during encoding.
-        
+
         Parameters:
         -----------
         b_list : tuple
@@ -197,7 +257,7 @@ class HierarchicalNestedLatticeQuantizer:
             Number of scaling operations that were applied during encoding.
         with_dither : bool
             Whether dithering was applied during encoding.
-            
+
         Returns:
         --------
         numpy.ndarray
@@ -205,20 +265,101 @@ class HierarchicalNestedLatticeQuantizer:
         """
         return self._decode(b_list, with_dither) * (2 ** (self.alpha * T))
 
+    def decode_coarse_to_fine(self, b_list, T, with_dither, max_level: int = None):
+        """
+        Decode hierarchical encoding vectors with coarse-to-fine reconstruction.
+
+        This method allows decoding from coarse to fine levels, where higher M
+        means coarser quantization. The reconstruction can be stopped at any
+        level from M-1 down to 0, providing progressive refinement.
+
+        Parameters:
+        -----------
+        b_list : tuple
+            Tuple of M encoding vectors.
+        T : int
+            Number of scaling operations that were applied during encoding.
+        with_dither : bool
+            Whether dithering was applied during encoding.
+        max_level : int, optional
+            Maximum level to decode up to (0 <= max_level < M).
+            If None, decodes all levels (equivalent to decode method).
+            Higher max_level means coarser reconstruction.
+
+        Returns:
+        --------
+        numpy.ndarray
+            Reconstructed vector at the specified level of detail.
+        """
+        if max_level is None:
+            # Default behavior: decode all levels
+            return self.decode(b_list, T, with_dither)
+
+        if not (0 <= max_level < self.M):
+            raise ValueError(f"max_level must be between 0 and {self.M-1}, got {max_level}")
+
+        # For coarse-to-fine decoding, we use levels from 0 to max_level
+        # The first level (index 0) has the highest weight, so it's the coarsest
+        # Higher max_level means we include more levels, giving finer reconstruction
+        x_hat_list = []
+
+        # Use only the levels from 0 to max_level (inclusive)
+        # This gives us finer reconstruction as max_level increases
+        for i in range(max_level + 1):
+            b = b_list[i]
+            x_i_hat = np.dot(self.G, b) - self.q_Q(np.dot(self.G, b))
+            x_hat_list.append(x_i_hat)
+
+        # Reconstruct using only the selected levels with correct weights
+        # Level 0 gets weight q^(M-1), level 1 gets weight q^(M-2), etc.
+        x_hat = sum([np.power(self.q, self.M - 1 - i) * x_i for i, x_i in enumerate(x_hat_list)])
+
+        if with_dither:
+            x_hat = x_hat - self.dither
+
+        return self.beta * x_hat * (2 ** (self.alpha * T))
+
+    def decode_progressive(self, b_list, T, with_dither):
+        """
+        Generate progressive reconstructions from coarse to fine.
+
+        This method returns a list of reconstructions at each level,
+        from the coarsest (level 0) to the finest (level M-1).
+
+        Parameters:
+        -----------
+        b_list : tuple
+            Tuple of M encoding vectors.
+        T : int
+            Number of scaling operations that were applied during encoding.
+        with_dither : bool
+            Whether dithering was applied during encoding.
+
+        Returns:
+        --------
+        list
+            List of reconstructed vectors, from coarsest to finest.
+        """
+        reconstructions = []
+        for level in range(self.M):  # From 0 to M-1
+            reconstruction = self.decode_coarse_to_fine(b_list, T, with_dither, level)
+            reconstructions.append(reconstruction)
+        return reconstructions
+
     def quantize(self, x, with_dither):
         """
         Complete hierarchical quantization process: encode and decode a vector.
-        
+
         This is a convenience method that performs both encoding and decoding
         in a single call, returning the quantized version of the input vector.
-        
+
         Parameters:
         -----------
         x : numpy.ndarray
             Input vector to be quantized.
         with_dither : bool
             Whether to apply dithering during quantization.
-            
+
         Returns:
         --------
         numpy.ndarray
@@ -230,21 +371,21 @@ class HierarchicalNestedLatticeQuantizer:
     def create_q_codebook(self, with_dither):
         """
         Create a codebook for the hierarchical quantizer.
-        
+
         This method creates a codebook by using the nested lattice quantizer
         with appropriate parameters. The codebook maps encoding vectors to
         their corresponding lattice points.
-        
+
         Parameters:
         -----------
         with_dither : bool
             Whether to apply dithering when creating the codebook.
-            
+
         Returns:
         --------
         dict
             Dictionary mapping encoding vectors (as tuples) to lattice points.
-            
+
         Notes:
         ------
         The codebook is created using the nested lattice quantizer with
@@ -252,8 +393,10 @@ class HierarchicalNestedLatticeQuantizer:
         a mapping for lookup-based operations.
         """
         if with_dither:
-            nq = NQ(self.G, self.Q_nn, self.q, self.beta, self.alpha, eps=self.eps, dither=self.dither)
+            nq = NQ(
+                self.G, self.Q_nn, self.q, self.beta, self.alpha, eps=self.eps, dither=self.dither
+            )
         else:
-            dither = np.array([[0]*len(self.G)])
+            dither = np.array([[0] * len(self.G)])
             nq = NQ(self.G, self.Q_nn, self.q, self.beta, self.alpha, eps=self.eps, dither=dither)
         return nq.create_codebook(with_dither)

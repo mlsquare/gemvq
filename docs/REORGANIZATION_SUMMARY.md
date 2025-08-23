@@ -13,7 +13,7 @@ src/
 │   ├── nested_lattice_quantizer.py
 │   ├── hierarchical_nested_lattice_quantizer.py
 │   └── closest_point.py
-├── applications/         # Matrix multiplication applications
+├── exps/                # Rate-distortion theory experiments
 │   ├── __init__.py
 │   ├── estimate_inner_product.py
 │   ├── estimate_correlated_inner_product.py
@@ -47,9 +47,9 @@ src/
 - `HierarchicalNestedLatticeQuantizer`: Advanced multi-level quantization
 - `closest_point_Dn`, `closest_point_A2`, `closest_point_E8`: Lattice algorithms
 
-### 2. `applications/` - Matrix Multiplication Applications
+### 2. `exps/` - Rate-Distortion Theory Experiments
 
-**Purpose**: Contains applications of quantizers for matrix operations and analysis.
+**Purpose**: Contains experiments and analysis tools for rate-distortion theory in lattice quantization.
 
 **Files**:
 - `estimate_inner_product.py`: Inner product estimation and analysis
@@ -104,7 +104,7 @@ from src.adaptive_matvec import adaptive_matvec_multiply
 ### After Reorganization
 ```python
 from src.quantizers import HierarchicalNestedLatticeQuantizer, closest_point_Dn
-from src.applications import plot_distortion_rate
+from src.exps import plot_distortion_rate
 from src.adaptive import adaptive_matvec_multiply
 ```
 
@@ -122,14 +122,14 @@ from src.adaptive import adaptive_matvec_multiply
 ### For Users
 
 1. **Core Quantizers**: Import from `src.quantizers`
-2. **Analysis Tools**: Import from `src.applications`
+2. **Analysis Tools**: Import from `src.exps`
 3. **Adaptive Methods**: Import from `src.adaptive`
 4. **Utilities**: Import from `src.utils` or `src` (for convenience)
 
 ### For Developers
 
 1. **New Quantizers**: Add to `src/quantizers/`
-2. **New Applications**: Add to `src/applications/`
+2. **New Experiments**: Add to `src/exps/`
 3. **New Adaptive Methods**: Add to `src/adaptive/`
 4. **New Utilities**: Add to `src/utils.py`
 

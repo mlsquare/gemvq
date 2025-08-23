@@ -3,7 +3,7 @@ Test modules for the LatticeQuant library.
 
 This module contains test suites for:
 - Quantizer implementations
-- Applications and analysis tools
+- Rate-distortion theory experiments and analysis tools
 - Adaptive matrix-vector multiplication
 - Layer-wise histogram implementation
 

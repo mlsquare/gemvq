@@ -1,7 +1,7 @@
 """
-Applications and analysis tools for lattice quantization.
+Rate-distortion theory experiments and analysis tools for lattice quantization.
 
-This module contains applications and analysis tools:
+This module contains experiments and analysis tools:
 - Inner product estimation and analysis
 - Rate-distortion analysis and comparison
 - Codebook visualization and reconstruction
@@ -12,4 +12,4 @@ For usage examples, see the individual module files:
 - compare_quantizer_distortion.py
 - plot_reconstructed_codebook.py
 - estimate_correlated_inner_product.py
-""" 
+"""

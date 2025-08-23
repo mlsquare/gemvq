@@ -1,18 +1,20 @@
 import matplotlib.pyplot as plt
-from ..quantizers.closest_point import custom_round
-from ..utils import *
-from ..quantizers.closest_point import closest_point_A2, closest_point_Dn
-from ..quantizers.hierarchical_nested_lattice_quantizer import HierarchicalNestedLatticeQuantizer as HQ
 import numpy as np
+
+from ..quantizers.closest_point import (closest_point_A2, closest_point_Dn,
+                                        custom_round)
+from ..quantizers.hierarchical_nested_lattice_quantizer import \
+    HierarchicalNestedLatticeQuantizer as HQ
+from ..utils import *
 
 
 def generate_rho_correlated_samples(rho, num_samples, vector_dim):
     """
     Generate pairs of rho-correlated Gaussian samples.
-    
+
     This function generates pairs of vectors that are correlated with
     correlation coefficient rho using Cholesky decomposition.
-    
+
     Parameters:
     -----------
     rho : float
@@ -21,13 +23,13 @@ def generate_rho_correlated_samples(rho, num_samples, vector_dim):
         Number of sample pairs to generate.
     vector_dim : int
         Dimension of each vector.
-        
+
     Returns:
     --------
     tuple
         (x_samples, y_samples) where both are numpy arrays of shape
         (num_samples, vector_dim) containing correlated samples.
-        
+
     Notes:
     ------
     The function uses Cholesky decomposition of the correlation matrix
@@ -45,10 +47,10 @@ def generate_rho_correlated_samples(rho, num_samples, vector_dim):
 def calculate_distortion(x_samples, y_samples, quantizer, lut=None, use_dithers=False):
     """
     Calculate the distortion of the inner product estimation for given samples.
-    
+
     This function computes the mean squared error between true inner products
     and estimated inner products using hierarchical quantization.
-    
+
     Parameters:
     -----------
     x_samples : numpy.ndarray
@@ -61,12 +63,12 @@ def calculate_distortion(x_samples, y_samples, quantizer, lut=None, use_dithers=
         Lookup table for inner product estimation.
     use_dithers : bool, optional
         Whether to apply dithering during quantization.
-        
+
     Returns:
     --------
     float
         Mean squared error of inner product estimation.
-        
+
     Notes:
     ------
     The function processes vectors in blocks according to the lattice dimension
@@ -85,12 +87,12 @@ def calculate_distortion(x_samples, y_samples, quantizer, lut=None, use_dithers=
             y = y + dither_y
 
         for k in range(0, len(x), d):
-            block1 = x[k:k + d]
-            block2 = y[k:k + d]
+            block1 = x[k : k + d]
+            block2 = y[k : k + d]
 
             enc_x, t_x = quantizer.encode(block1)
             enc_y, t_y = quantizer.encode(block2)
-            c = (2 ** (quantizer.alpha * (t_x + t_y))) * (quantizer.beta ** 2)
+            c = (2 ** (quantizer.alpha * (t_x + t_y))) * (quantizer.beta**2)
             res = calculate_weighted_sum(enc_x, enc_y, lut, q=4)
             quantized_inner_product += res * c
 
@@ -102,11 +104,11 @@ def calculate_distortion(x_samples, y_samples, quantizer, lut=None, use_dithers=
 def plot_distortion_rho():
     """
     Plot distortion vs correlation coefficient for hierarchical quantization.
-    
+
     This function analyzes how the performance of hierarchical quantization
     varies with the correlation between input vectors. It generates a plot
     showing distortion as a function of correlation coefficient.
-    
+
     Notes:
     ------
     The function:
@@ -166,4 +168,3 @@ def plot_distortion_rho():
 
 if __name__ == "__main__":
     plot_distortion_rho()
-

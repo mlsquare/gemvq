@@ -10,4 +10,4 @@ For usage examples, see the individual module files:
 - hierarchical_nested_lattice_quantizer.py
 - nested_lattice_quantizer.py
 - closest_point.py
-""" 
+"""

@@ -1,22 +1,27 @@
-from ..quantizers.nested_lattice_quantizer import NestedLatticeQuantizer as NQuantizer
-from ..quantizers.hierarchical_nested_lattice_quantizer import HierarchicalNestedLatticeQuantizer as HQuantizer
-from ..utils import get_a2, get_d3, get_d4, get_e8, calculate_mse, calculate_t_entropy
-from ..quantizers.closest_point import closest_point_A2, closest_point_Dn, closest_point_E8, custom_round
-import numpy as np
 import matplotlib.pyplot as plt
+import numpy as np
+
+from ..quantizers.closest_point import (closest_point_A2, closest_point_Dn,
+                                        closest_point_E8, custom_round)
+from ..quantizers.hierarchical_nested_lattice_quantizer import \
+    HierarchicalNestedLatticeQuantizer as HQuantizer
+from ..quantizers.nested_lattice_quantizer import \
+    NestedLatticeQuantizer as NQuantizer
+from ..utils import (calculate_mse, calculate_t_entropy, get_a2, get_d3,
+                     get_d4, get_e8)
 
 
 def calculate_mse_and_overload_for_samples(samples, quantizer):
     """
     Calculate the MSE and overload values for quantized samples.
-    
+
     Parameters:
     -----------
     samples : numpy.ndarray
         Array of sample vectors to be quantized.
     quantizer : object
         Quantizer object (NestedLatticeQuantizer or HierarchicalNestedLatticeQuantizer).
-        
+
     Returns:
     --------
     tuple
@@ -36,14 +41,14 @@ def calculate_mse_and_overload_for_samples(samples, quantizer):
 def calculate_slope(log_R, min_errors):
     """
     Calculate the slope of the rate-distortion curve.
-    
+
     Parameters:
     -----------
     log_R : numpy.ndarray
         Logarithm of rate values.
     min_errors : numpy.ndarray
         Minimum error values.
-        
+
     Returns:
     --------
     float
@@ -57,10 +62,10 @@ def calculate_slope(log_R, min_errors):
 def calculate_rate_and_distortion(name, samples, quantizer, q, beta_min):
     """
     Calculate rate and distortion for a given quantizer configuration.
-    
+
     This function performs a grid search over beta values to find the
     optimal rate-distortion performance for a given quantizer.
-    
+
     Parameters:
     -----------
     name : str
@@ -73,13 +78,13 @@ def calculate_rate_and_distortion(name, samples, quantizer, q, beta_min):
         Quantization parameter.
     beta_min : float
         Minimum beta value for the grid search.
-        
+
     Returns:
     --------
     tuple
         (optimal_R, optimal_mse, optimal_beta) containing the optimal
         rate, mean squared error, and beta parameter.
-        
+
     Notes:
     ------
     The function evaluates the rate-distortion function f(beta) = MSE / 2^(-2*R)
@@ -96,7 +101,7 @@ def calculate_rate_and_distortion(name, samples, quantizer, q, beta_min):
     overload_percentage = None
 
     for beta_idx, beta in enumerate(betas):
-        quantizer.alpha = 1/3
+        quantizer.alpha = 1 / 3
         quantizer.beta = beta
         mse, T_values = calculate_mse_and_overload_for_samples(samples, quantizer)
 
@@ -113,20 +118,23 @@ def calculate_rate_and_distortion(name, samples, quantizer, q, beta_min):
             optimal_R = R
             overload_percentage = (1 - (T_counts[0] / sum(T_counts))) * 100
 
-
-    print(f"For q={q} and scheme {name}: Optimal beta: {optimal_beta:.3f}, "
-          f"Minimum MSE: {optimal_mse:.6f}, Minimum f(beta, alpha): {min_f_beta:.3f}, "
-          f"optimal_H_T: {optimal_H_T:.4f}, overload percent: {overload_percentage:.2f}%")
+    print(
+        f"For q={q} and scheme {name}: Optimal beta: {optimal_beta:.3f}, "
+        f"Minimum MSE: {optimal_mse:.6f}, Minimum f(beta, alpha): {min_f_beta:.3f}, "
+        f"optimal_H_T: {optimal_H_T:.4f}, overload percent: {overload_percentage:.2f}%"
+    )
     return optimal_R, optimal_mse, optimal_beta
 
 
-def run_comparison_experiment(G, q_nn, q_values, n_samples, d, sigma_squared, M, sig_l, schemes, eps):
+def run_comparison_experiment(
+    G, q_nn, q_values, n_samples, d, sigma_squared, M, sig_l, schemes, eps
+):
     """
     Run a comprehensive comparison experiment between different quantization schemes.
-    
+
     This function compares the rate-distortion performance of different
     quantization methods across various quantization parameters.
-    
+
     Parameters:
     -----------
     G : numpy.ndarray
@@ -149,12 +157,12 @@ def run_comparison_experiment(G, q_nn, q_values, n_samples, d, sigma_squared, M,
         List of quantization schemes to compare.
     eps : float
         Small perturbation parameter.
-        
+
     Returns:
     --------
     dict
         Dictionary containing rate-distortion results for each scheme.
-        
+
     Notes:
     ------
     The function generates random samples and evaluates each quantization
@@ -166,18 +174,22 @@ def run_comparison_experiment(G, q_nn, q_values, n_samples, d, sigma_squared, M,
 
     results = {scheme["name"]: {"R": [], "min_errors": []} for scheme in schemes}
 
-    markers = ['o', 's', 'x']
-    colors = ['blue', 'green', 'orange']
+    markers = ["o", "s", "x"]
+    colors = ["blue", "green", "orange"]
 
     for q_idx, q in enumerate(q_values):
         print(f"Processing q={q} ({q_idx + 1}/{len(q_values)})...")
-        beta_min = (1 / q ** M) * np.sqrt(1 / sig_l) * np.sqrt(d / (d + 2))
+        beta_min = (1 / q**M) * np.sqrt(1 / sig_l) * np.sqrt(d / (d + 2))
 
         for idx, scheme in enumerate(schemes):
             name, quantizer_class, nesting = scheme["name"], scheme["quantizer"], scheme["nesting"]
-            quantizer = quantizer_class(G, q_nn, q=nesting(q), beta=beta_min, alpha=1, eps=eps, M=2, dither=np.zeros(d))
+            quantizer = quantizer_class(
+                G, q_nn, q=nesting(q), beta=beta_min, alpha=1, eps=eps, M=2, dither=np.zeros(d)
+            )
 
-            R, min_error, optimal_beta = calculate_rate_and_distortion(name, samples, quantizer, q, beta_min)
+            R, min_error, optimal_beta = calculate_rate_and_distortion(
+                name, samples, quantizer, q, beta_min
+            )
             results[name]["R"].append(R)
             results[name]["min_errors"].append(min_error)
 
@@ -189,8 +201,13 @@ def run_comparison_experiment(G, q_nn, q_values, n_samples, d, sigma_squared, M,
 
     q_2_rates = results[schemes[2]["name"]]["R"]
     benchmark_distortions = [2 ** (-2 * k) for k in q_2_rates]
-    plt.plot(q_2_rates, benchmark_distortions, label=f"Theoretical benchmark", color='red',
-             linestyle="--")
+    plt.plot(
+        q_2_rates,
+        benchmark_distortions,
+        label=f"Theoretical benchmark",
+        color="red",
+        linestyle="--",
+    )
 
     plt.xlabel(r"$R = 2 \log_2 (q) + H(T)/d$")
     plt.ylabel("D (logarithmic scale)")
@@ -205,17 +222,17 @@ def run_comparison_experiment(G, q_nn, q_values, n_samples, d, sigma_squared, M,
 def main():
     """
     Main function to run the quantizer comparison experiment.
-    
+
     This function sets up and runs a comprehensive comparison between
     different quantization schemes using the D4 lattice.
-    
+
     Notes:
     ------
     The experiment compares:
     1. q(q-1) Voronoi Code
     2. Hierarchical Quantizer
     3. q² Voronoi Code
-    
+
     Results are plotted showing the rate-distortion performance of each method.
     """
     num_samples = 5000
@@ -229,14 +246,21 @@ def main():
     M = 2
 
     schemes = [
-        {"name": r"$q(q-1)$ Voronoi Code", "quantizer": NQuantizer, "nesting": lambda q: int(q * (q-1))},
-        {"name": "Hierarchical Quantizer",  "quantizer": HQuantizer, "nesting": lambda q: int(q)},
-        {"name": r"$q^2$ Voronoi Code", "quantizer": NQuantizer, "nesting": lambda q: int(q ** 2)},
+        {
+            "name": r"$q(q-1)$ Voronoi Code",
+            "quantizer": NQuantizer,
+            "nesting": lambda q: int(q * (q - 1)),
+        },
+        {"name": "Hierarchical Quantizer", "quantizer": HQuantizer, "nesting": lambda q: int(q)},
+        {"name": r"$q^2$ Voronoi Code", "quantizer": NQuantizer, "nesting": lambda q: int(q**2)},
     ]
 
-    results = run_comparison_experiment(G, q_nn, q_values, num_samples, len(G), sigma_squared, M, sig_l, schemes, eps)
+    results = run_comparison_experiment(
+        G, q_nn, q_values, num_samples, len(G), sigma_squared, M, sig_l, schemes, eps
+    )
 
     print("Comparison complete. Results:")
     print(results)
+
 
 main()

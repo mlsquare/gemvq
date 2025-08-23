@@ -15,33 +15,29 @@ def test_imports():
     
     try:
         # Test quantizers module
-        from src.quantizers import (
-            HierarchicalNestedLatticeQuantizer,
-            NestedLatticeQuantizer,
-            closest_point_Dn,
-            closest_point_A2,
-            closest_point_E8
-        )
+        from src.quantizers.hierarchical_nested_lattice_quantizer import HierarchicalNestedLatticeQuantizer
+        from src.quantizers.nested_lattice_quantizer import NestedLatticeQuantizer
+        from src.quantizers.closest_point import closest_point_Dn, closest_point_A2, closest_point_E8
         print("✅ Quantizers module imports successful")
         
-        # Test applications module
-        from src.applications import (
-            calculate_inner_product_distortion,
-            plot_distortion_rate,
-            find_best_beta,
-            run_comparison_experiment,
-            generate_codebook
-        )
-        print("✅ Applications module imports successful")
+        # Test exps module
+        from src.exps.estimate_inner_product import calculate_inner_product_distortion, plot_distortion_rate, find_best_beta
+        from src.exps.compare_quantizer_distortion import run_comparison_experiment
+        from src.exps.plot_reconstructed_codebook import generate_codebook
+        print("✅ Exps module imports successful")
         
         # Test adaptive module
-        from src.adaptive import (
-            adaptive_matvec_multiply,
-            create_adaptive_matvec_processor,
-            AdaptiveColumnQuantizer,
-            run_comprehensive_demo
-        )
+        from src.adaptive.adaptive_matvec import adaptive_matvec_multiply, create_adaptive_matvec_processor, AdaptiveColumnQuantizer
+        from src.adaptive.demo_adaptive_matvec import run_comprehensive_demo
         print("✅ Adaptive module imports successful")
+        
+        # Test GEMV module
+        from src.gemv import ColumnWiseGEMV, RowWiseGEMV, LatticeQuantizedGEMV
+        from src.gemv.padder import BlockingStrategy
+        from src.gemv.column_wise_gemv import column_wise_gemv
+        from src.gemv.row_wise_gemv import row_wise_gemv
+        from src.gemv.lattice_quantized_gemv import lattice_quantized_gemv
+        print("✅ GEMV module imports successful")
         
         # Test utils module
         from src.utils import (
@@ -54,14 +50,13 @@ def test_imports():
         print("✅ Utils module imports successful")
         
         # Test main module imports (backward compatibility)
-        from src import (
-            HierarchicalNestedLatticeQuantizer,
-            NestedLatticeQuantizer,
-            closest_point_Dn,
-            plot_distortion_rate,
-            adaptive_matvec_multiply,
-            get_d4
-        )
+        from src.quantizers.hierarchical_nested_lattice_quantizer import HierarchicalNestedLatticeQuantizer
+        from src.quantizers.nested_lattice_quantizer import NestedLatticeQuantizer
+        from src.quantizers.closest_point import closest_point_Dn
+        from src.exps.estimate_inner_product import plot_distortion_rate
+        from src.adaptive.adaptive_matvec import adaptive_matvec_multiply
+        from src.gemv import LatticeQuantizedGEMV
+        from src.utils import get_d4
         print("✅ Main module imports successful")
         
         return True
@@ -75,7 +70,8 @@ def test_basic_functionality():
     print("\nTesting basic functionality...")
     
     try:
-        from src.quantizers import HierarchicalNestedLatticeQuantizer, closest_point_Dn
+        from src.quantizers.hierarchical_nested_lattice_quantizer import HierarchicalNestedLatticeQuantizer
+        from src.quantizers.closest_point import closest_point_Dn
         from src.utils import get_d4
         
         # Setup parameters
@@ -112,7 +108,7 @@ def test_adaptive_functionality():
     print("\nTesting adaptive functionality...")
     
     try:
-        from src.adaptive import adaptive_matvec_multiply
+        from src.adaptive.adaptive_matvec import adaptive_matvec_multiply
         
         # Create test data
         matrix = np.random.randn(4, 8)
@@ -135,14 +131,14 @@ def test_adaptive_functionality():
         print(f"❌ Adaptive functionality test failed: {e}")
         return False
 
-def test_applications_functionality():
-    """Test applications functionality."""
-    print("\nTesting applications functionality...")
+def test_exps_functionality():
+    """Test exps functionality."""
+    print("\nTesting exps functionality...")
     
     try:
-        from src.applications import find_best_beta
+        from src.exps.estimate_inner_product import find_best_beta
         from src.utils import get_d4
-        from src.quantizers import closest_point_Dn
+        from src.quantizers.closest_point import closest_point_Dn
         
         # Test parameter optimization
         G = get_d4()
@@ -162,7 +158,49 @@ def test_applications_functionality():
         return True
         
     except Exception as e:
-        print(f"❌ Applications functionality test failed: {e}")
+        print(f"❌ Exps functionality test failed: {e}")
+        return False
+
+def test_gemv_functionality():
+    """Test GEMV functionality."""
+    print("\nTesting GEMV functionality...")
+    
+    try:
+        from src.gemv import ColumnWiseGEMV, RowWiseGEMV, LatticeQuantizedGEMV
+        
+        # Create test data
+        matrix = np.random.randn(8, 6)
+        vector = np.random.randn(6)
+        
+        # Test column-wise approach
+        col_processor = ColumnWiseGEMV(matrix, 'D4', 2)
+        col_result = col_processor.multiply(vector)
+        
+        # Test row-wise approach
+        row_processor = RowWiseGEMV(matrix, 'D4', 2)
+        row_result = row_processor.multiply(vector)
+        
+        # Test unified interface
+        unified_processor = LatticeQuantizedGEMV(matrix, 'auto', 'D4', 2)
+        unified_result = unified_processor.multiply(vector)
+        
+        # Compare with exact computation
+        exact_result = matrix @ vector
+        
+        col_error = np.linalg.norm(col_result - exact_result) / np.linalg.norm(exact_result)
+        row_error = np.linalg.norm(row_result - exact_result) / np.linalg.norm(exact_result)
+        unified_error = np.linalg.norm(unified_result - exact_result) / np.linalg.norm(exact_result)
+        
+        print(f"✅ GEMV functionality test passed")
+        print(f"   Column-wise error: {col_error:.6f}")
+        print(f"   Row-wise error: {row_error:.6f}")
+        print(f"   Unified error: {unified_error:.6f}")
+        print(f"   Selected approach: {unified_processor.approach}")
+        
+        return True
+        
+    except Exception as e:
+        print(f"❌ GEMV functionality test failed: {e}")
         return False
 
 def main():
@@ -174,7 +212,8 @@ def main():
         test_imports,
         test_basic_functionality,
         test_adaptive_functionality,
-        test_applications_functionality
+        test_exps_functionality,
+        test_gemv_functionality
     ]
     
     passed = 0
