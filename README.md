@@ -1,25 +1,30 @@
 # gemvq
 
-A comprehensive library for lattice quantization and hierarchical nested lattice quantization with coarse-to-fine decoding capabilities.
+A comprehensive library for matrix-vector multiplication (GEMV) based on different lattice quantizers, including nested lattice quantizers and hierarchical nested lattice quantizers. This library builds on the latticequant library to provide efficient implementations of quantized matrix-vector operations.
 
 ## Overview
 
 gemvq provides efficient implementations of:
-- **Lattice Quantization**: Quantizing vectors to points on lattices (D4, A2, E8, Z2, Z3)
+- **Matrix-Vector Multiplication**: Efficient GEMV operations using quantized matrices with different lattice quantizers
+- **Lattice Quantization**: Quantizing vectors to points on lattices (D4, A2, E8, Z2, Z3) using latticequant library
+- **Nested Lattice Quantization**: Single-level quantization for matrix compression
 - **Hierarchical Nested Lattice Quantization**: Multi-level quantization for progressive refinement
 - **Coarse-to-Fine Decoding**: Progressive reconstruction from coarse to fine levels
-- **Matrix-Vector Multiplication**: Efficient GEMV operations using quantized matrices
 - **Adaptive Quantization**: Dynamic quantization based on data characteristics
 
 ## Key Features
 
-### 🎯 **Coarse-to-Fine Decoding**
-- Progressive reconstruction from coarse to fine levels
-- Monotonic error reduction as more levels are used
-- Support for variable depth decoding
-- Both column-wise and row-wise GEMV approaches
+### 🎯 **Matrix-Vector Multiplication (GEMV)**
+- **Quantized Matrix Operations**: Efficient matrix-vector multiplication using lattice-quantized matrices
+- **Multiple Processing Strategies**: Column-wise, row-wise, SVD-based, and lookup table approaches
+- **Coarse-to-Fine Decoding**: Progressive reconstruction from coarse to fine levels
+- **Monotonic Error Reduction**: Error decreases as more quantization levels are used
+- **Variable Depth Decoding**: Support for decoding at different quantization levels
 
-### 🔧 **Multiple Lattice Types**
+### 🔧 **Lattice Quantizer Support**
+- **Nested Lattice Quantizer**: Single-level quantization for matrix compression
+- **Hierarchical Nested Lattice Quantizer**: Multi-level quantization for progressive refinement
+- **Multiple Lattice Types**: Support for D4, A2, E8, Z2, Z3 lattices from latticequant library
 - **D4**: 4-dimensional checkerboard lattice
 - **A2**: 2-dimensional hexagonal lattice  
 - **E8**: 8-dimensional Gosset lattice
@@ -47,44 +52,50 @@ pip install -r requirements-dev.txt
 
 ## Quick Start
 
-### Basic Hierarchical Quantization
+### Matrix-Vector Multiplication with Lattice Quantizers
 
 ```python
 import numpy as np
-from src.lattices.quantizers.hierarchical_nested_lattice_quantizer import HierarchicalNestedLatticeQuantizer
+from src.gemv.columnwise_matvec_processor import ColumnwiseMatvecProcessor
+
+# Create a matrix and quantize it using D4 lattice
+matrix = np.random.uniform(0, 1, (100, 50)) * 256  # Scale by q^M
+processor = ColumnwiseMatvecProcessor(matrix, 'D4', M=3)
+
+# Perform matrix-vector multiplication with coarse-to-fine decoding
+vector = np.random.uniform(0, 1, 50) * 256
+result = processor.multiply_coarse_to_fine(vector, max_level=1)  # Use 2 levels
+print(f"Matrix-vector multiplication result shape: {result.shape}")
+```
+
+### Using Different Lattice Quantizers
+
+```python
+# Using nested lattice quantizer (single-level)
+from src.lattices.quantizers.nested_lattice_quantizer import NestedLatticeQuantizer
 from src.lattices.utils import get_d4
+
+G = get_d4()
+nested_quantizer = NestedLatticeQuantizer(G=G, q=4, beta=0.2)
+
+# Using hierarchical nested lattice quantizer (multi-level)
+from src.lattices.quantizers.hierarchical_nested_lattice_quantizer import HierarchicalNestedLatticeQuantizer
 from src.lattices.quantizers.nested_lattice_quantizer import closest_point_Dn
 
-# Setup quantizer
-G = get_d4()
-quantizer = HierarchicalNestedLatticeQuantizer(
+hierarchical_quantizer = HierarchicalNestedLatticeQuantizer(
     G=G, Q_nn=closest_point_Dn, q=4, beta=0.2,
     alpha=1/3, eps=1e-8, dither=np.zeros(4), M=3
 )
 
-# Encode vector
+# Encode and decode with progressive refinement
 x = np.random.uniform(0, 1, 4) * 64  # Scale by q^M
-b_list, T = quantizer.encode(x, with_dither=False)
+b_list, T = hierarchical_quantizer.encode(x, with_dither=False)
 
-# Decode at different levels
+# Decode at different levels for progressive quality
 for level in range(3):
-    reconstruction = quantizer.decode_coarse_to_fine(b_list, T, with_dither=False, max_level=level)
+    reconstruction = hierarchical_quantizer.decode_coarse_to_fine(b_list, T, with_dither=False, max_level=level)
     error = np.linalg.norm(reconstruction - x) / np.linalg.norm(x)
     print(f"Level {level}: Error = {error:.6f}")
-```
-
-### Matrix-Vector Multiplication
-
-```python
-from src.gemv.columnwise_matvec_processor import ColumnwiseMatvecProcessor
-
-# Create quantized matrix processor
-matrix = np.random.uniform(0, 1, (100, 50)) * 256  # Scale by q^M
-processor = ColumnwiseMatvecProcessor(matrix, 'D4', M=3)
-
-# Perform coarse-to-fine multiplication
-vector = np.random.uniform(0, 1, 50) * 256
-result = processor.multiply_coarse_to_fine(vector, max_level=1)  # Use 2 levels
 ```
 
 ## Project Structure
@@ -99,7 +110,7 @@ gemvq/
 │   │   │   └── nested_lattice_quantizer.py              # Single-level quantization
 │   │   └── utils.py                 # Lattice utilities (D4, A2, E8, etc.)
 │   │
-│   ├── 📁 gemv/                     # Matrix-vector multiplication (GEMV)
+│   ├── 📁 gemv/                     # Matrix-vector multiplication with lattice quantizers
 │   │   ├── 📁 base/                 # Base classes and factory patterns
 │   │   │   ├── gemv_factory.py      # Factory for creating GEMV processors
 │   │   │   └── gemv_processor.py    # Base processor interface
@@ -222,11 +233,19 @@ python -m tests.run_all_tests --list
 
 ## Key Concepts
 
-### Hierarchical Quantization
-The library implements hierarchical nested lattice quantization with M levels:
-- **Level 0**: Coarsest approximation (MSB - Most Significant Bits)
-- **Level M-1**: Finest detail (LSB - Least Significant Bits)
-- **Progressive Reconstruction**: Can decode from any level 0 to M-1
+### Matrix-Vector Multiplication with Lattice Quantizers
+The library provides efficient matrix-vector multiplication using different lattice quantizers:
+- **Quantized Matrices**: Matrices are quantized using lattice quantizers (nested or hierarchical)
+- **Multiple Processing Strategies**: Column-wise, row-wise, SVD-based, and lookup table approaches
+- **Progressive Decoding**: Can decode matrix-vector products at different quantization levels
+- **Latticequant Integration**: Builds on the latticequant library for core quantization algorithms
+
+### Lattice Quantizer Types
+- **Nested Lattice Quantizer**: Single-level quantization for matrix compression
+- **Hierarchical Nested Lattice Quantizer**: Multi-level quantization with M levels:
+  - **Level 0**: Coarsest approximation (MSB - Most Significant Bits)
+  - **Level M-1**: Finest detail (LSB - Least Significant Bits)
+  - **Progressive Reconstruction**: Can decode from any level 0 to M-1
 
 ### Coarse-to-Fine Decoding
 - **Cumulative Error**: Error calculated for complete reconstruction using levels 0 to max_level
