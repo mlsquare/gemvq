@@ -13,6 +13,7 @@ from typing import List, Tuple
 import time
 
 from .layer_wise_histogram_matvec import LayerWiseHistogramMatVec
+from ..lattices.quantizers.hierarchical_nested_lattice_quantizer import HierarchicalNestedLatticeQuantizer
 
 
 def plot_histogram_comparison(
@@ -74,7 +75,7 @@ def demo_basic_usage():
     def Q_nn(x):
         return np.round(x)
 
-    quantizer = LayerWiseHistogramMatVec.create_quantizer(
+    quantizer = HierarchicalNestedLatticeQuantizer(
         G=G, Q_nn=Q_nn, q=q, beta=1.0, alpha=1.0, eps=1e-8, dither=np.zeros(n), M=M
     )
 
@@ -152,7 +153,7 @@ def demo_efficiency_comparison():
     def Q_nn(x):
         return np.round(x)
 
-    quantizer = LayerWiseHistogramMatVec.create_quantizer(
+    quantizer = HierarchicalNestedLatticeQuantizer(
         G=G, Q_nn=Q_nn, q=q, beta=1.0, alpha=1.0, eps=1e-8, dither=np.zeros(n), M=M
     )
 
@@ -213,14 +214,27 @@ def demo_layer_wise_histogram():
     print(f"Matrix shape: {matrix.shape}")
     print(f"Vector shape: {vector.shape}")
 
-    # Initialize layer-wise histogram processor
-    processor = LayerWiseHistogramMatVec(
-        matrix, lattice_type="D4", M=3, num_bins=10
+    # Create quantizer for the processor
+    G = np.eye(m)
+    def Q_nn(x):
+        return np.round(x)
+    
+    quantizer = HierarchicalNestedLatticeQuantizer(
+        G=G, Q_nn=Q_nn, q=4, beta=1.0, alpha=1.0, eps=1e-8, dither=np.zeros(m), M=3
     )
+    
+    # Initialize layer-wise histogram processor
+    processor = LayerWiseHistogramMatVec(quantizer)
 
-    # Perform multiplication
+    # Encode the matrix first
+    b_matrix, M_j = processor.encode_matrix_columns(matrix)
+    
+    print(f"Encoded matrix with {len(b_matrix)} columns")
+    print(f"Layer counts: {M_j[:5]}...")  # Show first 5
+
+    # Perform multiplication using the encoded format
     start_time = time.time()
-    result = processor.multiply(vector)
+    result = processor.matvec(vector, b_matrix, M_j)
     computation_time = time.time() - start_time
 
     # Compare with exact computation
@@ -230,7 +244,11 @@ def demo_layer_wise_histogram():
     print(f"Result shape: {result.shape}")
     print(f"Relative error: {error:.6f}")
     print(f"Computation time: {computation_time:.6f} seconds")
-    print(f"Compression ratio: {processor.get_compression_ratio():.2f}x")
+    
+    # Calculate compression ratio based on unique code indices
+    total_unique = sum(len(set(b_matrix[j][m] for j in range(n) if m < M_j[j])) for m in range(3))
+    compression_ratio = (m * n) / total_unique if total_unique > 0 else 1.0
+    print(f"Compression ratio: {compression_ratio:.2f}x")
 
     return matrix, vector, result, exact_result, processor
 
@@ -244,35 +262,39 @@ def demo_histogram_analysis():
     matrix = np.random.uniform(0, 1, (m, n)) * 64
     vector = np.random.uniform(0, 1, n) * 64
 
-    # Test different bin counts
-    bin_counts = [5, 10, 15, 20]
-    results = {}
+    # Create quantizer
+    G = np.eye(m)
+    def Q_nn(x):
+        return np.round(x)
+    
+    quantizer = HierarchicalNestedLatticeQuantizer(
+        G=G, Q_nn=Q_nn, q=4, beta=1.0, alpha=1.0, eps=1e-8, dither=np.zeros(m), M=3
+    )
+    
+    processor = LayerWiseHistogramMatVec(quantizer)
+    
+    # Encode the matrix once
+    b_matrix, M_j = processor.encode_matrix_columns(matrix)
+    
+    print(f"Testing with encoded matrix of shape {matrix.shape}")
+    print(f"Layer counts: {M_j[:5]}...")  # Show first 5
 
-    for num_bins in bin_counts:
-        print(f"\nTesting with {num_bins} bins...")
+    start_time = time.time()
+    result = processor.matvec(vector, b_matrix, M_j)
+    computation_time = time.time() - start_time
 
-        processor = LayerWiseHistogramMatVec(
-            matrix, lattice_type="D4", M=3, num_bins=num_bins
-        )
+    exact_result = matrix @ vector
+    error = np.linalg.norm(result - exact_result) / np.linalg.norm(exact_result)
 
-        start_time = time.time()
-        result = processor.multiply(vector)
-        computation_time = time.time() - start_time
+    # Calculate compression ratio
+    total_unique = sum(len(set(b_matrix[j][m] for j in range(n) if m < M_j[j])) for m in range(3))
+    compression_ratio = (m * n) / total_unique if total_unique > 0 else 1.0
 
-        exact_result = matrix @ vector
-        error = np.linalg.norm(result - exact_result) / np.linalg.norm(exact_result)
+    print(f"  Error: {error:.6f}")
+    print(f"  Time: {computation_time:.6f}s")
+    print(f"  Compression: {compression_ratio:.2f}x")
 
-        results[num_bins] = {
-            "error": error,
-            "time": computation_time,
-            "compression_ratio": processor.get_compression_ratio(),
-        }
-
-        print(f"  Error: {error:.6f}")
-        print(f"  Time: {computation_time:.6f}s")
-        print(f"  Compression: {processor.get_compression_ratio():.2f}x")
-
-    return results
+    return {"error": error, "time": computation_time, "compression_ratio": compression_ratio}
 
 
 def run_demo():

@@ -27,7 +27,7 @@ from typing import Dict, List, Tuple
 
 import numpy as np
 
-from ..quantizers.hierarchical_nested_lattice_quantizer import \
+from ..lattices.quantizers.hierarchical_nested_lattice_quantizer import \
     HierarchicalNestedLatticeQuantizer
 
 
