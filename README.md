@@ -51,9 +51,9 @@ pip install -r requirements-dev.txt
 
 ```python
 import numpy as np
-from src.quantizers.hierarchical_nested_lattice_quantizer import HierarchicalNestedLatticeQuantizer
-from src.utils import get_d4
-from src.quantizers.closest_point import closest_point_Dn
+from src.lattices.quantizers.hierarchical_nested_lattice_quantizer import HierarchicalNestedLatticeQuantizer
+from src.lattices.utils import get_d4
+from src.lattices.quantizers.nested_lattice_quantizer import closest_point_Dn
 
 # Setup quantizer
 G = get_d4()
@@ -76,11 +76,11 @@ for level in range(3):
 ### Matrix-Vector Multiplication
 
 ```python
-from src.gemv.lattice_quantized_gemv import LatticeQuantizedGEMV
+from src.gemv.columnwise_matvec_processor import ColumnwiseMatvecProcessor
 
 # Create quantized matrix processor
 matrix = np.random.uniform(0, 1, (100, 50)) * 256  # Scale by q^M
-processor = LatticeQuantizedGEMV(matrix, 'auto', 'D4', M=3)
+processor = ColumnwiseMatvecProcessor(matrix, 'D4', M=3)
 
 # Perform coarse-to-fine multiplication
 vector = np.random.uniform(0, 1, 50) * 256
@@ -89,56 +89,135 @@ result = processor.multiply_coarse_to_fine(vector, max_level=1)  # Use 2 levels
 
 ## Project Structure
 
+
 ```
 LatticeQuant/
-├── src/                          # Source code
-│   ├── quantizers/              # Quantization algorithms
-│   ├── gemv/                    # Matrix-vector multiplication
-│   ├── adaptive/                # Adaptive quantization
-│   └── utils.py                 # Utility functions
-├── tests/                       # Test suite
-│   ├── run_all_tests.py         # Comprehensive test runner
-│   ├── README.md                # Test documentation
-│   └── [test files]             # Categorized test files
-├── docs/                        # Documentation and results
-│   ├── *.md                     # Analysis documents
-│   └── *.png                    # Visualization results
-├── requirements.txt             # Basic dependencies
-├── requirements-dev.txt         # Development dependencies
-└── setup.py                     # Package setup
+├── 📁 src/                          # Main source code
+│   ├── 📁 lattices/                 # Lattice quantization core
+│   │   ├── 📁 quantizers/           # Quantization algorithms
+│   │   │   ├── hierarchical_nested_lattice_quantizer.py  # Multi-level quantization
+│   │   │   └── nested_lattice_quantizer.py              # Single-level quantization
+│   │   └── utils.py                 # Lattice utilities (D4, A2, E8, etc.)
+│   │
+│   ├── 📁 gemv/                     # Matrix-vector multiplication (GEMV)
+│   │   ├── 📁 base/                 # Base classes and factory patterns
+│   │   │   ├── gemv_factory.py      # Factory for creating GEMV processors
+│   │   │   └── gemv_processor.py    # Base processor interface
+│   │   │
+│   │   ├── 📁 columnwise/           # Column-wise GEMV implementations
+│   │   │   ├── columnwise_processor.py      # Column-wise processing logic
+│   │   │   └── __init__.py
+│   │   │
+│   │   ├── 📁 rowwise/              # Row-wise GEMV implementations
+│   │   │   ├── rowwise_processor.py         # Row-wise processing logic
+│   │   │   └── __init__.py
+│   │   │
+│   │   ├── 📁 svd/                  # SVD-based GEMV
+│   │   │   ├── svd_gemv_processor.py        # SVD decomposition approach
+│   │   │   └── __init__.py
+│   │   │
+│   │   ├── 📁 utils/                # GEMV utilities
+│   │   │   ├── padder.py            # Matrix padding utilities
+│   │   │   └── __init__.py
+│   │   │
+│   │   ├── columnwise_matvec_processor.py   # Main column-wise processor
+│   │   ├── rowwise_gemv.py                  # Row-wise GEMV implementation
+│   │   ├── lookup_table_processor.py        # Lookup table approach
+│   │   ├── standard_dot_processor.py        # Standard dot product
+│   │   └── adaptive_processor.py            # Adaptive processing
+│   │
+│   ├── 📁 adaptive/                 # Adaptive quantization
+│   │   ├── adaptive_matvec.py       # Adaptive matrix-vector multiplication
+│   │   ├── layer_wise_histogram_matvec.py   # Layer-wise histogram approach
+│   │   ├── demo_adaptive_matvec.py          # Adaptive GEMV demonstrations
+│   │   └── demo_layer_wise_histogram.py     # Histogram demo
+│   │
+│   └── simple_test.py               # Simple test utilities
+│
+├── 📁 tests/                        # Comprehensive test suite
+│   ├── run_all_tests.py             # Main test runner with categories
+│   ├── README.md                    # Test documentation
+│   ├── test_nested_lattice_quantizer.py     # Core quantization tests
+│   ├── test_hierarchical_*.py       # Hierarchical quantization tests
+│   ├── test_columnwise_matvec_options.py    # Column-wise GEMV tests
+│   ├── test_adaptive_matvec.py              # Adaptive GEMV tests
+│   ├── test_error_*.py              # Error analysis tests
+│   └── test_*.py                    # Other specialized tests
+│
+├── 📁 examples/                     # Usage examples and demonstrations
+│   ├── demo_coarse_to_fine.py       # Coarse-to-fine decoding demo
+│   ├── example_adaptive_matvec.py   # Adaptive GEMV example
+│   ├── example_coarse_to_fine.py    # Coarse-to-fine example
+│   ├── analyze_rate_distortion_results.py   # Rate-distortion analysis
+│   ├── compare_quantizer_distortion.py      # Quantizer comparison
+│   ├── estimate_*.py                # Estimation examples
+│   └── plot_*.py                    # Visualization examples
+│
+├── 📁 docs/                         # Documentation and analysis
+│   ├── adaptive_matvec_approach.md  # Adaptive approach documentation
+│   └── [other analysis docs]        # Various analysis documents
+│
+├── requirements.txt                 # Basic dependencies
+├── requirements-dev.txt             # Development dependencies
+├── setup.py                         # Package setup
+└── README.md                        # This file
 ```
+
+### Module Organization
+
+#### 🏗️ **Core Architecture**
+- **`src/lattices/`**: Core lattice quantization algorithms and utilities
+- **`src/gemv/`**: Matrix-vector multiplication implementations with multiple strategies
+- **`src/adaptive/`**: Adaptive quantization approaches for dynamic scenarios
+
+#### 🔧 **GEMV Processing Strategies**
+- **Column-wise**: Process matrix column by column (default approach)
+- **Row-wise**: Process matrix row by row (alternative approach)
+- **SVD-based**: Use singular value decomposition for efficient processing
+- **Lookup Table**: Pre-computed lookup tables for fast computation
+- **Adaptive**: Dynamic strategy selection based on data characteristics
+
+#### 🧪 **Testing Framework**
+- **Categorized Tests**: Organized by functionality (core, hierarchical, GEMV, etc.)
+- **Comprehensive Runner**: `run_all_tests.py` with filtering and categorization
+- **Specialized Tests**: Error analysis, distortion comparison, parameter testing
+
+#### 📚 **Examples & Documentation**
+- **Usage Examples**: Practical demonstrations of library capabilities
+- **Analysis Tools**: Rate-distortion analysis, quantizer comparison
+- **Visualization**: Plotting and result analysis utilities
 
 ## Running Tests
 
 ### Run All Tests
 ```bash
-python tests/run_all_tests.py
+python -m tests.run_all_tests
 ```
 
 ### Run Specific Categories
 ```bash
 # Core functionality
-python tests/run_all_tests.py --category "Core Functionality"
+python -m tests.run_all_tests --category "Core Functionality"
 
 # Coarse-to-fine decoding
-python tests/run_all_tests.py --category "Coarse-to-Fine Decoding"
+python -m tests.run_all_tests --category "Coarse-to-Fine Decoding"
 
 # Analysis and debugging
-python tests/run_all_tests.py --category "Analysis & Debugging"
+python -m tests.run_all_tests --category "Analysis & Debugging"
 ```
 
 ### Run Specific Tests
 ```bash
 # Run uniform matrix tests
-python tests/run_all_tests.py --test "uniform"
+python -m tests.run_all_tests --test "uniform"
 
 # Run coarse-to-fine tests
-python tests/run_all_tests.py --test "coarse_to_fine"
+python -m tests.run_all_tests --test "coarse_to_fine"
 ```
 
 ### List Available Tests
 ```bash
-python tests/run_all_tests.py --list
+python -m tests.run_all_tests --list
 ```
 
 ## Key Concepts
@@ -164,11 +243,78 @@ For optimal performance, scale input data by q^M:
 
 Comprehensive documentation is available in the `docs/` folder:
 
-- **COARSE_TO_FINE_DECODING.md**: Detailed explanation of coarse-to-fine decoding
-- **UNIFORM_RANDOM_ANALYSIS.md**: Analysis of uniform random variable testing
-- **SCALED_MATRIX_ANALYSIS.md**: Analysis of scaled matrix testing
-- **ERROR_TYPE_ANALYSIS.md**: Analysis of cumulative vs tile-specific error
-- **MSB_LSB_FIX_SUMMARY.md**: Summary of MSB/LSB ordering fixes
+### 📖 **Technical Documentation**
+
+#### **Adaptive Matrix-Vector Multiplication** (`adaptive_matvec_approach.md`)
+- **Mathematical Framework**: Complete mathematical formulation of adaptive GEMV
+- **Column-wise Interpretation**: Matrix-vector multiplication as linear combination of columns
+- **Adaptive Quantization Strategy**: Dynamic bit rate allocation per column
+- **Sparsity Exploitation**: Handling sparse vectors with known patterns
+- **Implementation Approach**: Core components and architecture design
+- **Performance Characteristics**: Computational complexity and memory requirements
+- **Applications**: Neural networks, recommendation systems, signal processing
+- **Future Extensions**: Multi-dimensional sparsity, dynamic adaptation, hardware acceleration
+
+### 🔬 **Key Concepts Covered**
+
+#### **Adaptive Bit Allocation**
+- Each column can have different target bit rates based on importance
+- Dynamic rate allocation using energy-based or importance-based methods
+- Rate-distortion optimization for overall performance
+
+#### **Sparsity Handling**
+- Skip processing of zero vector elements for computational efficiency
+- Pre-compute lookup tables only for active columns
+- Memory and computation savings proportional to sparsity ratio
+
+#### **Hierarchical Refinement**
+- Multi-level quantization for better rate-distortion performance
+- Successive refinement capability with coarse-to-fine decoding
+- Efficient inner product estimation using precomputed tables
+
+#### **Flexible Lattice Support**
+- Support for different lattice types (Dₙ, A₂, E₈, Zⁿ)
+- Optimized closest point algorithms for each lattice type
+- Configurable quantization parameters for different use cases
+
+### 📊 **Performance Analysis**
+
+#### **Computational Complexity**
+- **Encoding**: O(|S| × M × d) where |S| is sparsity, M is hierarchical levels, d is dimension
+- **Decoding**: O(|S| × M × d) for selective column decoding
+- **MatVec**: O(|S| × M²) using precomputed lookup tables
+
+#### **Memory Requirements**
+- **Encoded Matrix**: O(|S| × M × d × log₂(q)) bits
+- **Lookup Tables**: O(Σᵢ q⁽ⁱ⁾^(2M)) entries
+- **Working Memory**: O(d) for intermediate computations
+
+#### **Rate-Distortion Performance**
+- **Adaptive Allocation**: Better overall rate-distortion than uniform allocation
+- **Sparsity Gain**: Additional compression proportional to sparsity ratio
+- **Hierarchical Benefits**: Improved performance with increasing M
+
+### 🎯 **Practical Applications**
+
+#### **Neural Network Compression**
+- Compress weight matrices with different importance levels
+- Handle sparse activations efficiently
+- Adaptive quantization based on layer sensitivity
+
+#### **Recommendation Systems**
+- Compress user-item matrices with varying sparsity
+- Handle cold-start scenarios with known zero patterns
+- Adaptive bit allocation based on popularity
+
+#### **Signal Processing**
+- Compress correlation matrices with known structure
+- Handle sparse frequency domain representations
+- Adaptive quantization based on signal characteristics
+
+#### **Scientific Computing**
+- Compress sparse matrices from finite element methods
+- Handle structured sparsity in PDE discretizations
+- Adaptive precision based on physical constraints
 
 ## Performance Characteristics
 
