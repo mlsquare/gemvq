@@ -5,10 +5,10 @@ import os
 from itertools import product
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-from src.quantizers.nested_lattice_quantizer import NestedLatticeQuantizer as NQ
-from src.quantizers.hierarchical_nested_lattice_quantizer import HierarchicalNestedLatticeQuantizer as HQ
-from src.quantizers.closest_point import closest_point_Dn, closest_point_E8, closest_point_A2, custom_round
-from src.utils import *
+from src.lattices.quantizers.nested_lattice_quantizer import NestedLatticeQuantizer as NQ
+from src.lattices.quantizers.hierarchical_nested_lattice_quantizer import HierarchicalNestedLatticeQuantizer as HQ
+from src.lattices.utils import closest_point_Dn, closest_point_E8, closest_point_A2, custom_round
+from src.lattices.utils import *
 
 def closest_point_Zn(x):
     return np.floor(x + 0.5)

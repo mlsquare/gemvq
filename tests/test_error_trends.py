@@ -5,9 +5,9 @@ Test script to analyze error trends in hierarchical quantization.
 
 import numpy as np
 import matplotlib.pyplot as plt
-from src.quantizers.hierarchical_nested_lattice_quantizer import HierarchicalNestedLatticeQuantizer
-from src.utils import get_d4
-from src.quantizers.closest_point import closest_point_Dn
+from src.lattices.quantizers.hierarchical_nested_lattice_quantizer import HierarchicalNestedLatticeQuantizer
+from src.lattices.utils import get_d4
+from src.lattices.utils import closest_point_Dn
 
 
 def test_error_trends_with_different_parameters():

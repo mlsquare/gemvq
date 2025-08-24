@@ -10,8 +10,8 @@ rate-distortion performance while enabling fast inner product estimation
 using compact lookup tables.
 
 For usage examples, import from the specific modules:
-- src.quantizers: Core quantizer implementations
-- src.exps: Rate-distortion theory experiments and analysis tools
+- src.lattices: Lattice utilities and quantizer implementations
 - src.adaptive: Adaptive matrix-vector multiplication
-- src.utils: Utility functions and lattice generators
+- src.gemv: Lattice-quantized matrix-vector multiplication
+- exps: Rate-distortion theory experiments and analysis tools (parallel to src)
 """

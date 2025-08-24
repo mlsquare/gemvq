@@ -5,9 +5,9 @@ Test script to verify that the decoding parameter is working correctly.
 
 import numpy as np
 
-from src.quantizers.hierarchical_nested_lattice_quantizer import HierarchicalNestedLatticeQuantizer
-from src.quantizers.closest_point import closest_point_Dn
-from src.utils import get_d4
+from src.lattices.quantizers.hierarchical_nested_lattice_quantizer import HierarchicalNestedLatticeQuantizer
+from src.lattices.utils import closest_point_Dn
+from src.lattices.utils import get_d4
 from src.gemv.column_wise_gemv import ColumnWiseGEMV
 from src.gemv.row_wise_gemv import RowWiseGEMV
 

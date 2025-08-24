@@ -10,9 +10,9 @@ from typing import List, Tuple
 
 import numpy as np
 
-from ..quantizers.closest_point import (closest_point_A2, closest_point_Dn,
-                                        closest_point_E8)
-from ..utils import get_a2, get_d4, get_e8, get_z2, get_z3
+from ..lattices.utils import (closest_point_A2, closest_point_Dn,
+                              closest_point_E8)
+from ..lattices.utils import get_a2, get_d4, get_e8, get_z2, get_z3
 
 
 class BlockingStrategy:

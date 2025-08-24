@@ -18,7 +18,7 @@ from src.adaptive.layer_wise_histogram_matvec import (
     create_example_from_paper,
     run_paper_example
 )
-from src.quantizers.hierarchical_nested_lattice_quantizer import HierarchicalNestedLatticeQuantizer
+from src.lattices.quantizers.hierarchical_nested_lattice_quantizer import HierarchicalNestedLatticeQuantizer
 
 
 def test_paper_example():

@@ -1,6 +1,6 @@
 import numpy as np
 
-from .closest_point import custom_round
+from ..utils import custom_round
 from .nested_lattice_quantizer import NestedLatticeQuantizer as NQ
 
 
@@ -232,12 +232,13 @@ class HierarchicalNestedLatticeQuantizer:
         numpy.ndarray
             Reconstructed vector.
         """
-        x_hat = np.zeros_like(self.G[0])
+        x_hat_list = []
+        for b in b_list:
+            # Use q_Q to properly handle quantization error
+            x_i_hat = np.dot(self.G, b) - self.q_Q(np.dot(self.G, b))
+            x_hat_list.append(x_i_hat)
         
-        # Reconstruct by reversing the encoding process
-        for i, b in enumerate(b_list):
-            # Each level contributes q^i * G * b
-            x_hat += (self.q ** i) * np.dot(self.G, b)
+        x_hat = sum([np.power(self.q, i) * x_i for i, x_i in enumerate(x_hat_list)])
         
         if with_dither:
             x_hat = x_hat - self.dither
@@ -300,22 +301,16 @@ class HierarchicalNestedLatticeQuantizer:
         if not (0 <= max_level < self.M):
             raise ValueError(f"max_level must be between 0 and {self.M-1}, got {max_level}")
 
-        # For coarse-to-fine decoding, we use levels from 0 to max_level
-        # The first level (index 0) has the highest weight, so it's the coarsest
-        # Higher max_level means we include more levels, giving finer reconstruction
+        # Use the same reconstruction formula as _decode method for consistency
         x_hat_list = []
-
-        # Use only the levels from 0 to max_level (inclusive)
-        # This gives us finer reconstruction as max_level increases
         for i in range(max_level + 1):
             b = b_list[i]
+            # Use q_Q to properly handle quantization error (same as _decode)
             x_i_hat = np.dot(self.G, b) - self.q_Q(np.dot(self.G, b))
             x_hat_list.append(x_i_hat)
-
-        # Reconstruct using only the selected levels with correct weights
-        # Level 0 gets weight q^(M-1), level 1 gets weight q^(M-2), etc.
-        x_hat = sum([np.power(self.q, self.M - 1 - i) * x_i for i, x_i in enumerate(x_hat_list)])
-
+        
+        x_hat = sum([np.power(self.q, i) * x_i for i, x_i in enumerate(x_hat_list)])
+        
         if with_dither:
             x_hat = x_hat - self.dither
 

@@ -1,11 +1,11 @@
 import matplotlib.pyplot as plt
 import numpy as np
 
-from ..quantizers.closest_point import (closest_point_A2, closest_point_Dn,
-                                        custom_round)
-from ..quantizers.hierarchical_nested_lattice_quantizer import \
+from src.lattices.utils import (closest_point_A2, closest_point_Dn,
+                               custom_round)
+from src.lattices.quantizers.hierarchical_nested_lattice_quantizer import \
     HierarchicalNestedLatticeQuantizer as HQ
-from ..utils import *
+from src.lattices.utils import *
 
 
 def generate_rho_correlated_samples(rho, num_samples, vector_dim):

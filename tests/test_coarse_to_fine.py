@@ -8,9 +8,9 @@ lattice quantization module to ensure it works correctly.
 
 import numpy as np
 from src.gemv.lattice_quantized_gemv import LatticeQuantizedGEMV
-from src.quantizers.hierarchical_nested_lattice_quantizer import HierarchicalNestedLatticeQuantizer
-from src.utils import get_d4
-from src.quantizers.closest_point import closest_point_Dn
+from src.lattices.quantizers.hierarchical_nested_lattice_quantizer import HierarchicalNestedLatticeQuantizer
+from src.lattices.utils import get_d4
+from src.lattices.utils import closest_point_Dn
 
 
 def test_hierarchical_quantizer_coarse_to_fine():
