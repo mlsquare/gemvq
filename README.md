@@ -1,10 +1,10 @@
-# LatticeQuant
+# gemvq
 
 A comprehensive library for lattice quantization and hierarchical nested lattice quantization with coarse-to-fine decoding capabilities.
 
 ## Overview
 
-LatticeQuant provides efficient implementations of:
+gemvq provides efficient implementations of:
 - **Lattice Quantization**: Quantizing vectors to points on lattices (D4, A2, E8, Z2, Z3)
 - **Hierarchical Nested Lattice Quantization**: Multi-level quantization for progressive refinement
 - **Coarse-to-Fine Decoding**: Progressive reconstruction from coarse to fine levels
@@ -36,7 +36,7 @@ LatticeQuant provides efficient implementations of:
 ```bash
 # Clone the repository
 git clone <repository-url>
-cd LatticeQuant
+cd gemvq
 
 # Install dependencies
 pip install -r requirements.txt
@@ -91,7 +91,7 @@ result = processor.multiply_coarse_to_fine(vector, max_level=1)  # Use 2 levels
 
 
 ```
-LatticeQuant/
+gemvq/
 ├── 📁 src/                          # Main source code
 │   ├── 📁 lattices/                 # Lattice quantization core
 │   │   ├── 📁 quantizers/           # Quantization algorithms

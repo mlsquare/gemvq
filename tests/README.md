@@ -1,6 +1,6 @@
-# LatticeQuant Tests
+# gemvq Tests
 
-This directory contains all the tests for the LatticeQuant library.
+This directory contains all the tests for the gemvq library.
 
 ## Test Organization
 

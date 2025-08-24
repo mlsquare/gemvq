@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Setup script for LatticeQuant package.
+Setup script for gemvq package.
 """
 
 from setuptools import setup, find_packages
@@ -17,18 +17,18 @@ def read_requirements():
         return [line.strip() for line in fh if line.strip() and not line.startswith("#")]
 
 setup(
-    name="latticequant",
+    name="gemvq",
     version="1.0.0",
-    author="LatticeQuant Contributors",
+    author="gemvq Contributors",
     author_email="soma@mlsquare.org",
     description="High-Rate Nested-Lattice Quantized Matrix Multiplication with Small Lookup Tables",
     long_description=read_readme(),
     long_description_content_type="text/markdown",
-    url="https://github.com/mlsquare/LatticeQuant",
+    url="https://github.com/mlsquare/gemvq",
     project_urls={
-        "Bug Tracker": "https://github.com/mlsquare/LatticeQuant/issues",
-        "Documentation": "https://github.com/mlsquare/LatticeQuant/wiki",
-        "Source Code": "https://github.com/mlsquare/LatticeQuant",
+        "Bug Tracker": "https://github.com/mlsquare/gemvq/issues",
+        "Documentation": "https://github.com/mlsquare/gemvq/wiki",
+        "Source Code": "https://github.com/mlsquare/gemvq",
     },
     packages=find_packages(),
     classifiers=[
