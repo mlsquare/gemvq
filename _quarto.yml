@@ -1,0 +1,31 @@
+project:
+  type: book
+  output-dir: _sites
+
+navbar:
+  background: primary
+  search: true
+  left:
+    - text: "Home"
+      href: index.qmd
+    - text: "Preface"
+      href: preface.qmd
+
+book:
+  title: "GEMV-Q"
+  subtitle: "Matrix Vector Multiplication with Lattice-based Vector Quantization"
+  reader-mode: true
+  page-footer:
+    left: |
+      Under development.
+    right: |
+      This documentation was built with <a href="https://quarto.org/">Quarto</a>.
+  site-url: https://mlsquare.github.io/gemvq
+  repo-url: https://github.com/mlsquare/gemvq
+  repo-branch: main
+  repo-actions: [edit, issue]
+  chapters:
+    - index.qmd
+    - preface.qmd
+    - docs/adaptive_matvec_approach.qmd
+    - docs/baseline.ipynb

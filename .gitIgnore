@@ -71,6 +71,10 @@ instance/
 # Sphinx documentation
 docs/_build/
 
+# Quarto
+.quarto-cache/
+_sites/
+
 # PyBuilder
 target/
 
@@ -150,3 +154,4 @@ Thumbs.db
 *.jpeg
 *.gif
 A2q6M*.png
+/.quarto/

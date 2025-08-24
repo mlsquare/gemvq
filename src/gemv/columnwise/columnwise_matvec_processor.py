@@ -11,12 +11,12 @@ from typing import Dict, List, Optional, Tuple, Union
 
 import numpy as np
 
-from ..lattices.utils import (closest_point_A2, closest_point_Dn,
+from ...lattices.utils import (closest_point_A2, closest_point_Dn,
                               closest_point_E8)
-from ..lattices.quantizers.hierarchical_nested_lattice_quantizer import \
+from ...lattices.quantizers.hierarchical_nested_lattice_quantizer import \
     HierarchicalNestedLatticeQuantizer
-from ..lattices.utils import get_a2, get_d4, get_e8, get_z2, get_z3
-from .padder import BlockingStrategy
+from ...lattices.utils import get_a2, get_d4, get_e8, get_z2, get_z3
+from ..utils.padder import BlockingStrategy
 
 
 class ColumnwiseMatVecProcessor(ABC):

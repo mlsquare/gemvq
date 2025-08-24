@@ -2,6 +2,27 @@
 
 This directory contains all the tests for the gemvq library.
 
+## Clean Test Structure
+
+The test suite follows clean Python practices with explicit imports and minimal dependencies:
+
+### 🧹 **Clean Import Patterns**
+- **Explicit imports**: Tests import specific modules directly
+- **No circular dependencies**: Clean import hierarchy
+- **Updated paths**: All import paths reflect the reorganized structure
+- **Method signature compliance**: All method calls include required parameters
+
+### 📦 **Updated Import Examples**
+```python
+# Import from reorganized structure
+from src.gemv.columnwise.columnwise_matvec_processor import ColumnwiseMatvecProcessor
+from src.gemv.columnwise.simple_columnwise_matvec import SimpleColumnwiseMatvecProcessor
+from src.gemv.rowwise.rowwise_processor import RowwiseGEMVProcessor
+from src.gemv.utils.padder import BlockingStrategy
+from src.lattices.utils import get_d4, closest_point_Dn
+from src.lattices.quantizers.nested_lattice_quantizer import NestedLatticeQuantizer
+```
+
 ## Test Organization
 
 Tests are organized into the following categories:
@@ -24,38 +45,46 @@ Tests are organized into the following categories:
 
 ### Run All Tests
 ```bash
-python tests/run_all_tests.py
+# Using the test runner
+python -m tests.run_all_tests
+
+# Or run individual test modules
+python -m tests.test_simple_columnwise_matvec
+python -m tests.test_nested_lattice_quantizer
+python -m tests.test_decoding_parameter
+python -m tests.test_d4_lattice_simulation
 ```
 
 ### Run Specific Test Categories
 ```bash
 # Run only core functionality tests
-python tests/run_all_tests.py --category "Core Functionality"
-
-
+python -m tests.run_all_tests --category "Core Functionality"
 
 # Run only analysis tests
-python tests/run_all_tests.py --category "Analysis & Debugging"
+python -m tests.run_all_tests --category "Analysis & Debugging"
 ```
 
 ### Run Specific Tests
 ```bash
 # Run a specific test (partial name match)
-python tests/run_all_tests.py --test "coarse_to_fine"
+python -m tests.run_all_tests --test "coarse_to_fine"
 
-
+# Run individual test modules directly
+python -m tests.test_simple_columnwise_matvec
+python -m tests.test_nested_lattice_quantizer
+python -m tests.test_decoding_parameter
 ```
 
 ### List Available Tests
 ```bash
-python tests/run_all_tests.py --list
+python -m tests.run_all_tests --list
 ```
 
 ### Run Individual Tests
 ```bash
 # Run a specific test file directly
-python tests/test_closest_point.py
-python tests/test_nested_lattice_quantizer.py
+python -m tests.test_closest_point
+python -m tests.test_nested_lattice_quantizer
 ```
 
 ## Test Dependencies

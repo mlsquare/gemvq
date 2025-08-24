@@ -1,11 +1,5 @@
 """
-Test modules for the LatticeQuant library.
+Test suite for GemVQ library.
 
-This module contains test suites for:
-- Quantizer implementations
-- Rate-distortion theory experiments and analysis tools
-- Adaptive matrix-vector multiplication
-- Layer-wise histogram implementation
-
-For running tests, see the individual test files in this directory.
+This module contains unit tests and integration tests for the GemVQ library.
 """

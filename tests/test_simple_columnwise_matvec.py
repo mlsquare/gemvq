@@ -8,7 +8,7 @@ work correctly with various input scenarios.
 import numpy as np
 import pytest
 
-from src.gemv.simple_columnwise_matvec import (
+from src.gemv.columnwise.simple_columnwise_matvec import (
     create_simple_processor,
     SimpleColumnwiseMatVecProcessor
 )

@@ -8,7 +8,7 @@ work correctly with various input scenarios.
 import numpy as np
 import pytest
 
-from src.gemv.columnwise_matvec_factory import (
+from src.gemv.columnwise.columnwise_matvec_factory import (
     create_processor,
     create_standard_dot_processor,
     create_lookup_table_processor,
@@ -20,6 +20,16 @@ from src.gemv.columnwise_matvec_factory import (
 
 class TestColumnwiseMatVecOptions:
     """Test class for columnwise matvec options."""
+    
+    def __init__(self):
+        """Initialize test data."""
+        # Create test matrix and vector
+        self.matrix = np.random.randn(16, 12)
+        self.x = np.random.randn(12)
+        
+        # Create sparse vector
+        self.sparse_x = self.x.copy()
+        self.sparse_x[::2] = 0.0  # Make every other element zero
     
     def setup_method(self):
         """Setup test data."""

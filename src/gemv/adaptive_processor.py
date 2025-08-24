@@ -11,9 +11,9 @@ from typing import Dict, List, Optional, Tuple, Union
 
 import numpy as np
 
-from .columnwise_matvec_processor import ColumnwiseMatVecProcessor
-from .standard_dot_processor import StandardDotProcessor
-from .lookup_table_processor import LookupTableProcessor
+from .columnwise.columnwise_matvec_processor import ColumnwiseMatVecProcessor
+from .columnwise.standard_dot_processor import StandardDotProcessor
+from .utils.lookup_table_processor import LookupTableProcessor
 
 
 class AdaptiveProcessor(ColumnwiseMatVecProcessor):

@@ -56,7 +56,7 @@ pip install -r requirements-dev.txt
 
 ```python
 import numpy as np
-from src.gemv.columnwise_matvec_processor import ColumnwiseMatvecProcessor
+from src.gemv.columnwise.columnwise_matvec_processor import ColumnwiseMatvecProcessor
 
 # Create a matrix and quantize it using D4 lattice
 matrix = np.random.uniform(0, 1, (100, 50)) * 256  # Scale by q^M
@@ -80,7 +80,7 @@ nested_quantizer = NestedLatticeQuantizer(G=G, q=4, beta=0.2)
 
 # Using hierarchical nested lattice quantizer (multi-level)
 from src.lattices.quantizers.hierarchical_nested_lattice_quantizer import HierarchicalNestedLatticeQuantizer
-from src.lattices.quantizers.nested_lattice_quantizer import closest_point_Dn
+from src.lattices.utils import closest_point_Dn
 
 hierarchical_quantizer = HierarchicalNestedLatticeQuantizer(
     G=G, Q_nn=closest_point_Dn, q=4, beta=0.2,
@@ -100,7 +100,6 @@ for level in range(3):
 
 ## Project Structure
 
-
 ```
 gemvq/
 ├── 📁 src/                          # Main source code
@@ -117,10 +116,16 @@ gemvq/
 │   │   │
 │   │   ├── 📁 columnwise/           # Column-wise GEMV implementations
 │   │   │   ├── columnwise_processor.py      # Column-wise processing logic
+│   │   │   ├── column_wise_gemv.py          # Column-wise GEMV implementation
+│   │   │   ├── columnwise_matvec_processor.py # Main column-wise processor
+│   │   │   ├── columnwise_matvec_factory.py  # Factory functions
+│   │   │   ├── simple_columnwise_matvec.py   # Simplified column-wise processor
+│   │   │   ├── standard_dot_processor.py     # Standard dot product
 │   │   │   └── __init__.py
 │   │   │
 │   │   ├── 📁 rowwise/              # Row-wise GEMV implementations
 │   │   │   ├── rowwise_processor.py         # Row-wise processing logic
+│   │   │   ├── row_wise_gemv.py             # Row-wise GEMV implementation
 │   │   │   └── __init__.py
 │   │   │
 │   │   ├── 📁 svd/                  # SVD-based GEMV
@@ -129,13 +134,17 @@ gemvq/
 │   │   │
 │   │   ├── 📁 utils/                # GEMV utilities
 │   │   │   ├── padder.py            # Matrix padding utilities
+│   │   │   ├── lookup_table_processor.py    # Lookup table approach
 │   │   │   └── __init__.py
 │   │   │
-│   │   ├── columnwise_matvec_processor.py   # Main column-wise processor
-│   │   ├── rowwise_gemv.py                  # Row-wise GEMV implementation
-│   │   ├── lookup_table_processor.py        # Lookup table approach
-│   │   ├── standard_dot_processor.py        # Standard dot product
-│   │   └── adaptive_processor.py            # Adaptive processing
+│   │   ├── 📁 demos/                # Demonstration scripts
+│   │   │   ├── demo_new_structure.py        # New structure demo
+│   │   │   ├── demo_columnwise_options_comprehensive.py # Comprehensive demo
+│   │   │   ├── demo_columnwise_matvec_options.py # Column-wise options demo
+│   │   │   └── columnwise_matvec_options.md # Documentation
+│   │   │
+│   │   ├── adaptive_processor.py            # Adaptive processing
+│   │   └── __init__.py
 │   │
 │   ├── 📁 adaptive/                 # Adaptive quantization
 │   │   ├── adaptive_matvec.py       # Adaptive matrix-vector multiplication
@@ -219,6 +228,12 @@ python -m tests.run_all_tests --category "Analysis & Debugging"
 
 ### Run Specific Tests
 ```bash
+# Run specific test modules
+python -m tests.test_simple_columnwise_matvec
+python -m tests.test_nested_lattice_quantizer
+python -m tests.test_decoding_parameter
+python -m tests.test_d4_lattice_simulation
+
 # Run uniform matrix tests
 python -m tests.run_all_tests --test "uniform"
 
@@ -230,6 +245,38 @@ python -m tests.run_all_tests --test "coarse_to_fine"
 ```bash
 python -m tests.run_all_tests --list
 ```
+
+## Clean Structure and Import Patterns
+
+### 🧹 **Clean Module Organization**
+The library follows clean Python practices with minimal `__init__.py` files and explicit imports:
+
+- **No imports in `__init__.py`**: All `__init__.py` files contain only module descriptions
+- **Explicit imports**: Users must import specific modules directly
+- **Logical organization**: Related functionality is grouped in subdirectories
+- **Clear separation**: Utilities, demos, and implementations are clearly separated
+
+### 📦 **Import Patterns**
+```python
+# Import specific modules directly
+from src.gemv.columnwise.columnwise_matvec_processor import ColumnwiseMatvecProcessor
+from src.gemv.rowwise.rowwise_processor import RowwiseGEMVProcessor
+from src.gemv.utils.padder import BlockingStrategy
+from src.lattices.utils import get_d4, closest_point_Dn
+from src.lattices.quantizers.nested_lattice_quantizer import NestedLatticeQuantizer
+
+# Run modules directly
+python -m src.gemv.columnwise.columnwise_matvec_processor
+python -m src.lattices.utils
+python -m tests.test_simple_columnwise_matvec
+```
+
+### 🏗️ **Directory Structure Benefits**
+- **`columnwise/`**: All column-wise implementations in one place
+- **`rowwise/`**: All row-wise implementations in one place  
+- **`utils/`**: Shared utilities and helper functions
+- **`demos/`**: Demonstration scripts and examples
+- **`base/`**: Base classes and factory patterns
 
 ## Key Concepts
 
@@ -263,6 +310,13 @@ For optimal performance, scale input data by q^M:
 Comprehensive documentation is available in the `docs/` folder:
 
 ### 📖 **Technical Documentation**
+
+#### **Clean Structure Guide** (`clean_structure_guide.md`)
+- **Module Organization**: Complete guide to the clean structure and organization
+- **Import Patterns**: Best practices for importing and using the library
+- **Directory Structure**: Before and after reorganization comparison
+- **Migration Guide**: How to update existing code to use the new structure
+- **Best Practices**: Do's and don'ts for maintaining clean code
 
 #### **Adaptive Matrix-Vector Multiplication** (`adaptive_matvec_approach.md`)
 - **Mathematical Framework**: Complete mathematical formulation of adaptive GEMV

@@ -1,10 +1,6 @@
 """
-Base GEMV module.
+Base classes and factory for GEMV processors.
 
-This module provides the base classes and factory for all GEMV processors.
+This module provides the base classes and factory pattern for creating
+different types of matrix-vector multiplication processors.
 """
-
-from .gemv_processor import GEMVProcessor
-from .gemv_factory import GEMVFactory, create_gemv_processor
-
-__all__ = ['GEMVProcessor', 'GEMVFactory', 'create_gemv_processor']

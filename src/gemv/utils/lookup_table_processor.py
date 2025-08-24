@@ -11,7 +11,7 @@ from typing import Dict, List, Optional, Tuple, Union
 
 import numpy as np
 
-from .columnwise_matvec_processor import ColumnwiseMatVecProcessor
+from ..columnwise.columnwise_matvec_processor import ColumnwiseMatVecProcessor
 
 
 class LookupTableProcessor(ColumnwiseMatVecProcessor):

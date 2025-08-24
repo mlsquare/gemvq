@@ -1,0 +1,279 @@
+---
+title: "Adaptive Matrix-Vector Multiplication"
+---
+
+# Adaptive Matrix-Vector Multiplication with Hierarchical Nested Quantizers
+
+## Overview
+
+This module implements adaptive matrix-vector multiplication using hierarchical
+nested lattice quantizers with column-wise encoding. The approach interprets
+matrix-vector multiplication as a linear combination of column vectors, where each
+column can have different target bit rates and some vector elements are known to
+be zero a priori.
+
+## Mathematical Framework
+
+### Problem Formulation
+
+Given:
+
+-   Matrix A ∈ ℝ^(m×n)
+-   Vector x ∈ ℝ^n (with known sparsity pattern)
+-   Target bit rates R = [R₁, R₂, ..., Rₙ] for each column
+-   Sparsity pattern S ⊆ {1, 2, ..., n} indicating non-zero elements of x
+
+Goal: Compute y = Ax efficiently using hierarchical nested quantization with
+adaptive bit allocation.
+
+### Column-wise Interpretation
+
+Matrix-vector multiplication can be expressed as:
+
+```
+y = Ax = Σᵢ₌₁ⁿ xᵢ · A[:,i]
+```
+
+Where:
+
+-   A[:,i] is the i-th column of matrix A
+-   xᵢ is the i-th element of vector x
+-   Only columns corresponding to non-zero xᵢ need to be processed
+
+## Adaptive Quantization Strategy
+
+### 1. Column-wise Encoding
+
+Each column A[:,i] is encoded independently using hierarchical nested
+quantization:
+
+```
+A[:,i] → (b₁⁽ⁱ⁾, b₂⁽ⁱ⁾, ..., b_M⁽ⁱ⁾, T⁽ⁱ⁾)
+```
+
+Where:
+
+-   b_j⁽ⁱ⁾ are the encoding vectors for level j
+-   T⁽ⁱ⁾ is the overload scaling factor
+-   M is the number of hierarchical levels
+
+### 2. Adaptive Bit Rate Allocation
+
+The quantization parameters for each column are determined by the target bit
+rate Rᵢ:
+
+```
+q⁽ⁱ⁾ = f(Rᵢ, M)  # Quantization parameter
+β⁽ⁱ⁾ = g(Rᵢ, M)  # Scaling parameter
+```
+
+### 3. Sparse Vector Handling
+
+For sparse vector x with known sparsity pattern S:
+
+-   Only encode columns A[:,i] where i ∈ S
+-   Skip computation for i ∉ S (xᵢ = 0)
+-   Pre-compute lookup tables only for active columns
+
+## Implementation Approach
+
+### Core Components
+
+#### 1. AdaptiveColumnQuantizer
+
+```python
+class AdaptiveColumnQuantizer:
+    def __init__(self, target_rates, lattice_params):
+        # Initialize quantizers for each column with different rates
+        pass
+    
+    def encode_column(self, column, col_idx):
+        # Encode single column with adaptive parameters
+        pass
+    
+    def decode_column(self, encoding, col_idx):
+        # Decode single column
+        pass
+```
+
+#### 2. SparseMatVecProcessor
+
+```python
+class SparseMatVecProcessor:
+    def __init__(self, matrix, sparsity_pattern, target_rates):
+        # Pre-process matrix and setup quantizers
+        pass
+    
+    def encode_matrix(self):
+        # Encode all columns with adaptive rates
+        pass
+    
+    def compute_matvec(self, sparse_vector):
+        # Compute matrix-vector product using encoded columns
+        pass
+```
+
+#### 3. AdaptiveLookupTable
+
+```python
+class AdaptiveLookupTable:
+    def __init__(self, lattice_params, max_rate):
+        # Pre-compute lookup tables for different rates
+        pass
+    
+    def get_table(self, rate):
+        # Retrieve appropriate lookup table for given rate
+        pass
+```
+
+### Algorithm Flow
+
+#### Phase 1: Preprocessing
+
+1.  **Sparsity Analysis**: Identify non-zero elements in vector x
+2.  **Rate Allocation**: Determine quantization parameters for each active column
+3.  **Column Encoding**: Encode each active column with adaptive parameters
+4.  **Lookup Table Generation**: Pre-compute tables for different bit rates
+
+#### Phase 2: Computation
+
+1.  **Sparse Vector Processing**: Extract non-zero elements and their indices
+2.  **Selective Decoding**: Decode only the columns corresponding to non-zero elements
+3.  **Weighted Combination**: Compute linear combination using decoded columns
+4.  **Result Assembly**: Combine results to form final output vector
+
+### Optimization Strategies
+
+#### 1. Memory Efficiency
+
+-   **Lazy Encoding**: Only encode columns when needed
+-   **Compressed Storage**: Store encoded columns in compact format
+-   **Cache Management**: Keep frequently used lookup tables in memory
+
+#### 2. Computational Efficiency
+
+-   **Parallel Processing**: Encode/decode multiple columns simultaneously
+-   **Early Termination**: Stop processing when sufficient accuracy is achieved
+-   **Vectorization**: Use SIMD operations for bulk computations
+
+#### 3. Rate-Distortion Optimization
+
+-   **Dynamic Rate Allocation**: Adjust rates based on column importance
+-   **Error Propagation Analysis**: Consider impact of quantization errors
+-   **Adaptive Hierarchical Levels**: Use different M values for different columns
+
+## Key Features
+
+### 1. Adaptive Bit Allocation
+
+-   Each column can have different target bit rates
+-   Rate allocation based on column importance or energy
+-   Dynamic adjustment based on error requirements
+
+### 2. Sparsity Exploitation
+
+-   Skip processing of zero vector elements
+-   Pre-compute only necessary lookup tables
+-   Memory and computation savings proportional to sparsity
+
+### 3. Hierarchical Refinement
+
+-   Multi-level quantization for better rate-distortion performance
+-   Successive refinement capability
+-   Efficient inner product estimation
+
+### 4. Flexible Lattice Support
+
+-   Support for different lattice types (Dₙ, A₂, E₈, Zⁿ)
+-   Optimized closest point algorithms
+-   Configurable quantization parameters
+
+## Performance Characteristics
+
+### Computational Complexity
+
+-   **Encoding**: O(|S| × M × d) where |S| is sparsity, M is hierarchical levels, d is dimension
+-   **Decoding**: O(|S| × M × d) for selective column decoding
+-   **MatVec**: O(|S| × M²) using precomputed lookup tables
+
+### Memory Requirements
+
+-   **Encoded Matrix**: O(|S| × M × d × log₂(q)) bits
+-   **Lookup Tables**: O(Σᵢ q⁽ⁱ⁾^(2M)) entries
+-   **Working Memory**: O(d) for intermediate computations
+
+### Rate-Distortion Performance
+
+-   **Adaptive Allocation**: Better overall rate-distortion than uniform allocation
+-   **Sparsity Gain**: Additional compression proportional to sparsity ratio
+-   **Hierarchical Benefits**: Improved performance with increasing M
+
+## Applications
+
+### 1. Neural Network Compression
+
+-   Compress weight matrices with different importance levels
+-   Handle sparse activations efficiently
+-   Adaptive quantization based on layer sensitivity
+
+### 2. Recommendation Systems
+
+-   Compress user-item matrices with varying sparsity
+-   Handle cold-start scenarios with known zero patterns
+-   Adaptive bit allocation based on popularity
+
+### 3. Signal Processing
+
+-   Compress correlation matrices with known structure
+-   Handle sparse frequency domain representations
+-   Adaptive quantization based on signal characteristics
+
+### 4. Scientific Computing
+
+-   Compress sparse matrices from finite element methods
+-   Handle structured sparsity in PDE discretizations
+-   Adaptive precision based on physical constraints
+
+## Implementation Considerations
+
+### 1. Parameter Selection
+
+-   **Lattice Type**: Choose based on dimension and performance requirements
+-   **Hierarchical Levels**: Balance accuracy vs. complexity
+-   **Rate Allocation**: Use energy-based or importance-based methods
+
+### 2. Error Control
+
+-   **Overload Handling**: Implement robust overload detection and handling
+-   **Error Bounds**: Provide theoretical and empirical error bounds
+-   **Adaptive Refinement**: Adjust parameters based on error measurements
+
+### 3. Integration
+
+-   **API Design**: Provide clean interface for different use cases
+-   **Compatibility**: Ensure compatibility with existing frameworks
+-   **Extensibility**: Support for custom quantization strategies
+
+## Future Extensions
+
+### 1. Multi-dimensional Sparsity
+
+-   Handle block sparsity patterns
+-   Support for structured sparsity
+-   Efficient encoding of sparse tensors
+
+### 2. Dynamic Adaptation
+
+-   Online rate allocation based on data statistics
+-   Adaptive hierarchical level selection
+-   Real-time parameter optimization
+
+### 3. Hardware Acceleration
+
+-   GPU-optimized implementations
+-   FPGA acceleration for lookup table operations
+-   Specialized hardware for lattice operations
+
+This approach provides a comprehensive framework for efficient matrix-vector
+multiplication using adaptive hierarchical nested quantization, leveraging both
+sparsity and variable bit rate requirements for optimal performance.

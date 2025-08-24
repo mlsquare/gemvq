@@ -8,8 +8,8 @@ import numpy as np
 from src.lattices.quantizers.hierarchical_nested_lattice_quantizer import HierarchicalNestedLatticeQuantizer
 from src.lattices.utils import closest_point_Dn
 from src.lattices.utils import get_d4
-from src.gemv.column_wise_gemv import ColumnWiseGEMV
-from src.gemv.row_wise_gemv import RowWiseGEMV
+from src.gemv.columnwise.column_wise_gemv import ColumnWiseGEMV
+from src.gemv.rowwise.row_wise_gemv import RowWiseGEMV
 
 def test_decoding_parameter():
     """Test that the decoding parameter works correctly."""

@@ -11,8 +11,8 @@ import numpy as np
 
 from .columnwise_matvec_processor import ColumnwiseMatVecProcessor
 from .standard_dot_processor import StandardDotProcessor
-from .lookup_table_processor import LookupTableProcessor
-from .adaptive_processor import AdaptiveProcessor
+from ..utils.lookup_table_processor import LookupTableProcessor
+from ..adaptive_processor import AdaptiveProcessor
 
 
 def create_standard_dot_processor(
