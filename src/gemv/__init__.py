@@ -1,16 +1,27 @@
 """
-General Matrix-Vector Multiplication (GEMV) Module
+GEMV (General Matrix-Vector) module.
 
-This module implements efficient matrix-vector multiplication using lattice quantization
-with both column-wise and row-wise approaches. It includes blocking strategies based on
-lattice dimensions for optimal performance.
-
-Main Components:
-    - ColumnWiseGEMV: Matrix-vector multiplication as linear combination of columns
-    - RowWiseGEMV: Matrix-vector multiplication as series of dot products
-    - BlockingStrategy: Efficient blocking based on lattice dimensions
-    - LatticeQuantizedGEMV: Unified interface for both approaches
-
-Usage:
-    from src.gemv import ColumnWiseGEMV, RowWiseGEMV, LatticeQuantizedGEMV
+This module provides various strategies for matrix-vector multiplication including
+columnwise, rowwise, and SVD-based approaches with support for quantization.
 """
+
+from .base import GEMVProcessor, GEMVFactory, create_gemv_processor
+from .columnwise import ColumnwiseGEMVProcessor
+from .rowwise import RowwiseGEMVProcessor
+from .svd import SVDGEMVProcessor
+from .utils import BlockingStrategy
+
+# Register processors with the factory
+GEMVFactory.register_processor('columnwise', ColumnwiseGEMVProcessor)
+GEMVFactory.register_processor('rowwise', RowwiseGEMVProcessor)
+GEMVFactory.register_processor('svd', SVDGEMVProcessor)
+
+__all__ = [
+    'GEMVProcessor',
+    'GEMVFactory', 
+    'create_gemv_processor',
+    'ColumnwiseGEMVProcessor',
+    'RowwiseGEMVProcessor',
+    'SVDGEMVProcessor',
+    'BlockingStrategy'
+]

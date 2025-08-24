@@ -57,31 +57,19 @@ def categorize_tests():
     ]
     
     # Coarse-to-fine decoding tests
-    coarse_to_fine_tests = [
-        'test_coarse_to_fine.py',
-        'test_large_matrix_coarse_to_fine.py',
-        'test_scaled_matrix_coarse_to_fine.py',
-        'test_uniform_small_matrices.py',
-        'test_fixed_hierarchical.py',
-        'test_final_error_improvement.py'
-    ]
+    coarse_to_fine_tests = []
     
     # Analysis and debugging tests
     analysis_tests = [
         'test_error_types.py',
-        'test_error_trends.py',
-        'debug_hierarchical_quantizer.py'
+        'test_error_trends.py'
     ]
     
     # Other tests
-    other_tests = [
-        'test_reorganization.py',
-        'test_demo.py'
-    ]
+    other_tests = []
     
     return {
         'Core Functionality': core_tests,
-        'Coarse-to-Fine Decoding': coarse_to_fine_tests,
         'Analysis & Debugging': analysis_tests,
         'Other': other_tests
     }

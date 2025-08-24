@@ -10,7 +10,7 @@ The reconstruction can be stopped at any level from M-1 down to 0.
 import matplotlib.pyplot as plt
 import numpy as np
 
-from src.gemv.lattice_quantized_gemv import LatticeQuantizedGEMV
+from src.gemv.column_wise_gemv import ColumnWiseGEMV
 
 
 def demo_coarse_to_fine_decoding():
@@ -35,10 +35,9 @@ def demo_coarse_to_fine_decoding():
 
     # Initialize processor with M=3 levels
     M = 3
-    processor = LatticeQuantizedGEMV(matrix, "auto", "D4", M)
+    processor = ColumnWiseGEMV(matrix, "D4", M)
 
-    print(f"\nSelected approach: {processor.approach}")
-    print(f"Number of hierarchical levels (M): {M}")
+    print(f"\nNumber of hierarchical levels (M): {M}")
     print(f"Lattice type: {processor.lattice_type}")
 
     # Compute exact result for comparison
@@ -168,7 +167,7 @@ def demo_compression_vs_quality():
 
     for M in M_values:
         print(f"Testing M = {M}")
-        processor = LatticeQuantizedGEMV(matrix, "auto", "D4", M)
+        processor = ColumnWiseGEMV(matrix, "D4", M)
 
         # Test at different levels
         level_results = {}

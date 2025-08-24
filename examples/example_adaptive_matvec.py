@@ -8,8 +8,8 @@ using hierarchical nested quantizers with column-wise encoding.
 
 import numpy as np
 
-from src.adaptive import (adaptive_matvec_multiply,
-                          create_adaptive_matvec_processor)
+from src.adaptive.adaptive_matvec import (adaptive_matvec_multiply,
+                                          create_adaptive_matvec_processor)
 
 
 def main():

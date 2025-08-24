@@ -7,7 +7,7 @@ This script shows the basic usage of the coarse-to-fine decoding functionality.
 
 import numpy as np
 
-from src.gemv.lattice_quantized_gemv import LatticeQuantizedGEMV
+from src.gemv.column_wise_gemv import ColumnWiseGEMV
 
 
 def main():
@@ -23,8 +23,7 @@ def main():
     print(f"Vector dimension: {vector.shape}")
 
     # Initialize processor with M=3 levels
-    processor = LatticeQuantizedGEMV(matrix, "auto", "D4", M=3)
-    print(f"Selected approach: {processor.approach}")
+    processor = ColumnWiseGEMV(matrix, "D4", M=3)
     print(f"Number of hierarchical levels (M): {processor.M}")
 
     # Compute exact result for comparison

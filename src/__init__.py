@@ -13,5 +13,5 @@ For usage examples, import from the specific modules:
 - src.lattices: Lattice utilities and quantizer implementations
 - src.adaptive: Adaptive matrix-vector multiplication
 - src.gemv: Lattice-quantized matrix-vector multiplication
-- exps: Rate-distortion theory experiments and analysis tools (parallel to src)
+- examples: Rate-distortion theory experiments and analysis tools (parallel to src)
 """

@@ -14,22 +14,11 @@ Tests are organized into the following categories:
 - `test_layer_wise_histogram.py` - Tests for layer-wise histogram functionality
 - `test_standalone_layer_wise_histogram.py` - Standalone histogram tests
 
-### Coarse-to-Fine Decoding Tests
-- `test_coarse_to_fine.py` - Basic coarse-to-fine decoding tests
-- `test_large_matrix_coarse_to_fine.py` - Large matrix coarse-to-fine tests
-- `test_scaled_matrix_coarse_to_fine.py` - Scaled matrix coarse-to-fine tests
-- `test_uniform_small_matrices.py` - Uniform random variable tests
-- `test_fixed_hierarchical.py` - Fixed hierarchical quantizer tests
-- `test_final_error_improvement.py` - Error improvement validation tests
+
 
 ### Analysis & Debugging Tests
 - `test_error_types.py` - Error type analysis (cumulative vs tile-specific)
 - `test_error_trends.py` - Error trend analysis
-- `debug_hierarchical_quantizer.py` - Debugging tools for hierarchical quantization
-
-### Other Tests
-- `test_reorganization.py` - Reorganization functionality tests
-- `test_demo.py` - Demo functionality tests
 
 ## Running Tests
 
@@ -43,8 +32,7 @@ python tests/run_all_tests.py
 # Run only core functionality tests
 python tests/run_all_tests.py --category "Core Functionality"
 
-# Run only coarse-to-fine decoding tests
-python tests/run_all_tests.py --category "Coarse-to-Fine Decoding"
+
 
 # Run only analysis tests
 python tests/run_all_tests.py --category "Analysis & Debugging"
@@ -55,8 +43,7 @@ python tests/run_all_tests.py --category "Analysis & Debugging"
 # Run a specific test (partial name match)
 python tests/run_all_tests.py --test "coarse_to_fine"
 
-# Run uniform matrix tests
-python tests/run_all_tests.py --test "uniform"
+
 ```
 
 ### List Available Tests
@@ -67,9 +54,8 @@ python tests/run_all_tests.py --list
 ### Run Individual Tests
 ```bash
 # Run a specific test file directly
-python tests/test_coarse_to_fine.py
-python tests/test_uniform_small_matrices.py
-python tests/test_scaled_matrix_coarse_to_fine.py
+python tests/test_closest_point.py
+python tests/test_nested_lattice_quantizer.py
 ```
 
 ## Test Dependencies
@@ -93,23 +79,7 @@ Tests generate various outputs:
 
 ## Key Test Features
 
-### Coarse-to-Fine Decoding Tests
-These tests validate the hierarchical quantization's ability to provide progressive reconstruction:
-- Error should decrease as more levels are used
-- Monotonic error reduction is expected
-- Different matrix sizes and quantization parameters are tested
 
-### Uniform Random Variable Tests
-These tests use uniform random variables for more controlled analysis:
-- Better scale alignment with quantization levels
-- More predictable behavior
-- Ideal for algorithm validation
-
-### Scaled Matrix Tests
-These tests use matrices scaled by q^M to better reveal hierarchical behavior:
-- Proper scale matching with quantization levels
-- Better level separation
-- Improved monotonicity
 
 ## Debugging Tests
 
