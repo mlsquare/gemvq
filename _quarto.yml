@@ -29,3 +29,5 @@ book:
     - preface.qmd
     - docs/adaptive_matvec_approach.qmd
     - docs/baseline.ipynb
+    - docs/nested_lattice_demo.ipynb
+    - docs/hierarchical_lattice_demo.ipynb
