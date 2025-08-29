@@ -1,10 +1,10 @@
 import matplotlib.pyplot as plt
 import numpy as np
 
-from src.quantizers.lattice.utils import (closest_point_A2, closest_point_Dn,
+from gemvq.quantizers.utils import (closest_point_A2, closest_point_Dn,
                                custom_round)
-from src.quantizers.lattice.hnlq import HNLQ as HQ
-from src.quantizers.lattice.utils import *
+from gemvq.quantizers.hnlq import HNLQ as HQ
+from gemvq.quantizers.utils import *
 
 
 def generate_rho_correlated_samples(rho, num_samples, vector_dim):

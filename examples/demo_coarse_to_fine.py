@@ -10,7 +10,7 @@ The reconstruction can be stopped at any level from M-1 down to 0.
 import matplotlib.pyplot as plt
 import numpy as np
 
-from src.gemv.column_wise_gemv import ColumnWiseGEMV
+from gemvq.gemv.columnwise.column_wise_gemv import ColumnWiseGEMV
 
 
 def demo_coarse_to_fine_decoding():

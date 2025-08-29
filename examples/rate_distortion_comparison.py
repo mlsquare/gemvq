@@ -14,10 +14,10 @@ import matplotlib.pyplot as plt
 import numpy as np
 from typing import List, Dict, Tuple, Callable
 
-from src.quantizers.lattice.utils import closest_point_Dn
-from src.quantizers.lattice.hnlq import HNLQ as HQuantizer
-from src.quantizers.lattice.nlq import NLQ as NQuantizer
-from src.quantizers.lattice.utils import calculate_mse, calculate_t_entropy, get_d4, SIG_D4
+from gemvq.quantizers.utils import closest_point_Dn
+from gemvq.quantizers.hnlq import HNLQ as HQuantizer
+from gemvq.quantizers.nlq import NLQ as NQuantizer
+from gemvq.quantizers.utils import calculate_mse, calculate_t_entropy, get_d4, SIG_D4
 
 
 class QuantizerConfig:

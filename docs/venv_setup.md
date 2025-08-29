@@ -39,9 +39,9 @@ uv run jupyter notebook
 Since the project is installed in development mode, you can import modules directly:
 
 ```python
-# Instead of sys.path.append('../')
-from src.quantizers.lattice.nlq import NLQ
-from src.gemv.adaptive.adaptive_matvec import AdaptiveMatvecProcessor
+# Clean imports from the installed package
+from gemvq import NLQ, HNLQ, get_d4
+from gemvq.gemv.adaptive_processor import AdaptiveProcessor
 # ... etc
 ```
 

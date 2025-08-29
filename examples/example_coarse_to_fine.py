@@ -7,7 +7,7 @@ This script shows the basic usage of the coarse-to-fine decoding functionality.
 
 import numpy as np
 
-from src.gemv.column_wise_gemv import ColumnWiseGEMV
+from gemvq.gemv.columnwise.column_wise_gemv import ColumnWiseGEMV
 
 
 def main():

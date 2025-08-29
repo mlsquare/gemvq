@@ -1,7 +1,7 @@
-from src.quantizers.lattice.nlq import NLQ as NQuantizer
-from src.quantizers.lattice.hnlq import HNLQ as HQuantizer
-from src.quantizers.lattice.utils import get_a2, get_d3, get_d4, get_e8, calculate_mse, calculate_t_entropy
-from src.quantizers.lattice.utils import closest_point_A2, closest_point_Dn, closest_point_E8, custom_round
+from gemvq.quantizers.nlq import NLQ as NQuantizer
+from gemvq.quantizers.hnlq import HNLQ as HQuantizer
+from gemvq.quantizers.utils import get_a2, get_d3, get_d4, get_e8, calculate_mse, calculate_t_entropy
+from gemvq.quantizers.utils import closest_point_A2, closest_point_Dn, closest_point_E8, custom_round
 import numpy as np
 import matplotlib.pyplot as plt
 

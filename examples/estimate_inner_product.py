@@ -1,11 +1,11 @@
 import matplotlib.pyplot as plt
 import numpy as np
 
-from src.quantizers.lattice.utils import (closest_point_A2, closest_point_Dn,
+from gemvq.quantizers.utils import (closest_point_A2, closest_point_Dn,
                                custom_round)
-from src.quantizers.lattice.hnlq import HNLQ as HQuantizer
-from src.quantizers.lattice.nlq import NLQ as NQuantizer
-from src.quantizers.lattice.utils import *
+from gemvq.quantizers.hnlq import HNLQ as HQuantizer
+from gemvq.quantizers.nlq import NLQ as NQuantizer
+from gemvq.quantizers.utils import *
 
 
 def pad_vector(vec, lattice_dim):
