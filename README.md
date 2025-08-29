@@ -281,14 +281,6 @@ python -m tests.run_all_tests --list
 
 ## Clean Structure and Import Patterns
 
-### 🧹 **Clean Module Organization**
-The library follows clean Python practices with minimal `__init__.py` files and explicit imports:
-
-- **No imports in `__init__.py`**: All `__init__.py` files contain only module descriptions
-- **Explicit imports**: Users must import specific modules directly
-- **Logical organization**: Related functionality is grouped in subdirectories
-- **Clear separation**: Utilities, demos, and implementations are clearly separated
-
 ### 📦 **Import Patterns**
 ```python
 # Clean, intuitive imports from the main package
@@ -467,18 +459,39 @@ Comprehensive documentation is available in the `docs/` folder:
 
 ## License
 
-[License information]
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+The MIT License is a permissive license that allows for:
+- Commercial use
+- Modification
+- Distribution
+- Private use
+
+While providing liability protection for the authors. See the full license text in the [LICENSE](LICENSE) file.
 
 ## Citation
 
 If you use this library in your research, please cite:
 
 ```bibtex
-[Citation information]
+@article{gemv-q,
+  title={A library for GEMV based on Lattice Quantizers},
+  author={Soma S Dhavala},s
+}
+
+
 ```
+
+## References
+
+This library is based on the following foundational works:
+
+1. Kaplan and O. Ordentlich, “High-Rate Nested-Lattice Quantized Matrix Multiplication with Small Lookup Tables”, to be presented in ISIT 2025, arXiv:2505.13164, 2025.
+
+2. O. Ordentlich and Y. Polyanskiy, “Optimal quantization for matrix multiplication”, arXiv preprint arXiv:2410.13780, 2024.
+
+3. J. Conway and N. Sloane, "Fast quantizing and decoding and algorithms for lattice quantizers and codes", in IEEE Transactions on Information Theory, vol. 28, no. 2, pp. 227-232, March 1982, doi: 10.1109/TIT.1982.1056484..
 
 ## Acknowledgments
 
-- Implementation based on hierarchical nested lattice quantization theory
-- Coarse-to-fine decoding inspired by progressive transmission techniques
-- Testing methodology developed for robust algorithm validation
+**[LatticeQuant Repository](https://github.com/iriskaplan/LatticeQuant)**: The core implementation by Iris Kaplan that provides the foundational M-leveled nested-lattice quantizer and Voronoi code quantizer implementations. This repository implements the work described in the papers below and serves as the base for GEMV-Q's quantization capabilities.
