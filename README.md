@@ -217,9 +217,33 @@ gemvq/
 ### Module Organization
 
 #### 🏗️ **Core Architecture**
-- **`src/quantizers/`**: Core lattice quantization algorithms and utilities
-- **`src/gemv/`**: Matrix-vector multiplication implementations with multiple strategies
-- **`src/adaptive/`**: Adaptive quantization approaches for dynamic scenarios
+
+**Quantization Layer** (`gemvq/quantizers/`)
+- **`nlq.py`**: Single-level nested lattice quantization for matrix compression
+- **`hnlq.py`**: Multi-level hierarchical nested lattice quantization with progressive refinement
+- **`utils.py`**: Lattice utilities supporting D4, A2, E8, Z2, Z3 lattices with optimized closest point algorithms
+
+**GEMV Processing Layer** (`gemvq/gemv/`)
+- **`columnwise/`**: Column-wise matrix-vector multiplication with multiple strategies
+  - `columnwise_matvec_processor.py`: Main processor with coarse-to-fine decoding
+  - `columnwise_matvec_factory.py`: Factory pattern for processor creation
+  - `simple_columnwise_matvec.py`: Simplified implementation for basic use cases
+- **`rowwise/`**: Row-wise processing alternative for specific matrix structures
+- **`svd/`**: SVD-based decomposition for efficient processing of structured matrices
+- **`utils/`**: Shared utilities including lookup tables and matrix padding
+- **`adaptive_processor.py`**: Dynamic strategy selection based on data characteristics
+
+**Adaptive Layer** (`gemvq/adaptive/`)
+- **`adaptive_matvec.py`**: Core adaptive matrix-vector multiplication algorithms
+- **`layer_wise_histogram_matvec.py`**: Histogram-based adaptive quantization
+- **`demo_adaptive_matvec.py`**: Demonstrations of adaptive processing capabilities
+
+**Architecture Benefits**:
+- **Modular Design**: Each layer has clear responsibilities and interfaces
+- **Strategy Pattern**: Multiple processing strategies can be easily swapped
+- **Factory Pattern**: Clean object creation with configurable parameters
+- **Progressive Refinement**: Support for coarse-to-fine decoding at multiple levels
+- **Extensible Framework**: Easy to add new lattice types and processing strategies
 
 #### 🔧 **GEMV Processing Strategies**
 - **Column-wise**: Process matrix column by column (default approach)
@@ -494,4 +518,4 @@ This library is based on the following foundational works:
 
 ## Acknowledgments
 
-**[LatticeQuant Repository](https://github.com/iriskaplan/LatticeQuant)**: The core implementation by Iris Kaplan that provides the foundational M-leveled nested-lattice quantizer and Voronoi code quantizer implementations. This repository implements the work described in the papers below and serves as the base for GEMV-Q's quantization capabilities.
+**[LatticeQuant Repository](https://github.com/iriskaplan/LatticeQuant)**: The core implementation by Iris Kaplan provides the foundational M-leveled nested-lattice quantizer and Voronoi code quantizer implementations. This repository implements the work described in the papers above and serves as the base for GEMV-Q's quantization capabilities.
