@@ -1,16 +1,17 @@
-# gemvq
+# GEMV-Q
 
-A comprehensive library for matrix-vector multiplication (GEMV) based on different lattice quantizers, including nested lattice quantizers and hierarchical nested lattice quantizers. This library builds on the latticequant library to provide efficient implementations of quantized matrix-vector operations.
+A comprehensive library for matrix-vector multiplication (GEMV) based on different lattice quantizers, including nested lattice quantizers and hierarchical nested lattice quantizers. This library provides efficient implementations of quantized matrix-vector operations with support for multiple processing strategies and adaptive quantization.
 
 ## Overview
 
-gemvq provides efficient implementations of:
+GEMV-Q provides efficient implementations of:
 - **Matrix-Vector Multiplication**: Efficient GEMV operations using quantized matrices with different lattice quantizers
 - **Lattice Quantization**: Quantizing vectors to points on lattices (D4, A2, E8, Z2, Z3) using latticequant library
 - **Nested Lattice Quantization**: Single-level quantization for matrix compression
 - **Hierarchical Nested Lattice Quantization**: Multi-level quantization for progressive refinement
 - **Coarse-to-Fine Decoding**: Progressive reconstruction from coarse to fine levels
 - **Adaptive Quantization**: Dynamic quantization based on data characteristics
+- **Multiple Processing Strategies**: Column-wise, row-wise, SVD-based, and lookup table approaches
 
 ## Key Features
 
@@ -20,10 +21,11 @@ gemvq provides efficient implementations of:
 - **Coarse-to-Fine Decoding**: Progressive reconstruction from coarse to fine levels
 - **Monotonic Error Reduction**: Error decreases as more quantization levels are used
 - **Variable Depth Decoding**: Support for decoding at different quantization levels
+- **Adaptive Processing**: Dynamic strategy selection based on data characteristics
 
 ### 🔧 **Lattice Quantizer Support**
-- **Nested Lattice Quantizer**: Single-level quantization for matrix compression
-- **Hierarchical Nested Lattice Quantizer**: Multi-level quantization for progressive refinement
+- **Nested Lattice Quantizer (NLQ)**: Single-level quantization for matrix compression
+- **Hierarchical Nested Lattice Quantizer (HNLQ)**: Multi-level quantization for progressive refinement
 - **Multiple Lattice Types**: Support for D4, A2, E8, Z2, Z3 lattices from latticequant library
 - **D4**: 4-dimensional checkerboard lattice
 - **A2**: 2-dimensional hexagonal lattice  
@@ -35,6 +37,13 @@ gemvq provides efficient implementations of:
 - Uniform random variable testing for controlled analysis
 - Scaled matrix testing for better hierarchical behavior
 - Error type analysis (cumulative vs tile-specific)
+- Performance benchmarking and validation
+
+### 🎛️ **Adaptive Features**
+- **Layer-wise Histogram Processing**: Adaptive quantization based on data distribution
+- **Dynamic Bit Allocation**: Optimal bit rate allocation per column
+- **Sparsity Exploitation**: Efficient handling of sparse vectors
+- **Rate-Distortion Optimization**: Adaptive quantization for optimal performance
 
 ## Installation
 
@@ -72,17 +81,17 @@ print(f"Matrix-vector multiplication result shape: {result.shape}")
 
 ```python
 # Using nested lattice quantizer (single-level)
-from src.lattices.quantizers.nested_lattice_quantizer import NestedLatticeQuantizer
-from src.lattices.utils import get_d4
+from src.quantizers.lattice.nlq import NLQ
+from src.quantizers.lattice.utils import get_d4
 
 G = get_d4()
-nested_quantizer = NestedLatticeQuantizer(G=G, q=4, beta=0.2)
+nested_quantizer = NLQ(G=G, q=4, beta=0.2)
 
 # Using hierarchical nested lattice quantizer (multi-level)
-from src.lattices.quantizers.hierarchical_nested_lattice_quantizer import HierarchicalNestedLatticeQuantizer
-from src.lattices.utils import closest_point_Dn
+from src.quantizers.lattice.hnlq import HNLQ
+from src.quantizers.lattice.utils import closest_point_Dn
 
-hierarchical_quantizer = HierarchicalNestedLatticeQuantizer(
+hierarchical_quantizer = HNLQ(
     G=G, Q_nn=closest_point_Dn, q=4, beta=0.2,
     alpha=1/3, eps=1e-8, dither=np.zeros(4), M=3
 )
@@ -98,16 +107,35 @@ for level in range(3):
     print(f"Level {level}: Error = {error:.6f}")
 ```
 
+### Adaptive Matrix-Vector Multiplication
+
+```python
+from src.adaptive.adaptive_matvec import AdaptiveMatvecProcessor
+from src.quantizers.lattice.utils import get_d4
+
+# Create adaptive processor with D4 lattice
+G = get_d4()
+processor = AdaptiveMatvecProcessor(G=G, q=4, beta=0.2, M=3)
+
+# Create matrix and vector
+matrix = np.random.uniform(0, 1, (100, 50)) * 256
+vector = np.random.uniform(0, 1, 50) * 256
+
+# Perform adaptive matrix-vector multiplication
+result = processor.adaptive_matvec(matrix, vector, target_rate=2.0)
+print(f"Adaptive GEMV result shape: {result.shape}")
+```
+
 ## Project Structure
 
 ```
 gemvq/
 ├── 📁 src/                          # Main source code
-│   ├── 📁 lattices/                 # Lattice quantization core
-│   │   ├── 📁 quantizers/           # Quantization algorithms
-│   │   │   ├── hierarchical_nested_lattice_quantizer.py  # Multi-level quantization
-│   │   │   └── nested_lattice_quantizer.py              # Single-level quantization
-│   │   └── utils.py                 # Lattice utilities (D4, A2, E8, etc.)
+│   ├── 📁 quantizers/               # Quantization core
+│   │   ├── 📁 lattice/              # Lattice algorithms
+│   │   │   ├── hnlq.py              # Multi-level quantization
+│   │   │   ├── nlq.py               # Single-level quantization
+│   │   │   └── utils.py             # Lattice utilities (D4, A2, E8, etc.)
 │   │
 │   ├── 📁 gemv/                     # Matrix-vector multiplication with lattice quantizers
 │   │   ├── 📁 base/                 # Base classes and factory patterns
@@ -150,19 +178,22 @@ gemvq/
 │   │   ├── adaptive_matvec.py       # Adaptive matrix-vector multiplication
 │   │   ├── layer_wise_histogram_matvec.py   # Layer-wise histogram approach
 │   │   ├── demo_adaptive_matvec.py          # Adaptive GEMV demonstrations
-│   │   └── demo_layer_wise_histogram.py     # Histogram demo
+│   │   ├── demo_layer_wise_histogram.py     # Histogram demo
+│   │   ├── ada_matmul.md            # Adaptive approach documentation
+│   │   └── __init__.py
 │   │
-│   └── simple_test.py               # Simple test utilities
+│   └── __init__.py                  # Main package initialization
 │
 ├── 📁 tests/                        # Comprehensive test suite
 │   ├── run_all_tests.py             # Main test runner with categories
-│   ├── README.md                    # Test documentation
 │   ├── test_nested_lattice_quantizer.py     # Core quantization tests
 │   ├── test_hierarchical_*.py       # Hierarchical quantization tests
 │   ├── test_columnwise_matvec_options.py    # Column-wise GEMV tests
 │   ├── test_adaptive_matvec.py              # Adaptive GEMV tests
-│   ├── test_error_*.py              # Error analysis tests
-│   └── test_*.py                    # Other specialized tests
+│   ├── test_layer_wise_histogram.py         # Layer-wise histogram tests
+│   ├── test_d4_lattice_simulation.py        # D4 lattice simulation tests
+│   ├── test_decoding_parameter.py           # Decoding parameter tests
+│   └── __init__.py
 │
 ├── 📁 examples/                     # Usage examples and demonstrations
 │   ├── demo_coarse_to_fine.py       # Coarse-to-fine decoding demo
@@ -171,11 +202,17 @@ gemvq/
 │   ├── analyze_rate_distortion_results.py   # Rate-distortion analysis
 │   ├── compare_quantizer_distortion.py      # Quantizer comparison
 │   ├── estimate_*.py                # Estimation examples
-│   └── plot_*.py                    # Visualization examples
+│   ├── plot_*.py                    # Visualization examples
+│   ├── demo_hnlq_*.py               # HNLQ demonstrations
+│   ├── d4_nested_lattice_manim.py   # D4 lattice visualization
+│   └── __init__.py
 │
 ├── 📁 docs/                         # Documentation and analysis
-│   ├── adaptive_matvec_approach.md  # Adaptive approach documentation
-│   └── [other analysis docs]        # Various analysis documents
+│   ├── 📁 gemv/                     # GEMV documentation
+│   ├── 📁 lattices/                 # Lattice documentation
+│   ├── 📁 quantizers/               # Quantizer documentation
+│   ├── 📁 notebooks/                # Jupyter notebooks
+│   └── 📁 papers/                   # Research papers
 │
 ├── requirements.txt                 # Basic dependencies
 ├── requirements-dev.txt             # Development dependencies
@@ -186,7 +223,7 @@ gemvq/
 ### Module Organization
 
 #### 🏗️ **Core Architecture**
-- **`src/lattices/`**: Core lattice quantization algorithms and utilities
+- **`src/quantizers/`**: Core lattice quantization algorithms and utilities
 - **`src/gemv/`**: Matrix-vector multiplication implementations with multiple strategies
 - **`src/adaptive/`**: Adaptive quantization approaches for dynamic scenarios
 
@@ -229,10 +266,12 @@ python -m tests.run_all_tests --category "Analysis & Debugging"
 ### Run Specific Tests
 ```bash
 # Run specific test modules
-python -m tests.test_simple_columnwise_matvec
 python -m tests.test_nested_lattice_quantizer
-python -m tests.test_decoding_parameter
+python -m tests.test_columnwise_matvec_options
+python -m tests.test_adaptive_matvec
+python -m tests.test_layer_wise_histogram
 python -m tests.test_d4_lattice_simulation
+python -m tests.test_decoding_parameter
 
 # Run uniform matrix tests
 python -m tests.run_all_tests --test "uniform"
@@ -262,13 +301,15 @@ The library follows clean Python practices with minimal `__init__.py` files and 
 from src.gemv.columnwise.columnwise_matvec_processor import ColumnwiseMatvecProcessor
 from src.gemv.rowwise.rowwise_processor import RowwiseGEMVProcessor
 from src.gemv.utils.padder import BlockingStrategy
-from src.lattices.utils import get_d4, closest_point_Dn
-from src.lattices.quantizers.nested_lattice_quantizer import NestedLatticeQuantizer
+from src.quantizers.lattice.utils import get_d4, closest_point_Dn
+from src.quantizers.lattice.nlq import NLQ
+from src.quantizers.lattice.hnlq import HNLQ
+from src.adaptive.adaptive_matvec import AdaptiveMatvecProcessor
 
 # Run modules directly
 python -m src.gemv.columnwise.columnwise_matvec_processor
-python -m src.lattices.utils
-python -m tests.test_simple_columnwise_matvec
+python -m src.quantizers.lattice.utils
+python -m tests.test_nested_lattice_quantizer
 ```
 
 ### 🏗️ **Directory Structure Benefits**
@@ -288,8 +329,8 @@ The library provides efficient matrix-vector multiplication using different latt
 - **Latticequant Integration**: Builds on the latticequant library for core quantization algorithms
 
 ### Lattice Quantizer Types
-- **Nested Lattice Quantizer**: Single-level quantization for matrix compression
-- **Hierarchical Nested Lattice Quantizer**: Multi-level quantization with M levels:
+- **Nested Lattice Quantizer (NLQ)**: Single-level quantization for matrix compression
+- **Hierarchical Nested Lattice Quantizer (HNLQ)**: Multi-level quantization with M levels:
   - **Level 0**: Coarsest approximation (MSB - Most Significant Bits)
   - **Level M-1**: Finest detail (LSB - Least Significant Bits)
   - **Progressive Reconstruction**: Can decode from any level 0 to M-1
@@ -298,6 +339,12 @@ The library provides efficient matrix-vector multiplication using different latt
 - **Cumulative Error**: Error calculated for complete reconstruction using levels 0 to max_level
 - **Monotonic Reduction**: Error should decrease as more levels are used
 - **Progressive Quality**: Quality improves progressively with each additional level
+
+### Adaptive Quantization
+- **Dynamic Bit Allocation**: Optimal bit rate allocation per column based on importance
+- **Layer-wise Processing**: Adaptive quantization based on data distribution characteristics
+- **Sparsity Exploitation**: Efficient handling of sparse vectors with known patterns
+- **Rate-Distortion Optimization**: Adaptive quantization for optimal performance
 
 ### Scaling Strategy
 For optimal performance, scale input data by q^M:
@@ -311,14 +358,25 @@ Comprehensive documentation is available in the `docs/` folder:
 
 ### 📖 **Technical Documentation**
 
-#### **Clean Structure Guide** (`clean_structure_guide.md`)
-- **Module Organization**: Complete guide to the clean structure and organization
-- **Import Patterns**: Best practices for importing and using the library
-- **Directory Structure**: Before and after reorganization comparison
-- **Migration Guide**: How to update existing code to use the new structure
-- **Best Practices**: Do's and don'ts for maintaining clean code
+#### **GEMV Module** (`docs/gemv/`)
+- **Column-wise Processing**: Complete guide to column-wise matrix-vector multiplication
+- **Row-wise Processing**: Alternative row-wise processing strategies
+- **SVD-based Processing**: Singular value decomposition approaches
+- **Lookup Table Processing**: Pre-computed table strategies
 
-#### **Adaptive Matrix-Vector Multiplication** (`adaptive_matvec_approach.md`)
+#### **Lattice Documentation** (`docs/lattices/`)
+- **D4 Lattice**: 4-dimensional checkerboard lattice implementation
+- **A2 Lattice**: 2-dimensional hexagonal lattice
+- **E8 Lattice**: 8-dimensional Gosset lattice
+- **Z2/Z3 Lattices**: Integer lattice implementations
+
+#### **Quantizer Documentation** (`docs/quantizers/`)
+- **Nested Lattice Quantization**: Single-level quantization guide
+- **Hierarchical Nested Lattice Quantization**: Multi-level quantization guide
+- **Beta Selection**: Parameter optimization for HNLQ
+- **Improvements**: Recent enhancements and optimizations
+
+#### **Adaptive Approach** (`src/adaptive/ada_matmul.md`)
 - **Mathematical Framework**: Complete mathematical formulation of adaptive GEMV
 - **Column-wise Interpretation**: Matrix-vector multiplication as linear combination of columns
 - **Adaptive Quantization Strategy**: Dynamic bit rate allocation per column
