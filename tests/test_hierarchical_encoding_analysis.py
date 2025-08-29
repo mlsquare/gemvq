@@ -10,9 +10,9 @@ import sys
 import os
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-from src.lattices.quantizers.hierarchical_nested_lattice_quantizer import HierarchicalNestedLatticeQuantizer
-from src.lattices.utils import closest_point_Dn
-from src.lattices.utils import get_d4, calculate_mse, calculate_t_entropy
+from src.quantizers.lattice.hnlq import HNLQ
+from src.quantizers.lattice.utils import closest_point_Dn
+from src.quantizers.lattice.utils import get_d4, calculate_mse, calculate_t_entropy
 
 
 def test_hierarchical_encoding_process():
@@ -31,7 +31,7 @@ def test_hierarchical_encoding_process():
     dither = np.zeros(4)
     
     # Create hierarchical quantizer
-    hq = HierarchicalNestedLatticeQuantizer(
+    hq = HNLQ(
         G=G,
         Q_nn=closest_point_Dn,
         q=q,
@@ -84,7 +84,7 @@ def test_hierarchical_vs_voronoi_encoding():
     """
     print("=== Comparing Hierarchical vs Voronoi Encoding ===\n")
     
-    from src.quantizers.nested_lattice_quantizer import NestedLatticeQuantizer
+    from src.quantizers.lattice.nlq import NLQ
     
     # Setup parameters
     G = get_d4()
@@ -96,14 +96,14 @@ def test_hierarchical_vs_voronoi_encoding():
     dither = np.zeros(4)
     
     # Create quantizers
-    hq = HierarchicalNestedLatticeQuantizer(
+    hq = HNLQ(
         G=G, Q_nn=closest_point_Dn, q=q, beta=beta, alpha=alpha,
         eps=eps, dither=dither, M=M
     )
     
     # Create Voronoi quantizer with equivalent parameters
     effective_q = q**M  # 3^3 = 27
-    vq = NestedLatticeQuantizer(
+    vq = NLQ(
         G=G, Q_nn=closest_point_Dn, q=effective_q, beta=beta, alpha=alpha,
         eps=eps, dither=dither
     )
@@ -150,7 +150,7 @@ def test_rate_calculation():
     dither = np.zeros(4)
     
     # Create hierarchical quantizer
-    hq = HierarchicalNestedLatticeQuantizer(
+    hq = HNLQ(
         G=G,
         Q_nn=closest_point_Dn,
         q=q,
@@ -214,7 +214,7 @@ def test_parameter_sensitivity():
     print("-" * 20)
     
     for beta in beta_values:
-        hq = HierarchicalNestedLatticeQuantizer(
+        hq = HNLQ(
             G=G, Q_nn=closest_point_Dn, q=q, beta=beta, alpha=alpha,
             eps=eps, dither=dither, M=M
         )
@@ -251,7 +251,7 @@ def test_m_values():
     print("-" * 25)
     
     for M in M_values:
-        hq = HierarchicalNestedLatticeQuantizer(
+        hq = HNLQ(
             G=G, Q_nn=closest_point_Dn, q=q, beta=beta, alpha=alpha,
             eps=eps, dither=dither, M=M
         )

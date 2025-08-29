@@ -1,0 +1,106 @@
+---
+title: "Introduction"
+---
+
+**Quantization** turns continuous-valued signals into a finite set of reconstruction values (codewords). We do this to **store** or **transmit** signals using a limited number of bits, to **interface** analog measurements with digital computation, and to **control** power/bandwidth/latency in communication systems. This note gives a broad, simple introduction: we formalize quantization and distortion, review **scalar** and **vector** approaches, and then specialize to **lattice quantization**—a structured vector quantizer with elegant geometry and strong performance.
+
+## Why quantize?
+
+- **Analog-to-digital conversion (A/D):** sensors produce real values; processors store/transmit bits. Quantization bridges them.
+- **Compression & rate limits:** storage and channels have finite rates. Smaller bit budgets require coarser representations (more distortion).
+- **Robustness & standardization:** discrete alphabets simplify hardware, error control, and interoperability.
+- **Control/ML:** fixed-point arithmetic, model compression/pruning, and on-device inference need quantization to meet latency/energy budgets.
+
+## Formal model and notation
+
+Let $X\in\mathbb{R}^n$ be a random source vector with distribution $P_X$. A **quantizer** is a (measurable) mapping
+$$
+Q: \mathbb{R}^n \to \mathcal{C},\qquad \mathcal{C}=\{c_1,\dots,c_M\}\subset\mathbb{R}^n\quad(\text{codebook}),
+$$
+typically paired with the **nearest-neighbor** rule under a distortion measure $d(\cdot,\cdot)$:
+$$
+Q(x) \in \operatorname*{arg\,min}_{c\in\mathcal{C}}\ d(x,c).
+$$
+We focus on **squared error** $d(x,c)=\lVert x-c\rVert^2$ with the Euclidean norm $\lVert\cdot\rVert$. The **mean-squared error (MSE)** is
+$$
+D \,=\, \mathbb{E}\big[\lVert X-Q(X)\rVert^2\big].
+$$
+A fixed-length representation with $M$ codewords uses $R=\log_2 M$ **bits/symbol**. In variable-length settings, $R\approx H(Q(X))$ (bits/symbol) after entropy coding.
+
+## Scalar quantization ($n=1$)
+
+### Uniform midrise/midtread
+Partition $\mathbb{R}$ into equal bins of width $\Delta>0$; reconstruction points are at bin centers (midrise) or include zero level (midtread). For inputs constrained to $[-A,A]$ and no overload,
+$$
+D_{\text{uniform}} \approx \frac{\Delta^2}{12}.
+$$
+Smaller $\Delta$ reduces distortion but increases rate (more bins across $[-A,A]$). Overload/clipping occurs if $|X|>A$.
+
+### Nonuniform & companding
+If $X$ has nonuniform density (e.g., Laplace, speech), **Lloyd–Max** optimization yields nonuniform bin boundaries and levels. A practical approximation is **companding**: apply a monotone compressor $g$, quantize uniformly in $g$-domain, then expand with $g^{-1}$ (e.g., $\mu$-law, A-law).
+
+## Vector quantization ($n>1$)
+
+A **vector quantizer** uses a codebook $\mathcal{C}\subset\mathbb{R}^n$ and partitions space into **cells** (generalized Voronoi regions). Benefits:
+
+- Exploits **correlations** and **structure** across components.
+- Achieves lower MSE than independent scalar quantizers at the same rate (especially at moderate $n$).
+- Aligns with theoretical **rate–distortion** bounds: for Gaussian sources, $R(D)\approx \tfrac12\log_2(\sigma^2/D)$ per dimension at high rate.
+
+**Design & search.** The classic LBG algorithm (k-means–like) alternates assignment and centroid updates; tree/product/residual VQ reduce search complexity. Curse-of-dimensionality limits unconstrained codebooks at large $n$.
+
+## Lattice quantization (structured VQ)
+
+A **lattice** $\Lambda\subset\mathbb{R}^n$ is the set $\Lambda=B\mathbb{Z}^n$ for a full-rank basis $B\in\mathbb{R}^{n\times n}$. The **nearest-neighbor quantizer** and **Voronoi cell** are
+$$
+Q_\Lambda(x):=\operatorname*{arg\,min}_{\lambda\in\Lambda}\lVert x-\lambda\rVert,\qquad
+\mathcal{V}_\Lambda:=\{u:\ \lVert u\rVert\le \lVert u-\lambda\rVert\ \forall\lambda\in\Lambda\}.
+$$
+The **modulo–lattice** map is
+$$
+x\bmod\Lambda := x - Q_\Lambda(x)\in\mathcal{V}_\Lambda.
+$$
+
+### High-rate MSE and normalized second moment
+Let $V=\det(\Lambda)$ be the cell volume (covolume). The **normalized second moment** of $\mathcal{V}_\Lambda$ is
+$$
+G(\Lambda) \,=\, \frac{1}{n\,V^{1+2/n}}\int_{\mathcal{V}_\Lambda} \lVert u\rVert^2\,du.
+$$
+At high rate (fine cells), the per-dimension MSE of a dithered lattice quantizer satisfies
+$$
+\frac{D}{n} \,\approx\, G(\Lambda)\, V^{2/n}.
+$$
+Smaller $G(\Lambda)$ is better. Examples (per dimension): $G(\mathbb{Z}^n)=\tfrac{1}{12}$; $G(A_2)=\tfrac{5}{36\sqrt{3}}\approx 0.08019$; $G(E_8)\approx 0.07168$; $G(\Lambda_{24})\approx 0.0658$.
+
+### Dithered lattice quantization
+Let $U\sim\mathrm{Unif}(\mathcal{V}_\Lambda)$ independent of $X$ (known at encoder and decoder). Define the **subtractive-dither** quantizer
+$$
+Q^{\text{dith}}(X) = Q_\Lambda(X+U)-U,\qquad E := X-Q^{\text{dith}}(X).
+$$
+Then $E\stackrel{d}{=}U$ and, crucially, $E$ is (approximately) **independent** of $X$ at high rate. This yields an accurate **additive-noise model** with zero-mean, white error, variance $\approx n\,G(\Lambda)V^{2/n}$.
+
+### Shaping with nested lattices
+To bound signal energy, use a **coarse** lattice $\Lambda_c\subseteq\Lambda$ for **shaping**. The **index**
+$$
+[\Lambda:\Lambda_c]=\frac{\det(\Lambda_c)}{\det(\Lambda)}\in\mathbb{N}
+$$
+equals the number of **cosets** $\Lambda/\Lambda_c$. The modulo map $x\bmod\Lambda_c\in\mathcal{V}_{\Lambda_c}$ picks a representative inside a bounded region. Special cases:
+
+- **Uniform scalar quantization** is lattice quantization with $\Lambda=\mathbb{Z}^n$ (often $n=1$).
+- Better shaping in low $n$: $A_2$ (hexagonal) in 2D; $D_4$ in 4D; $E_8$ in 8D.
+
+## Practical design tips
+
+- **Source matching:** rotate/whiten so that $X$ is closer to white Gaussian; then a good lattice (small $G(\Lambda)$) is effective.
+- **Bit allocation:** with $\Lambda_c\subseteq\Lambda$, the coset index size $[\Lambda:\Lambda_c]$ determines bits per vector; combine with entropy coding on labels.
+- **Dithering:** subtractive dither linearizes distortion and avoids bias/“granular” patterns; essential in analysis-by-synthesis codecs.
+- **Complexity:** nearest-neighbor search on general lattices can be done with sphere decoding or Babai rounding; for $\mathbb{Z}^n$, rounding is coordinatewise.
+- **When to prefer VQ over scalar:** strong inter-component correlation or perceptual weighting across dimensions favors vector or lattice quantization.
+
+## References & classic results
+
+- S.P. Lloyd (1982), J. Max (1960): optimal scalar and vector quantization conditions.
+- R.M. Gray & D.L. Neuhoff, “Quantization” (IEEE Trans. IT, 1998): comprehensive survey.
+- Conway & Sloane, *Sphere Packings, Lattices and Groups*: lattice geometry; $A_2,D_4,E_8,\Lambda_{24}$.
+- Zamir, *Lattice Coding for Signals and Networks*: dithered lattice quantization; nested lattices.
+

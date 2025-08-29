@@ -5,9 +5,9 @@ Test script to verify that the decoding parameter is working correctly.
 
 import numpy as np
 
-from src.lattices.quantizers.hierarchical_nested_lattice_quantizer import HierarchicalNestedLatticeQuantizer
-from src.lattices.utils import closest_point_Dn
-from src.lattices.utils import get_d4
+from src.quantizers.lattice.hnlq import HNLQ
+from src.quantizers.lattice.utils import closest_point_Dn
+from src.quantizers.lattice.utils import get_d4
 from src.gemv.columnwise.column_wise_gemv import ColumnWiseGEMV
 from src.gemv.rowwise.row_wise_gemv import RowWiseGEMV
 
@@ -23,22 +23,22 @@ def test_decoding_parameter():
     # Test data
     x = np.random.randn(4)
     
-    print("Testing HierarchicalNestedLatticeQuantizer with different decoding methods...")
+    print("Testing HNLQ with different decoding methods...")
     
     # Test with full decoding
-    quantizer_full = HierarchicalNestedLatticeQuantizer(
+    quantizer_full = HNLQ(
         G=G, Q_nn=closest_point_Dn, q=4, beta=0.2, alpha=1/3, 
         eps=1e-8, dither=dither, M=2, decoding='full'
     )
     
     # Test with coarse_to_fine decoding
-    quantizer_coarse = HierarchicalNestedLatticeQuantizer(
+    quantizer_coarse = HNLQ(
         G=G, Q_nn=closest_point_Dn, q=4, beta=0.2, alpha=1/3, 
         eps=1e-8, dither=dither, M=2, decoding='coarse_to_fine'
     )
     
     # Test with progressive decoding
-    quantizer_progressive = HierarchicalNestedLatticeQuantizer(
+    quantizer_progressive = HNLQ(
         G=G, Q_nn=closest_point_Dn, q=4, beta=0.2, alpha=1/3, 
         eps=1e-8, dither=dither, M=2, decoding='progressive'
     )

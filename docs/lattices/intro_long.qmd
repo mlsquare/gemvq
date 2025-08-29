@@ -1,0 +1,347 @@
+---
+title: "Lattice Intro - Deep"
+---
+
+# Overview
+
+This note gives a concise but formal introduction to **lattices** in Euclidean spaces. We define lattices and their basic invariants (basis, generator matrix, determinant), introduce **cosets** and nested pairs, and explain geometric notions motivated by **sphere packing**, including **packing radius**, **covering radius**, and **kissing number**. We close with selected **applications** in information theory, signal processing, optimization, and cryptography.
+
+## Notation
+
+- Vectors are column vectors in $\mathbb{R}^n$, with inner product $\langle x,y\rangle$ and norm $\lVert x\rVert=\sqrt{\langle x,x\rangle}$.
+- The **closed Euclidean ball** of radius $R$ centered at $x$ is $\mathcal{B}_n(x,R)=\{y\in\mathbb{R}^n: \lVert y-x\rVert\le R\}$.
+- The **volume** of the unit ball is
+$$
+\mathrm{vol}(\mathcal{B}_n(0,1)) = \frac{\pi^{n/2}}{\Gamma(\tfrac{n}{2}+1)},\quad
+\mathrm{vol}(\mathcal{B}_n(0,R)) = \mathrm{vol}(\mathcal{B}_n(0,1))\,R^n.
+$$
+
+# Basic definitions
+
+::: {.callout-note}
+#### Definition (Lattice)
+A **lattice** $\Lambda\subset \mathbb{R}^n$ is the set of all integer linear combinations of $n$ linearly independent vectors $b_1,\dots,b_n\in\mathbb{R}^n$:
+$$
+\Lambda = \big\{ Bk : k\in\mathbb{Z}^n \big\},\quad
+B = \begin{bmatrix} b_1 & b_2 & \cdots & b_n\end{bmatrix}\in\mathbb{R}^{n\times n}.
+$$
+The matrix $B$ is a **basis** (or **generator matrix**) of $\Lambda$.
+:::
+
+The **Gram matrix** of a basis $B$ is $G = B^\top B$. The **determinant** (or **covolume**) of a full-rank lattice is
+$$
+\det(\Lambda) := |\det B| = \sqrt{\det(B^\top B)}.
+$$
+Geometrically, $\det(\Lambda)$ is the $n$-dimensional volume of any **fundamental domain**, e.g., the **fundamental parallelotope**
+$$
+\mathcal{P}(B) := \big\{ B\alpha : \alpha\in[0,1)^n \big\}.
+$$
+
+Different bases generating the same lattice are related by right multiplication by a unimodular integer matrix $U\in\mathrm{GL}_n(\mathbb{Z})$ ($|\det U|=1$): if $B' = B U$, then $\Lambda(B')=\Lambda(B)$ and $\det(\Lambda)$ is invariant.
+
+::: {.callout-note}
+#### Definition (Dual lattice)
+The **dual lattice** of $\Lambda$ is
+$$
+\Lambda^* := \big\{ y\in\mathbb{R}^n : \langle y,x\rangle\in\mathbb{Z}\ \text{for all}\ x\in\Lambda \big\}.
+$$
+If $B$ is a basis of $\Lambda$, then a basis of $\Lambda^*$ is $B^{-*} := (B^{-1})^{\top}$, and $\det(\Lambda^*) = 1/\det(\Lambda)$.
+:::
+
+### Core properties (at a glance)
+
+- **Basis and determinant.** If $\Lambda=B\mathbb{Z}^n$, then $\Lambda^*=B^{-*}\mathbb{Z}^n$, and
+  $$
+  \det(\Lambda^*)=\frac{1}{\det(\Lambda)}.
+  $$
+- **Monotonicity (order reversal).** If $\Lambda_1\subseteq \Lambda_2$, then
+  $$
+  \Lambda_2^* \subseteq \Lambda_1^*.
+  $$
+- **Linear transforms and scaling.** For $A\in\mathrm{GL}_n(\mathbb{R})$ and scalar $a\ne 0$,
+  $$
+  (A\Lambda)^* = A^{-\top}\Lambda^*, \qquad (a\Lambda)^* = \tfrac{1}{a}\,\Lambda^*.
+  $$
+- **Sum / intersection duality (full-rank).**
+  $$
+  (\Lambda_1+\Lambda_2)^* = \Lambda_1^*\cap \Lambda_2^*, 
+  \qquad
+  (\Lambda_1\cap\Lambda_2)^* = \Lambda_1^* + \Lambda_2^*.
+  $$
+- **Transference (one example).** There are absolute-constant bounds linking successive minima of $\Lambda$ and $\Lambda^*$, e.g.
+  $$
+  \lambda_i(\Lambda)\,\lambda_{n-i+1}(\Lambda^*) \;\le\; c\,n
+  \quad (i=1,\dots,n),
+  $$
+  for a universal constant $c$; in particular $\lambda_1(\Lambda)\,\lambda_n(\Lambda^*)\lesssim n$.
+
+### Examples
+
+- **Cubic lattice.** $\Lambda=\mathbb{Z}^n \Rightarrow \Lambda^*=\mathbb{Z}^n$ (self-dual up to orthonormal transforms; $\det=1$).
+- **Scaled cubic.** $(m\mathbb{Z}^n)^*=\tfrac{1}{m}\mathbb{Z}^n$; hence $\det(m\mathbb{Z}^n)=m^n$ and $\det((m\mathbb{Z}^n)^*)=m^{-n}$.
+- **Checkerboard ($D_4$).** $\det(D_4)=4$, so $\det(D_4^*)=1/4$ and $D_4\subset D_4^*$ with index $4$; $D_4^*$ consists of integer and half-integer vectors with even coordinate sum.
+
+### Connection to modulo and shaping
+
+On the torus $\mathbb{R}^n/\Lambda$, the modulo map $x\mapsto x\bmod\Lambda$ picks a unique representative in $\mathcal V_\Lambda$. Fourier tools on this torus are indexed by $\Lambda^*$, so **spectral** analyses of quantization error, dithering, and shaping regions naturally invoke the dual lattice via the Poisson formula and theta series of $\Lambda$ and $\Lambda^*$.
+
+
+::: {.callout-note}
+#### Definition (Nearest-neighbor quantizer and modulo)
+The **nearest-neighbor quantizer** associated to $\Lambda$ is
+$$
+Q_{\Lambda}(x) := \operatorname*{arg\,min}_{\lambda\in\Lambda} \lVert x-\lambda\rVert.
+$$
+The **Voronoi cell** of the origin is $\mathcal{V}_{\Lambda} := \{ x\in\mathbb{R}^n : Q_{\Lambda}(x)=0\}$. The **modulo-lattice** map is
+$$
+x\bmod\Lambda := x - Q_{\Lambda}(x)\in\mathcal{V}_{\Lambda}.
+$$
+:::
+
+By construction, the modulo-map $x-Q_\Lambda(x)\in\mathcal V_\Lambda$, i.e. **$x\bmod\Lambda\in\mathcal V_\Lambda$**.  
+(If $x$ lies on a Voronoi boundary, the nearest point may not be unique; any fixed tie-break makes the map single-valued.)
+
+Some key properties are:
+- **Range / canonical representative:** $\mathrm{ran}(x\bmod\Lambda)=\mathcal V_\Lambda$. The map picks the unique representative of the class $[x]\in\mathbb{R}^n/\Lambda$ inside $\mathcal V_\Lambda$.
+- **Shift-invariance:** $(x+\lambda)\bmod\Lambda = x\bmod\Lambda$ for all $\lambda\in\Lambda$.
+- **Idempotence:** $(x\bmod\Lambda)\bmod\Lambda = x\bmod\Lambda$.
+- **Distance (quantization error):** $\|x - Q_\Lambda(x)\|=\min_{\lambda\in\Lambda}\|x-\lambda\|$; in particular, $\|x\bmod\Lambda\|$ equals the distance from $x$ to $\Lambda$.
+- **Tiling view:** $\mathbb{R}^n=\bigsqcup_{\lambda\in\Lambda}(\mathcal V_\Lambda+\lambda)$; the modulo map reduces $x$ into the base tile $\mathcal V_\Lambda$.
+
+
+
+# Cosets and nested lattices
+
+Let $\Lambda\subseteq\Lambda_c$ be two full-rank lattices in $\mathbb{R}^n$ ($\Lambda$ **finer** than $\Lambda_c$). The **index** is
+$$
+[\Lambda_c: \Lambda] \,=\, \frac{\det(\Lambda)}{\det(\Lambda_c)}\in\mathbb{N}.
+$$
+The quotient group $\Lambda/\Lambda_c$ has exactly $[\Lambda_c:\Lambda]$ **cosets**. Each coset can be represented by a point of $\Lambda$ reduced **modulo** $\Lambda_c$, i.e., by an element of a fundamental region of $\Lambda_c$.
+
+
+Nested pairs $\Lambda\subseteq\Lambda_c$ underpin **lattice codes**: the coset index can carry information, while modulo by $\Lambda_c$ provides **shaping** (bounded power).
+
+## Cosets, quotient, and modulo
+
+::: {.callout-note}
+**Convention.** We take the **fine** lattice to be $\Lambda$ and the **coarse** lattice to be $\Lambda_c$, with
+$$
+\Lambda_c \subseteq \Lambda
+\quad\text{and}\quad
+\det(\Lambda)\le \det(\Lambda_c).
+$$
+(Example: $\Lambda=\mathbb{Z}^2$, $\Lambda_c=2\mathbb{Z}^2$.)
+:::
+
+### Cosets in general
+
+Let $G$ be an abelian group (written additively) and $H\le G$ a subgroup.  
+For any $g\in G$, the **(left) coset** of $H$ through $g$ is
+$$
+g+H \;:=\;\{\,g+h:\;h\in H\,\}.
+$$
+Cosets form a partition of $G$: either $g_1+H=g_2+H$ or $(g_1+H)\cap(g_2+H)=\varnothing$.  
+Define an equivalence relation $g_1\sim g_2 \iff g_1-g_2\in H$. The set of equivalence classes is the **quotient group**
+$$
+G/H \;:=\; \{\, g+H : g\in G \,\}.
+$$
+
+### Specialization to lattices
+
+Regard a full-rank lattice $\Lambda\subset\mathbb{R}^n$ as an abelian group under addition.  
+If $\Lambda_c\subseteq \Lambda$ is a **sublattice** (our coarse lattice), then the cosets of $\Lambda_c$ in $\Lambda$ are
+$$
+\lambda+\Lambda_c,\qquad \lambda\in\Lambda.
+$$
+The quotient
+$$
+\Lambda/\Lambda_c \;=\; \{\,\lambda+\Lambda_c:\lambda\in\Lambda\,\}
+$$
+is a **finite** abelian group. Its cardinality is the **index**
+$$
+[\Lambda:\Lambda_c] \;=\; \frac{\det(\Lambda_c)}{\det(\Lambda)} \;\in\; \mathbb{N}.
+$$
+
+### Representatives and the modulo map
+
+Every $x\in\mathbb{R}^n$ has a unique representative in the (closed) Voronoi cell $\mathcal{V}_{\Lambda_c}$ of $\Lambda_c$ via the **modulo-lattice** map
+$$
+x \bmod \Lambda_c \;:=\; x - Q_{\Lambda_c}(x) \;\in\; \mathcal{V}_{\Lambda_c}.
+$$
+If $x\in \Lambda$, then $x\bmod\Lambda_c$ depends only on the coset $\;x+\Lambda_c\;$ and yields a **coset representative** inside $\mathcal{V}_{\Lambda_c}$. Thus,
+$$
+\Lambda/\Lambda_c \;\longleftrightarrow\; \mathcal{V}_{\Lambda_c}\cap \big(\Lambda \bmod \Lambda_c\big)
+$$
+is a one-to-one correspondence (choose one representative per coset).
+
+::: {.callout-note}
+**Syndrome / label.** In coding applications, the coset $x+\Lambda_c$ (or equivalently $x\bmod\Lambda_c$) is the **syndrome/label** that indexes the finite set of $[\Lambda:\Lambda_c]$ classes.
+:::
+
+### Worked example: $\mathbb{Z}^2$ modulo $2\mathbb{Z}^2$
+
+Take $\Lambda=\mathbb{Z}^2$ and $\Lambda_c=2\mathbb{Z}^2=\{(2a,2b):a,b\in\mathbb{Z}\}$.  
+Then
+$$
+[\Lambda:\Lambda_c] = \frac{\det(2I_2)}{\det(I_2)}= \frac{4}{1}=4,
+$$
+and the four cosets are
+$$
+\begin{aligned}
+&(0,0)+2\mathbb{Z}^2, \quad (1,0)+2\mathbb{Z}^2,\\
+&(0,1)+2\mathbb{Z}^2, \quad (1,1)+2\mathbb{Z}^2,
+\end{aligned}
+$$
+distinguished by the parities of the coordinates $(x \bmod 2,\; y \bmod 2)\in\{0,1\}^2$.  
+Equivalently,
+$$
+(x,y)\sim (x',y') \iff (x-x',\,y-y')\in 2\mathbb{Z}^2 \iff (x\bmod 2,\,y\bmod 2)=(x'\bmod 2,\,y'\bmod 2).
+$$
+
+### Computing coset labels from a basis
+
+Let $B\in\mathbb{R}^{n\times n}$ be a basis of $\Lambda$ and $B_c\in\mathbb{R}^{n\times n}$ a basis of $\Lambda_c$ with $\Lambda_c\subseteq \Lambda$.  
+There exists a unimodular $U\in \mathrm{GL}_n(\mathbb{Z})$ and a diagonal matrix
+$$
+D=\mathrm{diag}(d_1,\dots,d_n),\quad d_i\in\mathbb{N},\; d_i\mid d_{i+1},
+$$
+(the **Smith normal form**) such that
+$$
+B_c \;=\; B\,U\,D.
+$$
+Then
+$$
+[\Lambda:\Lambda_c] \;=\; \prod_{i=1}^n d_i,
+\qquad
+\Lambda/\Lambda_c \;\cong\; \bigoplus_{i=1}^n \mathbb{Z}_{d_i}.
+$$
+For $\lambda = Bk\in\Lambda$ with $k\in\mathbb{Z}^n$, the coset label is the residue class of $U^{-1}k$ modulo $D$; concretely
+$$
+s \;=\; \big(U^{-1}k \bmod D\big)\ \in\ \prod_{i=1}^n \mathbb{Z}_{d_i}.
+$$
+In the scalar-dilation case $B_c = mB$ (so $D=mI$), this reduces to the familiar
+$$
+s \;=\; k \bmod m \;\in\; \mathbb{Z}_m^n,
+\quad\text{with}\quad [\Lambda:\Lambda_c]=m^n.
+$$
+
+### Why cosets matter
+
+- **Rate:** the finite group $\Lambda/\Lambda_c$ has size $[\Lambda:\Lambda_c]$, carrying $\log_2 [\Lambda:\Lambda_c]$ bits per lattice symbol.
+- **Shaping:** $x\bmod\Lambda_c\in \mathcal{V}_{\Lambda_c}$ keeps signal energy bounded.
+- **Computation:** coset labels compose additively: $(\lambda_1+\lambda_2)+\Lambda_c = (\lambda_1+\Lambda_c)+(\lambda_2+\Lambda_c)$, enabling algebra over messages.
+
+
+
+
+
+# Geometry: packing, covering, kissing
+
+## Successive minima and packing radius
+
+The **successive minima** $\lambda_i(\Lambda)$ are defined by
+$$
+\lambda_i(\Lambda) := \inf\big\{ r>0 : \dim \operatorname{span}(\Lambda\cap \mathcal{B}_n(0,r)) \ge i \big\},\quad i=1,\dots,n.
+$$
+The **minimum distance** is $d(\Lambda)=\lambda_1(\Lambda)=\min\{\lVert v\rVert: v\in\Lambda\setminus\{0\}\}$. The **packing radius** is
+$$
+r_\mathrm{pack}(\Lambda) = \tfrac{1}{2}\,d(\Lambda).
+$$
+
+## Sphere packing density
+
+A lattice packing places spheres of radius $r_\mathrm{pack}(\Lambda)$ centered at lattice points with no overlap. The **packing density** is
+$$
+\Delta(\Lambda) = \frac{\mathrm{vol}(\mathcal{B}_n(0,r_\mathrm{pack}))}{\det(\Lambda)}.
+$$
+Classical optima include $A_2$ in $n=2$, $E_8$ in $n=8$, and the Leech lattice $\Lambda_{24}$ in $n=24$.
+
+## Covering radius and covering density
+
+The **covering radius** is the smallest radius $\rho(\Lambda)$ such that balls of radius $\rho(\Lambda)$ centered at lattice points **cover** $\mathbb{R}^n$:
+$$
+\rho(\Lambda) := \sup_{x\in\mathbb{R}^n} \min_{\lambda\in\Lambda} \lVert x-\lambda\rVert.
+$$
+The **covering density** (sometimes called **thickness**) is
+$$
+\Theta(\Lambda) = \frac{\mathrm{vol}(\mathcal{B}_n(0,\rho(\Lambda)))}{\det(\Lambda)}.
+$$
+
+## Kissing number
+
+The **kissing number** $\tau(\Lambda)$ of a lattice packing is the number of spheres that **touch** the sphere centered at the origin. Equivalently,
+$$
+\tau(\Lambda) = \big|\{ v\in\Lambda\setminus\{0\} : \lVert v\rVert = d(\Lambda) \}\big|.
+$$
+Examples: $\tau(\mathbb{Z}^n)=2n$, $\tau(A_2)=6$, $\tau(D_4)=24$, $\tau(E_8)=240$.
+
+## Relations
+
+One always has $r_\mathrm{pack}(\Lambda) \le \rho(\Lambda)$. Geometry-of-numbers connects these to $\det(\Lambda)$ via inequalities such as Minkowski's theorems and the **Hermite constant**
+$$
+\gamma_n = \sup_{\Lambda} \frac{\lambda_1(\Lambda)^2}{\det(\Lambda)^{2/n}}.
+$$
+
+# Generator matrices and examples
+
+Given a basis $B\in\mathbb{R}^{n\times n}$, the lattice is $\Lambda = B\mathbb{Z}^n$ and $\det(\Lambda)=|\det B|$.
+
+- **Cubic lattice** $\mathbb{Z}^n$: $B=I_n$, $d=1$, $r_\mathrm{pack}=\tfrac{1}{2}$, $\det=1$.
+- **Hexagonal lattice** $A_2$: one basis is
+  $$
+  B=\begin{bmatrix}1 & 1/2\\[2pt] 0 & \sqrt{3}/2\end{bmatrix},\quad
+  \det(\Lambda)=\tfrac{\sqrt{3}}{2}.
+  $$
+- **Checkerboard lattice** $D_4$: a basis is
+  $$
+  B=\begin{bmatrix}
+  1 & 0 & 0 & 0\\
+  -1& 1 & 0 & 0\\
+  0 & -1& 1 & 1\\
+  0 & 0 & -1& 1
+  \end{bmatrix}.
+  $$
+  The set description is $D_4=\{x\in\mathbb{Z}^4: \sum_i x_i\equiv 0\ (\mathrm{mod}\ 2)\}$.
+
+# Lattice quantization and shaping
+
+Given a **fine** lattice $\Lambda$ and a **coarse** lattice $\Lambda_c$ with $\Lambda\subseteq\Lambda_c$, we have:
+
+- **Quantization:** map $x\mapsto Q_{\Lambda}(x)$ (coding) or $x\mapsto Q_{\Lambda_c}(x)$ (shaping).
+- **Modulo:** $x\bmod\Lambda_c\in\mathcal{V}_{\Lambda_c}$ provides a bounded representative.
+- **Index/rate:** $[\Lambda_c:\Lambda]=\det(\Lambda)/\det(\Lambda_c)$ equals the number of **cosets**, which naturally encodes $\log_2 [\Lambda_c:\Lambda]$ bits per lattice point (per use).
+
+The **Voronoi region** $\mathcal{V}_\Lambda$ controls quantization error; the second moment of $\mathcal{V}_\Lambda$ (per dimension) is a key figure of merit for high-rate vector quantization.
+
+# Selected applications
+
+## Information theory and coding
+
+- **Lattice codes** for AWGN channels; **Construction A/B/C** link linear codes over finite fields/rings to Euclidean lattices.
+- **Nested lattice coding** for **dirty-paper coding**, **compute-and-forward**, and **physical-layer network coding**: coset indices carry messages, modulo-$\Lambda_c$ ensures power shaping.
+- **Shaping** with coarse lattices (e.g., $E_8$, $\Lambda_{24}$) improves power efficiency.
+
+## Signal processing and optimization
+
+- **Vector quantization** and dithering (subtractively dithered lattice quantizers).
+- **Basis reduction** (LLL, BKZ) to obtain numerically well-conditioned bases for estimation, integer least squares (MIMO detection), and global optimization (branch-and-bound over $\Lambda$).
+
+## Cryptography
+
+- **Hard lattice problems** (SVP, CVP, SIVP) underpin post-quantum cryptosystems.
+- **LWE/SIS** hardness is connected to worst-case lattice problems; algorithms rely on basis reduction (LLL/BKZ) and discrete Gaussian sampling on $\Lambda$.
+
+# Further reading
+
+- J.H. Conway and N.J.A. Sloane, *Sphere Packings, Lattices and Groups*.
+- C.E. Shannon, *A Mathematical Theory of Communication* (lattice quantization ideas).
+- U. Erez and R. Zamir, "Achieving $\tfrac{1}{2}\log(1+\mathrm{SNR})$ with Lattice-Encoding and Decoding".
+- D. Micciancio and S. Goldwasser, *Complexity of Lattice Problems*.
+- D. Tse and P. Viswanath, *Fundamentals of Wireless Communication* (lattice detection and MIMO).
+
+# Appendix: common formulas
+
+- Packing density: $\displaystyle \Delta(\Lambda) = \frac{\pi^{n/2}}{\Gamma(\tfrac{n}{2}+1)}\, \frac{r_\mathrm{pack}(\Lambda)^n}{\det(\Lambda)}$.
+- Covering density: $\displaystyle \Theta(\Lambda) = \frac{\pi^{n/2}}{\Gamma(\tfrac{n}{2}+1)}\, \frac{\rho(\Lambda)^n}{\det(\Lambda)}$.
+- Dual lattice basis: if $B$ is a basis of $\Lambda$, then $B^{-*}=(B^{-1})^\top$ is a basis of $\Lambda^*$.
+- Invariance: $B' = B U$ with $U\in\mathrm{GL}_n(\mathbb{Z})$ generates the same lattice; $\det(\Lambda)$ is basis-independent.

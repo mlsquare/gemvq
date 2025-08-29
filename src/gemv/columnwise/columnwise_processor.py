@@ -10,10 +10,9 @@ import numpy as np
 
 from ..base.gemv_processor import GEMVProcessor
 from ..utils.padder import BlockingStrategy
-from ...lattices.utils import (closest_point_A2, closest_point_Dn, closest_point_E8,
-                              get_a2, get_d4, get_e8, get_z2, get_z3)
-from ...lattices.quantizers.hierarchical_nested_lattice_quantizer import \
-    HierarchicalNestedLatticeQuantizer
+from ...quantizers.lattice.utils import (closest_point_A2, closest_point_Dn, closest_point_E8,
+                                get_a2, get_d4, get_e8, get_z2, get_z3)
+from ...quantizers.lattice.hnlq import HNLQ
 
 
 class ColumnwiseGEMVProcessor(GEMVProcessor):
@@ -204,7 +203,7 @@ class ColumnwiseGEMVProcessor(GEMVProcessor):
             # Create quantizer for this block
             dither = np.zeros(self.dimension)
             
-            quantizer = HierarchicalNestedLatticeQuantizer(
+            quantizer = HNLQ(
                 G=self.G,
                 Q_nn=self.Q_nn,
                 M=self.config.get('M', 2),
@@ -313,7 +312,7 @@ class ColumnwiseGEMVProcessor(GEMVProcessor):
         
         return result[:self.original_m]
 
-    def _decode_column(self, column_encodings: List, quantizer: HierarchicalNestedLatticeQuantizer, 
+    def _decode_column(self, column_encodings: List, quantizer: HNLQ, 
                       decoding_method: str) -> np.ndarray:
         """Decode a column using the specified decoding method."""
         decoded_chunks = []

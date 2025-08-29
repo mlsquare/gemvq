@@ -11,9 +11,9 @@ import sys
 import os
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-from src.lattices.quantizers.hierarchical_nested_lattice_quantizer import HierarchicalNestedLatticeQuantizer
-from src.lattices.utils import closest_point_Dn, custom_round
-from src.lattices.utils import get_d4, calculate_mse
+from src.quantizers.lattice.hnlq import HNLQ
+from src.quantizers.lattice.utils import closest_point_Dn, custom_round
+from src.quantizers.lattice.utils import get_d4, calculate_mse
 
 
 def generate_d4_lattice_samples(G, num_samples=20, max_coeff=3, beta=1.0):
@@ -88,7 +88,7 @@ def test_idempotency_at_full_depth():
     dither = np.zeros(4)
     
     # Create hierarchical quantizer
-    hq = HierarchicalNestedLatticeQuantizer(
+    hq = HNLQ(
         G=G,
         Q_nn=closest_point_Dn,
         q=q,
@@ -147,7 +147,7 @@ def test_idempotency_at_different_depths():
     dither = np.zeros(4)
     
     # Create hierarchical quantizer
-    hq = HierarchicalNestedLatticeQuantizer(
+    hq = HNLQ(
         G=G,
         Q_nn=closest_point_Dn,
         q=q,
@@ -206,7 +206,7 @@ def test_progressive_idempotency():
     dither = np.zeros(4)
     
     # Create hierarchical quantizer
-    hq = HierarchicalNestedLatticeQuantizer(
+    hq = HNLQ(
         G=G,
         Q_nn=closest_point_Dn,
         q=q,
@@ -284,7 +284,7 @@ def test_idempotency_with_different_parameters():
         samples, sample_betas = generate_d4_lattice_samples(G, num_samples=3, beta=beta)
         
         # Create hierarchical quantizer
-        hq = HierarchicalNestedLatticeQuantizer(
+        hq = HNLQ(
             G=G,
             Q_nn=closest_point_Dn,
             q=q,
@@ -334,7 +334,7 @@ def test_idempotency_edge_cases():
     dither = np.zeros(4)
     
     # Create hierarchical quantizer
-    hq = HierarchicalNestedLatticeQuantizer(
+    hq = HNLQ(
         G=G,
         Q_nn=closest_point_Dn,
         q=q,
@@ -401,7 +401,7 @@ def debug_beta_issue():
     dither = np.zeros(4)
     
     # Create hierarchical quantizer
-    hq = HierarchicalNestedLatticeQuantizer(
+    hq = HNLQ(
         G=G,
         Q_nn=closest_point_Dn,
         q=q,

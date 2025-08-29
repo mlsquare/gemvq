@@ -9,9 +9,9 @@ This serves as a validation test for the hierarchical quantizer implementation.
 import numpy as np
 import pytest
 
-from src.lattices.utils import get_d4, calculate_mse
-from src.lattices.utils import closest_point_Dn
-from src.lattices.quantizers.hierarchical_nested_lattice_quantizer import HierarchicalNestedLatticeQuantizer
+from src.quantizers.lattice.utils import get_d4, calculate_mse
+from src.quantizers.lattice.utils import closest_point_Dn
+from src.quantizers.lattice.hnlq import HNLQ
 
 
 def generate_d4_lattice_points(G, num_points=100, scale_factor=1.0):
@@ -62,7 +62,7 @@ def test_d4_lattice_simulation_zero_error():
     dither = np.zeros(4)  # No dithering for this test
     
     # Create hierarchical quantizer
-    hq = HierarchicalNestedLatticeQuantizer(
+    hq = HNLQ(
         G=G,
         Q_nn=closest_point_Dn,
         q=q,
@@ -131,7 +131,7 @@ def test_d4_lattice_quantization_consistency():
     dither = np.zeros(4)
     
     # Create hierarchical quantizer
-    hq = HierarchicalNestedLatticeQuantizer(
+    hq = HNLQ(
         G=G,
         Q_nn=closest_point_Dn,
         q=q,
@@ -193,7 +193,7 @@ def test_d4_lattice_known_issues():
     dither = np.zeros(4)
     
     # Create hierarchical quantizer
-    hq = HierarchicalNestedLatticeQuantizer(
+    hq = HNLQ(
         G=G,
         Q_nn=closest_point_Dn,
         q=q,
@@ -253,7 +253,7 @@ def test_d4_lattice_debug():
     dither = np.zeros(4)
     
     # Create hierarchical quantizer
-    hq = HierarchicalNestedLatticeQuantizer(
+    hq = HNLQ(
         G=G,
         Q_nn=closest_point_Dn,
         q=q,

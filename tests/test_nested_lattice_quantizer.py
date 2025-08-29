@@ -5,10 +5,10 @@ import os
 from itertools import product
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-from src.lattices.quantizers.nested_lattice_quantizer import NestedLatticeQuantizer as NQ
-from src.lattices.quantizers.hierarchical_nested_lattice_quantizer import HierarchicalNestedLatticeQuantizer as HQ
-from src.lattices.utils import closest_point_Dn, closest_point_E8, closest_point_A2, custom_round
-from src.lattices.utils import *
+from src.quantizers.lattice.nlq import NLQ as NQ
+from src.quantizers.lattice.hnlq import HNLQ as HQ
+from src.quantizers.lattice.utils import closest_point_Dn, closest_point_E8, closest_point_A2, custom_round
+from src.quantizers.lattice.utils import *
 
 def closest_point_Zn(x):
     return np.floor(x + 0.5)
@@ -77,7 +77,7 @@ class TestQuantizer(unittest.TestCase):
         x = np.array([1.5, 2.3, -1.8, 1.1, 0.9, -0.5, 1.2, -0.7])
         encoded, _ = quantizer._encode(x, with_dither=False)
         decoded = quantizer._decode(encoded, with_dither=False)
-        expected = np.array([-0.5, 0.5, 0.5, -0.5, -0.5, -2.5, -0.5, 1.5])
+        expected = np.array([0.0, 0.0, 0.0, -1.0, -1.0, -2.0, -1.0, 1.0])
         np.testing.assert_almost_equal(decoded, expected, decimal=5, err_msg="E₈ lattice decode failed")
 
     def test_has_all_cosets(self):

@@ -10,10 +10,9 @@ import numpy as np
 from scipy import linalg
 
 from ..base.gemv_processor import GEMVProcessor
-from ...lattices.utils import (closest_point_A2, closest_point_Dn, closest_point_E8,
-                              get_a2, get_d4, get_e8, get_z2, get_z3)
-from ...lattices.quantizers.hierarchical_nested_lattice_quantizer import \
-    HierarchicalNestedLatticeQuantizer
+from ...quantizers.lattice.utils import (closest_point_A2, closest_point_Dn, closest_point_E8,
+                                get_a2, get_d4, get_e8, get_z2, get_z3)
+from ...quantizers.lattice.hnlq import HNLQ
 
 
 class SVDGEMVProcessor(GEMVProcessor):
@@ -212,7 +211,7 @@ class SVDGEMVProcessor(GEMVProcessor):
 
     def _quantize_svd_components(self):
         """Quantize the SVD components using lattice quantization."""
-        quantizer = HierarchicalNestedLatticeQuantizer(
+        quantizer = HNLQ(
             G=self.G,
             Q_nn=self.Q_nn,
             M=self.config.get('M', 2),
@@ -232,7 +231,7 @@ class SVDGEMVProcessor(GEMVProcessor):
         # Quantize V^T matrix
         self.quantized_components['Vt'] = self._quantize_matrix(self.Vt, quantizer)
 
-    def _quantize_matrix(self, matrix: np.ndarray, quantizer: HierarchicalNestedLatticeQuantizer) -> Dict:
+    def _quantize_matrix(self, matrix: np.ndarray, quantizer: HNLQ) -> Dict:
         """Quantize a matrix using the given quantizer."""
         m, n = matrix.shape
         encoded_matrix = []
@@ -253,7 +252,7 @@ class SVDGEMVProcessor(GEMVProcessor):
             'quantizer': quantizer
         }
 
-    def _quantize_vector(self, vector: np.ndarray, quantizer: HierarchicalNestedLatticeQuantizer) -> Dict:
+    def _quantize_vector(self, vector: np.ndarray, quantizer: HNLQ) -> Dict:
         """Quantize a vector using the given quantizer."""
         encoded_vector = []
         

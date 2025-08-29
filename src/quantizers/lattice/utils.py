@@ -243,7 +243,7 @@ def precompute_hq_lut(G, Q_nn, q, m, eps):
     in hierarchical quantization by precomputing all possible inner
     products between quantized vectors.
     """
-    from .quantizers.hierarchical_nested_lattice_quantizer import HierarchicalNestedLatticeQuantizer as HQuantizer
+    from .lattice.hnlq import HNLQ as HQuantizer
     hq = HQuantizer(G=G, Q_nn=Q_nn, q=q, beta=1, alpha=1, M=m, eps=eps, dither=np.zeros(len(G)))
     codebook = hq.create_q_codebook(with_dither=False)
     lookup_table = {}
@@ -365,10 +365,14 @@ def g_x(x):
     k = np.argmax(delta)
     g_x_ = f_x.copy()
 
-    if x[k] >= 0:
-        g_x_[k] = f_x[k] + 1 if f_x[k] < x[k] else f_x[k] - 1
+    # Ensure we're working with scalar values
+    x_k = x.flat[k] if hasattr(x, 'flat') else x[k]
+    f_x_k = f_x.flat[k] if hasattr(f_x, 'flat') else f_x[k]
+    
+    if x_k >= 0:
+        g_x_[k] = f_x_k + 1 if f_x_k < x_k else f_x_k - 1
     else:
-        g_x_[k] = f_x[k] + 1 if f_x[k] <= x[k] else f_x[k] - 1
+        g_x_[k] = f_x_k + 1 if f_x_k <= x_k else f_x_k - 1
 
     return g_x_
 
@@ -441,7 +445,8 @@ def closest_point_E8(x):
     algorithms for lattice quantizers and codes. IEEE Transactions on
     Information Theory, 28(2), 227-232.
     """
-    y_0 = custom_round(x) if np.sum(custom_round(x)) % 2 == 0 else g_x(x)
+    f_x = custom_round(x)
+    y_0 = f_x if np.sum(f_x) % 2 == 0 else g_x(x)
 
     f_x_shifted = custom_round(x - 0.5)
     g_x_shifted = g_x(x - 0.5)

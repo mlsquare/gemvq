@@ -26,8 +26,42 @@ book:
   repo-actions: [edit, issue]
   chapters:
     - index.qmd
-    - preface.qmd
-    - docs/adaptive_matvec_approach.qmd
-    - docs/baseline.ipynb
-    - docs/nested_lattice_demo.ipynb
-    - docs/hierarchical_lattice_demo.ipynb
+    - README.md
+    - part: Lattices
+      chapters:
+        - docs/lattices/intro.qmd
+        - docs/lattices/Z2.qmd
+        - docs/lattices/A2.qmd
+        - docs/lattices/D4.qmd
+        - docs/lattices/E8.qmd
+    - part: Quantizers
+      chapters:
+        - docs/quantizers/intro.qmd
+        - docs/quantizers/Z2.qmd
+        - docs/quantizers/hnlq.qmd
+        - docs/quantizers/beta_selection_hnlq.qmd
+    - part: GEMV-Q
+      chapters:
+        - docs/gemv/adaptive_matvec_approach.qmd
+    - part: Notebooks
+      chapters:
+        -  docs/notebooks/nlq.ipynb
+        -  docs/notebooks/hnlq.ipynb
+    - part: Papers
+      chapters:
+        -  docs/papers/hnlq_paper.qmd
+    - part: Drafts
+      chapters:
+        -  docs/lattices/intro_long.qmd
+
+
+format:
+  html:
+    theme:
+    - pulse
+    - mlops.scss
+    code-link: true
+    author-meta: "mlsquare"
+    callout-appearance: simple
+    number-sections: false
+editor: visual

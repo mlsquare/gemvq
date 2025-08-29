@@ -1,0 +1,144 @@
+---
+title: "$Z_2$ Lattice"
+---
+
+## Overview
+
+We will work mainly with the square lattice $\mathbb{Z}_2$ (or sometimes written as $\mathbb{Z}^2$ to emphhasase it is a square lattice) and occasionally contrast with the hexagonal lattice $A_2$ (the densest 2D packing).
+
+## Two Canonical Lattices in $\mathbb{R}^2$
+
+### Euclidean plane and notation
+We identify the plane with $\mathbb{R}^2$, equipped with the usual inner product $\langle x,y\rangle$ and norm $\lVert x\rVert=\sqrt{\langle x,x\rangle}$. Points are column vectors $x=(x_1,x_2)^\top$.
+
+### Square lattice $\mathbb{Z}_2$
+Take the standard basis $e_1=(1,0)^\top$, $e_2=(0,1)^\top$ and the generator matrix
+$$
+B=\begin{bmatrix}1&0\\[2pt]0&1\end{bmatrix},\qquad
+\Lambda = B\mathbb{Z}_2 = \mathbb{Z}_2.
+$$
+
+- **Fundamental region:** the unit square $[0,1)^2$; area $\det(\Lambda)=1$.
+- **Voronoi cell:** the unit square centered at the origin, $[-\tfrac12,\tfrac12]^2$.
+- **Minimum distance:** $d(\Lambda)=1$ (nearest nonzero vectors are $\pm e_1,\pm e_2$).
+
+### Hexagonal lattice $A_2$ (for contrast)
+A convenient basis is
+$$
+B=\begin{bmatrix}
+1 & 1/2\\[2pt]
+0 & \sqrt{3}/2
+\end{bmatrix},\qquad
+\det(\Lambda)=\frac{\sqrt{3}}{2}.
+$$
+- **Voronoi cell:** a regular hexagon centered at the origin.\
+- **Packing density (best in 2D):** $\Delta(A_2)=\tfrac{\pi}{2\sqrt{3}}\approx 0.9069$. (By comparison, $\Delta(\mathbb{Z}^2)=\pi/4\approx 0.7854$.)
+
+## Formal Definitions in 2D
+
+### Lattice, Gram matrix, and area (covolume)
+A (full-rank) **lattice** in $\mathbb{Z}_2$ is
+$$
+\Lambda=\{Bk:k\in\mathbb{Z}_2\},\quad
+B=\begin{bmatrix}b_1&b_2\end{bmatrix}\in\mathbb{R}^{2\times 2},\ b_1,b_2\ \text{lin. indep.}
+$$
+The **Gram matrix** is $G=B^\top B$. The **covolume** (fundamental area) is
+$$
+\det(\Lambda)=|\det B|=\sqrt{\det(B^\top B)}\quad(=\text{area of a fundamental region}).
+$$
+If $B'=BU$ with $U\in\mathrm{GL}_2(\mathbb{Z})$ and $|\det U|=1$, then $B'$ generates the same lattice.
+
+### Voronoi cell and nearest–neighbor quantizer
+The **Voronoi cell** of the origin is
+$$
+\mathcal{V}_\Lambda:=\{u\in\mathbb{R}^2:\ \lVert u\rVert\le \lVert u-\lambda\rVert\ \forall\lambda\in\Lambda\}.
+$$
+The **nearest–neighbor quantizer** is
+$$
+Q_\Lambda(x):=\operatorname*{arg\,min}_{\lambda\in\Lambda}\lVert x-\lambda\rVert.
+$$
+(When $x$ lies on a Voronoi edge/vertex, several nearest points may exist; fix any tie–break.) The **modulo–lattice** map sends $x$ to its canonical representative in $\mathcal{V}_\Lambda$:
+$$
+x\bmod\Lambda:=x-Q_\Lambda(x)\in\mathcal{V}_\Lambda.
+$$
+
+## Cosets and Nested Pairs in $\mathbb{Z}_2$
+
+Let $\Lambda_c\subseteq\Lambda\subset\mathbb{R}^2$ be lattices (so $\Lambda$ is **finer**). The **cosets** of $\Lambda_c$ in $\Lambda$ are sets $\lambda+\Lambda_c$, $\lambda\in\Lambda$. The finite **quotient group**
+$$
+\Lambda/\Lambda_c=\{\lambda+\Lambda_c:\lambda\in\Lambda\}
+$$
+has size (the **index**)
+$$
+[\Lambda:\Lambda_c]=\frac{\det(\Lambda_c)}{\det(\Lambda)}\in\mathbb{N}.
+$$
+
+### 3.1 Worked example: $\mathbb{Z}_2\,/\,2\mathbb{Z}_2$
+Here $2\mathbb{Z}_2=\{(2a,2b):a,b\in\mathbb{Z}\}\subset\mathbb{Z}_2$ and $[\mathbb{Z}_2:2\mathbb{Z}_2]=4$.\
+The four cosets are determined by the parity pair $(x\bmod 2,\,y\bmod 2)\in\{0,1\}^2$; a set of representatives is
+$$
+\{(0,0),(1,0),(0,1),(1,1)\}.
+$$
+Reducing $x\in\mathbb{Z}^2$ **mod $2\mathbb{Z}_2$** is exactly taking its parity class.
+
+## Packing, Covering, and Kissing in $\mathbb{Z}_2$
+
+Let $d(\Lambda)=\min\{\lVert v\rVert: v\in\Lambda\setminus\{0\}\}$ be the **minimum distance**.\
+The **packing radius** is $r_{\mathrm{pack}}(\Lambda)=\tfrac12 d(\Lambda)$, the largest radius so that closed disks $\overline{B}(\lambda,r_{\mathrm{pack}})$ around lattice points are disjoint.
+
+For the **covering radius**
+$$
+\rho(\Lambda):=\sup_{y\in\mathbb{R}^2}\min_{\lambda\in\Lambda}\lVert y-\lambda\rVert,
+$$
+disks of radius $\rho(\Lambda)$ centered at lattice points cover the entire plane.
+
+The $2$–ball (disk) area is $\mathrm{vol}\,\mathcal{B}_2(0,R)=\pi R^2$. Hence the **packing** and **covering densities** are
+$$
+\Delta(\Lambda)=\frac{\pi r_{\mathrm{pack}}(\Lambda)^2}{\det(\Lambda)},\qquad
+\Theta(\Lambda)=\frac{\pi\rho(\Lambda)^2}{\det(\Lambda)}.
+$$
+
+### Numbers for $\mathbb{Z}_2$
+- $d(\mathbb{Z}_2)=1\ \Rightarrow\ r_{\mathrm{pack}}=\tfrac12$\
+- $\det(\mathbb{Z}_2)=1\ \Rightarrow\ \Delta(\mathbb{Z}_2)=\pi/4\approx 0.7854$\
+- The farthest point from the origin inside $[-\tfrac12,\tfrac12]^2$ is a corner, so $\rho(\mathbb{Z}_2)=\tfrac{\sqrt{2}}{2}$ giving $\Theta(\mathbb{Z}^2)=\pi/2\approx 1.5708$.\
+- **Kissing number:** $\tau(\mathbb{Z}_2)=4$ (neighbors at $\pm e_1,\pm e_2$).
+
+### Contrast with $A_2$
+- $d(A_2)=1\ \Rightarrow\ r_{\mathrm{pack}}=\tfrac12$, but $\det(A_2)=\sqrt{3}/2<1$, so $\Delta(A_2)=\pi/(2\sqrt{3})\approx 0.9069$ (denser than $\mathbb{Z}^2$).\
+- $\tau(A_2)=6$ (hexagonal symmetry).\
+- The hexagonal Voronoi cell also yields a smaller second moment (better quantization shaping).
+
+## Quantization and the Modulo Map in 2D
+
+Given a **fine** lattice $\Lambda$ and a **coarse** lattice $\Lambda_c\subseteq\Lambda$:
+
+- **Quantization:** map $x\mapsto Q_\Lambda(x)$ (minimizes Euclidean error to a lattice point).
+- **Modulo:** $x\mapsto x\bmod\Lambda_c\in\mathcal{V}_{\Lambda_c}$ provides a canonical representative, keeping signals inside a bounded region.
+- **Rate:** the number of cosets $[\Lambda:\Lambda_c]=\det(\Lambda_c)/\det(\Lambda)$ provides $\log_2[\Lambda:\Lambda_c]$ bits/symbol.
+
+**Example (square case).** With $\Lambda=\mathbb{Z}_2$, $\Lambda_c=2\mathbb{Z}_2$, $x\bmod\Lambda_c$ is simply componentwise reduction modulo $2$ into $[-1,1)^2$ (after centering), and $Q_\Lambda$ is coordinatewise rounding.
+
+## Dual Lattice in 2D (Brief)
+
+The **dual lattice** is
+$$
+\Lambda^*:=\{y\in\mathbb{R}^2:\ \langle y,x\rangle\in\mathbb{Z}\ \ \forall x\in\Lambda\},
+\qquad \det(\Lambda)\det(\Lambda^*)=1.
+$$
+If $\Lambda=B\mathbb{Z}_2$, then $\Lambda^*=(B^{-1})^\top\mathbb{Z}_2$. For the square lattice, $\mathbb{Z}_2$ is self-dual. The dual indexes the Fourier characters on the torus $\mathbb{R}^2/\Lambda$ and appears in Poisson summation and theta-series identities relevant to packing bounds and quantization analysis.
+
+## Visual Exercises (Paper-and-pencil)
+
+1. **Voronoi tiling for $\mathbb{Z}^2$.** Draw the unit grid, put squares of side $1$ centered at each lattice point, and check they tile the plane without overlaps or gaps.\
+2. **Coset coloring.** Color points of $\mathbb{Z}^2$ by parities $(x\bmod 2,y\bmod 2)$. Verify that each color forms a translate of $2\mathbb{Z}^2$ and that there are exactly $4$ colors (cosets).\
+3. **Packing vs covering.** In the unit square fundamental region, draw the largest inscribed circle (radius $\tfrac12$) and the smallest covering circle (radius $\tfrac{\sqrt{2}}{2}$).\
+4. **Compare with $A_2$.** Sketch the equilateral triangular grid and its hexagonal Voronoi cells. Count the $6$ nearest neighbors.
+
+## Quick Reference (2D)
+
+- $\det(\Lambda)=|\det B|$ (area of any fundamental region)\
+- $\mathcal{V}_\Lambda$ (Voronoi cell), $Q_\Lambda$ (nearest-lattice quantizer), $x\bmod\Lambda$ (representative in $\mathcal{V}_\Lambda$)\
+- $[\Lambda:\Lambda_c]=\det(\Lambda_c)/\det(\Lambda)$ (index/number of cosets)\
+- $\Delta(\Lambda)=\pi r_{\mathrm{pack}}^2/\det(\Lambda)$, $\Theta(\Lambda)=\pi\rho(\Lambda)^2/\det(\Lambda)$\
+- $\tau(\mathbb{Z}^2)=4$, $\tau(A_2)=6$, $\Delta(\mathbb{Z}^2)=\pi/4$, $\Delta(A_2)=\pi/(2\sqrt{3})$

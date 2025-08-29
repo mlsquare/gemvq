@@ -14,10 +14,10 @@ import matplotlib.pyplot as plt
 import numpy as np
 from typing import List, Dict, Tuple, Callable
 
-from src.lattices.utils import closest_point_Dn
-from src.lattices.quantizers.hierarchical_nested_lattice_quantizer import HierarchicalNestedLatticeQuantizer as HQuantizer
-from src.lattices.quantizers.nested_lattice_quantizer import NestedLatticeQuantizer as NQuantizer
-from src.lattices.utils import calculate_mse, calculate_t_entropy, get_d4, SIG_D4
+from src.quantizers.lattice.utils import closest_point_Dn
+from src.quantizers.lattice.hnlq import HNLQ as HQuantizer
+from src.quantizers.lattice.nlq import NLQ as NQuantizer
+from src.quantizers.lattice.utils import calculate_mse, calculate_t_entropy, get_d4, SIG_D4
 
 
 class QuantizerConfig:
@@ -40,7 +40,7 @@ def calculate_mse_and_overload_for_samples(samples: np.ndarray, quantizer) -> Tu
     samples : numpy.ndarray
         Array of sample vectors to be quantized.
     quantizer : object
-        Quantizer object (NestedLatticeQuantizer or HierarchicalNestedLatticeQuantizer).
+        Quantizer object (NLQ or HNLQ).
 
     Returns:
     --------

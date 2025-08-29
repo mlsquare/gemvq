@@ -40,7 +40,7 @@ Since the project is installed in development mode, you can import modules direc
 
 ```python
 # Instead of sys.path.append('../')
-from src.lattices.quantizers.nested_lattice_quantizer import NestedLatticeQuantizer
+from src.quantizers.lattice.nlq import NLQ
 from src.gemv.adaptive.adaptive_matvec import AdaptiveMatvecProcessor
 # ... etc
 ```

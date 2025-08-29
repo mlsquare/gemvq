@@ -1,0 +1,136 @@
+---
+title: "Tuning HNLQ"
+---
+
+## Objective
+
+The performance of the quantizers - in terms of bit rate ($R$), distortion ($D$) and computational complexity (memory and compute) — depends critically on the choice of the lattice, codebook size, and the nesting structure (hierarchy) of the quantizer. They translate to choice of the lattice ($D_4$ or $E_8$), nesting depth $q$, bit depth $M$, the norm of the inputs to be quantized $\beta$. 
+
+Often, we can select the target bit rate ($R$) needed, and make a choice about the lattice (say $D_4$ for example, where the inputs has to be coded in block of size 4. For $E_8$, the dimension is $d=8$). For the HNLQ, they are related by $R = M\log_2(q)$ bits per dimension. The codebook will be size $q^d$, the Rate-Distortion curve is determined by the lattice. For example, $E_8$ is optimal for Gaussian sources.
+
+
+What is the interplay between $q,M, \beta$. How should one select them? We develop some intuition in into the problem to guide the selection. The following decomposition of the distortion in two primary terms will be helpful.
+
+## Error Decomposition
+
+We split the Distortio into two terms - distortion due to quantization and distortion due to overloading.
+The distortion due to quantization ia function of the target rate, lattice and codebook size (via $q$). The second term - overloading -- is a function of $\beta, M$, in addition to others.
+$$
+D(q,M,\beta)=D_{\mathrm{lat}}(\beta,L)+\Delta_{\mathrm{ol}}(q,M,\beta).
+$$
+
+In particular, $D_{\mathrm{lat}}(\beta,L) \approx \beta^{-2}G(L)$ where $G(L)$ is the second moment of the lattice. As one can see, increasing $\beta$, which is equivalent to increasinf the dynamic range, reduces the distortion due to quantization, but it can increase $\Delta_{\mathrm{ol}}$. In particular, the following expression for the overload error, signifies the dependence on $\beta$, given below:
+$$
+\frac{1}{\beta^2}\,\mathbb{E}\Big(\,[\,\|\beta X\|+r_{\mathrm{cov}}(L)-q^M r_{\mathrm{pack}}(L)\,]_+^2\Big)
+$$
+For clarity, $r_cov(L), r_pack(L)$ are the covering and packing number of the lattice $L$. These terms make the roles of $(q,M)$ and $\beta$ transparent:
+
+-   Increasing $\beta$ decreases the granular term like $1/\beta^2$ but increases overload pressure through $\|\beta X\|$;
+    the optimal $\beta$ trades these two effects.
+-   Increasing $M$ (or $q$) can shrink $\Delta_{\mathrm{ol}}$  and therefore reduces the overload penalty
+    monotonically in $M$ (since the hierarchical constellations obey $C_{L,q,M}\subset C_{L,q,M+1}$).
+-   Once the hinge is *inactive* (no overload with high probability), increasing $q$ or $M$ no longer helps; further gains come from larger $\beta$ within the safe limits or from switching to a lattice with smaller $G(L)$ (e.g., $E_8$ over $D_4$).
+
+
+
+## Tuning $\beta$
+
+Selecting appropriate parameters for the scaling factor $\beta$ is essential to balance the trade-offs between quantization error, overflow probability, and efficient use of the codebook. This document provides a principled approach to determine feasible bounds for $\beta$ under practical constraints.
+
+Our goal is to find a feasible range for the scaling factor $\beta$ that is applied to an input vector $x$ before quantization. This range must satisfy two competing objectives:
+
+1.  **Safety:** $\beta$ should be small enough to prevent overload error with high probability.
+2.  **Efficiency:** $\beta$ should be large enough to make meaningful use of the quantizer's resolution and avoid trivial coset computing which does reduce the quantization error.
+
+We will use the following notation and assumptions:
+
+Let $L \subset \mathbb{R}^d$ be a full-rank lattice with Voronoi cell $V$, packing radius $r_{\mathrm{pack}}(L)$ and covering radius $r_{\mathrm{cov}}(L)$:
+
+$$
+B_2(0, r_{\mathrm{pack}}) \subseteq V \subseteq B_2(0, r_{\mathrm{cov}})
+$$
+
+We quantize a block $x \in \mathbb{R}^d$ by scaling $x'=\beta x$, snapping $\lambda=Q_L(x') \in L$, and (optionally) unscaling $\hat{x}=\lambda/\beta$. For hierarchical coding with base $q \ge 2$, depth $M \ge 1$, a sufficient **no-overload** condition is
+
+$$
+\|Q_L(\beta x)\|_2 \le q^M\, r_{\mathrm{pack}}(L)
+$$
+
+At high resolution, the within-cell error $e=x'-\lambda \in V$ has bounded second moment (lattice-dependent), so MSE after unscale behaves like $\mathbb{E}\|x-\hat{x}\|^2 \propto \beta^{-2}$. Thus you want **β as large as safely possible**. But too large a $\beta$ can add no value if the cosets trivially map to zero vector. 
+
+Therefore, too small a $\beta$ leads to overload condition (leading to distortion) and too large a $\beta$ leads to wasteful spending of compute and memory resources. We want to find suitable range of $\beta$.
+
+---
+
+## Upper Bound $\beta_{\text{max}}$ (Safety)
+
+The upper bound ensures that the quantized point does not exceed the codebook's boundary.
+
+### Derivation
+
+**1. No-Overload Condition:** The sufficient condition for preventing overload is that the quantized point $Q_L(\beta x)$ must lie within the packing sphere of the coarsest lattice, $(q^M)L$. The radius of this sphere is $q^M r_{\text{pack}}(L)$.
+$$\|Q_L(\beta x)\|_2 \le q^M r_{\text{pack}}(L)$$
+
+**2. Worst-Case Analysis:** To guarantee safety, we must consider the worst-case scenario. The norm of the quantized point $\|Q_L(\beta x)\|_2$ is maximized when the quantization error $e$ points in the same direction as $\beta x$. Using the triangle inequality, we can bound the maximum possible norm of the output:
+$$\|Q_L(\beta x)\|_2 = \|\beta x - e\|_2 \le \|\beta x\|_2 + \|e\|_2 \le \|\beta x\|_2 + r_{\text{cov}}(L)$$
+
+**3. Formulating the Guarantee:** To ensure the no-overload condition holds even in this worst case, we require:
+$$\|\beta x\|_2 + r_{\text{cov}}(L) \le q^M r_{\text{pack}}(L)$$
+
+**4. Solving for $\beta$:** Rearranging and using the $(1-\delta)$-quantile of the input norm distribution to create a probabilistic guarantee gives:
+$$\beta \cdot Q_{1-\delta}(\|X\|_2) \le q^M r_{\text{pack}}(L) - r_{\text{cov}}(L)$$
+This yields the final upper bound:
+$$\beta_{\text{max}} = \frac{q^M r_{\text{pack}}(L) - r_{\text{cov}}(L)}{Q_{1-\delta}(\|X\|_2)}$$
+
+---
+
+## Lower Bound $\beta_{\text{min}}$ (Efficiency)
+
+The lower bound ensures that the signal is strong enough to not be trivialized by the quantizer.
+
+### Heuristic A: Non-Zero Output
+
+To prevent the signal from being quantized to the zero vector, the input $\beta x$ should, with high probability, lie outside the central packing sphere of the fine lattice $L$. Requiring this for a "typical" input (represented by a central quantile $Q_p(\|X\|_2)$) gives:
+$$\beta \cdot Q_p(\|X\|_2) \ge r_{\text{pack}}(L) \implies \beta_{\text{min}}^{(A)} = \frac{r_{\text{pack}}(L)}{Q_p(\|X\|_2)}$$
+
+### Heuristic B: Headroom Fraction
+
+This heuristic requires that the quantized signal occupies a significant fraction $\alpha$ of the codebook's dynamic range.
+$$\|Q_L(\beta x)\|_2 \ge \alpha \cdot q^M r_{\text{pack}}(L)$$
+To guarantee this, we consider the worst case where the quantization error shrinks the vector's norm: $\|Q_L(\beta x)\|_2 \ge \|\beta x\|_2 - r_{\text{cov}}(L)$. Requiring that even this smallest norm meets the condition and using a central quantile gives:
+$$\|\beta x\|_2 - r_{\text{cov}}(L) \ge \alpha q^M r_{\text{pack}}(L) \implies \beta \cdot Q_p(\|X\|_2) \ge \alpha q^M r_{\text{pack}}(L) + r_{\text{cov}}(L)$$
+This yields the second lower bound:
+$$\beta_{\text{min}}^{(B)} = \frac{\alpha q^M r_{\text{pack}}(L) + r_{\text{cov}}(L)}{Q_p(\|X\|_2)}$$
+
+
+## Two-sided recipe
+
+Pick $(\delta,\alpha,p)$ and choose
+
+$$
+\boxed{\
+\beta \ \in\
+\Big[\,\max\!\big\{\tfrac{r_{\mathrm{pack}}}{Q_{p}},\ \tfrac{\alpha\,q^M r_{\mathrm{pack}}+r_{\mathrm{cov}}}{Q_{p}}\big\},\ 
+\tfrac{q^M r_{\mathrm{pack}}-r_{\mathrm{cov}}}{Q_{1-\delta}}\Big]
+}
+$$
+
+with all $Q_{\cdot}$ quantiles of $\|X\|_2$. Take $\beta$ near the upper end (error $\propto \beta^{-2}$) while keeping your overflow rate $\le\delta$. If the interval is empty, relax $(\alpha,\theta)$, increase $q^M$, or reduce variability (e.g., incoherent mixing).
+
+## Examples (unit-norm inputs)
+
+If $\|X\|_2 \equiv 1$,
+
+$$
+\beta_{\max} = q^M r_{\mathrm{pack}} - r_{\mathrm{cov}},\quad
+\beta_{\min}^{(A)} = r_{\mathrm{pack}},\quad
+\beta_{\min}^{(B)} = \alpha\, q^M r_{\mathrm{pack}} + r_{\mathrm{cov}}
+$$
+
+Pick $\beta \in \big[\max\{\beta_{\min}^{(A)},\beta_{\min}^{(B)}\},\ \beta_{\max}\big]$; if infeasible, decrease $\alpha$ or increase $q^M$.
+
+## Takeaways
+
+-   Push **β** up to a target overflow probability (tight upper bound).\
+-   Impose a **lower** bound so layers carry information (avoid trivial zeros).\
+-   With fixed $(q,M)$, MSE $\sim \beta^{-2}$; if feasible window is small, prefer increasing **(M)** (keep $q=2$) over enlarging $q$. Enlarging $q$ exponentially increases the computational complexity.

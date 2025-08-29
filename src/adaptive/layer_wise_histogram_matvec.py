@@ -27,8 +27,7 @@ from typing import Dict, List, Tuple
 
 import numpy as np
 
-from ..lattices.quantizers.hierarchical_nested_lattice_quantizer import \
-    HierarchicalNestedLatticeQuantizer
+from ..quantizers.lattice.hnlq import HNLQ
 
 
 class LayerWiseHistogramMatVec:
@@ -50,7 +49,7 @@ class LayerWiseHistogramMatVec:
 
     Attributes:
     -----------
-    quantizer : HierarchicalNestedLatticeQuantizer
+    quantizer : HNLQ
         The hierarchical quantizer used for encoding/decoding.
     codebook : dict
         Mapping from code indices to codeword vectors.
@@ -60,13 +59,13 @@ class LayerWiseHistogramMatVec:
         Nesting base for the hierarchical structure.
     """
 
-    def __init__(self, quantizer: HierarchicalNestedLatticeQuantizer):
+    def __init__(self, quantizer: HNLQ):
         """
         Initialize the layer-wise histogram matrix-vector multiplier.
 
         Parameters:
         -----------
-        quantizer : HierarchicalNestedLatticeQuantizer
+        quantizer : HNLQ
             The hierarchical quantizer to use for encoding/decoding.
         """
         self.quantizer = quantizer
@@ -320,7 +319,7 @@ def create_example_from_paper() -> (
         return np.round(x)
 
     # Create quantizer
-    quantizer = HierarchicalNestedLatticeQuantizer(
+    quantizer = HNLQ(
         G=G, Q_nn=Q_nn, q=q, beta=1.0, alpha=1.0, eps=1e-8, dither=np.zeros(n), M=M
     )
 

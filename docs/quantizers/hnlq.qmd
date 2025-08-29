@@ -1,0 +1,261 @@
+---
+title: "HNLQ"
+---
+
+This tutorial is a self-contained walkthrough of **hierarchical nested** lattice quantization,
+with concrete examples for $L=\mathbb{Z}$ and $L=D_4$.
+We explain *cosets*, the sets $L\cap (qV)$ and $L/qL$, how the encoder/decoder work,
+what the parameters $q$ and depth $M$ mean, and why deeper layers eventually emit all-zero digits.
+
+
+## Lattices
+
+A **lattice** $L\subset \mathbb{R}^d$ is the integer span of a full-rank matrix $G\in\mathbb{R}^{d\times d}$:
+$$
+L \;=\; G\,\mathbb{Z}^d.
+$$
+
+- A typical point of $L$ is $\lambda = G z$ for some $z\in\mathbb{Z}^d$.
+- The **nearest-neighbor quantizer** to $L$ is
+  $$
+  Q_L(x) \;=\; \operatorname*{arg\,min}_{\lambda\in L} \|x-\lambda\|_2.
+  $$
+- The **Voronoi region** $V$ of $L$ is the set of points closest to $0$:
+  $$
+  V \;=\; \Big\{ u\in\mathbb{R}^d : \|u\| \le \|u-\lambda\|\ \ \forall\,\lambda\in L\setminus\{0\}\Big\}.
+  $$
+  Equivalently, $x\in V\iff Q_L(x)=0$.
+
+### The $D_4$ lattice
+
+A convenient description is
+$$
+D_4 \;=\; \Big\{ z\in\mathbb{Z}^4 : z_1+z_2+z_3+z_4 \text{ is even}\Big\}.
+$$
+One integer basis $G$ (columns are a basis) is, for example,
+$$
+G=\big[\ (1,1,0,0)\ \ (1,-1,0,0)\ \ (0,1,-1,0)\ \ (0,0,1,-1)\ \big].
+$$
+We’ll quantize 4-D chunks with $L=D_4$.
+
+---
+
+### Cosets
+
+Let $q\in\mathbb{Z}_{\ge 2}$. The scaled sublattice is $qL=\{q\lambda:\lambda\in L\}\subset L$.
+
+- A **coset** of $qL$ in $L$ is a translated copy $\lambda + qL = \{\lambda + q\mu:\mu\in L\}$.
+- The **quotient** $L/qL$ is the set of all such cosets (“remainder classes” mod $qL$).
+- There are finitely many: $|L/qL|=q^d$ when $L$ has rank $d$.
+
+The **finite codebook**
+$$
+A_q \;=\; L\ \cap\ (qV)
+$$
+contains exactly one representative from each coset of $qL$ in $L$. Intuitively: scale the Voronoi cell by $q$, then pick all lattice points inside; those are the canonical “remainders.”
+
+::: {.callout-tip}
+Think of integers modulo $2$.
+
+- $L=\mathbb{Z}$, $2L=2\mathbb{Z}$ (evens).  
+- Cosets: evens $0+2\mathbb{Z}$ and odds $1+2\mathbb{Z}$.  
+- Representatives $A_2=\{0,1\}$.
+Exactly the same idea holds in higher-dimensional lattices.
+:::
+
+---
+
+## Quantization
+
+### Nested Lattice Quantization
+
+Pick $r\in\mathbb{Z}_{\ge 2}$ and form
+$$
+A_r \;=\; L \cap (rV).
+$$
+
+- This is a **Voronoi code** of rate $R=\log_2 r$ **per $d$-dimensional chunk**.
+- Codebook size: $|A_r| = r^d = 2^{dR}$.
+
+Pros: excellent shaping; in nice lattices (e.g., $D_n,E_n$) inner products of codewords are integers.  
+Con: if you want to precompute inner-product look-up tables (LUTs), the table size scales as $|A_r|^2=r^{2d}=2^{2dR}$, which explodes for high rate $R$.
+
+
+### Hierarchical Nested Lattice Quantization
+
+Instead of one big code at rate $R$, send $M$ **small** layers at base $q$. Build the chain
+$$
+L \ \supset\ qL \ \supset\ q^2L \ \supset\ \cdots \ \supset\ q^{M}L.
+$$
+
+- **Parameters.** $q\in\{2,3,\dots\}$ (nesting ratio), $M\in\mathbb{Z}_{\ge 1}$ (depth).
+- **Per-layer alphabet.** $A_q=L\cap(qV)$, size $|A_q|=q^d$.
+- **Total rate.** $R = M\log_2 q$ per $d$-dimensional chunk.
+- **Constellation.**
+  $$
+  C_{L,q,M}\;=\;\sum_{m=0}^{M-1} q^m A_q \;=\; A_q + qA_q + \cdots + q^{M-1}A_q.
+  $$
+  This has $|L/q^M L|=q^{Md}=2^{dR}$ points — the **same cardinality** as a single Voronoi code at rate $R$.
+
+::: {.callout-tip}
+For encoding, we only store the index (the digit) of the coset (remainder).
+The decoder, maps the index back to the codebook, and does Minkowsly sum to reconstruct the input which can be lossy.
+:::
+
+---
+
+## Encoder/Decoder
+
+We present the version with optional dithering/overload control omitted for clarity.
+
+### Encoder
+
+**Inputs:** $x\in\mathbb{R}^d$, lattice $L=G\mathbb{Z}^d$, integers $q\ge 2$, $M\ge 1$.  
+
+**State:** $\tilde g\leftarrow x$.  
+
+**For $m=0,1,\dots,M-1$:**
+
+1. Snap to lattice: $\tilde g \leftarrow Q_L(\tilde g)\in L$.
+2. Digit (coset label): $b_m \leftarrow \big(G^{-1}\tilde g\big)\bmod q \in [q]^d$.
+3. Downscale: $\tilde g \leftarrow \tilde g/q$.
+
+**Output:** digits $b_0,b_1,\dots,b_{M-1}$.  
+Each $b_m$ names the coset in $L/qL$ (a “base-$q$” digit).
+
+### Decoder
+
+1. For each layer $m$, map the digit to a codeword in $A_q$ via $\hat x_m \;=\; G\,b_m \;-\; q\,Q_L\!\Big(\frac{G\,b_m}{q}\Big)\ \ \in A_q$
+2. Then assemble $\hat x \;=\; \sum_{m=0}^{M-1} q^m\,\hat x_m \ \in\ C_{L,q,M}$
+
+
+::: {.callout-tip}
+If the composed quantizer $Q^{\circ M}(x)=0$ (i.e., after $M$ rounds of snapping/scaling the point lands in $V$), then $\hat x = Q_L(x)$: the hierarchical scheme exactly returns the nearest lattice point. Otherwise, the returned reconstructed input is lossy.
+:::
+
+---
+
+## Examples at $q=2, M=2$
+
+We use the same tie-breaking rule consistently: if a point is exactly on a boundary, treat halves as rounding “down” (this avoids ambiguity).
+
+### Lattice $\mathbb{Z}$
+
+- $G=[1]$, $V=[-\tfrac12,\tfrac12)$.  
+- $A_2=L\cap(2V)=\{0,1\}$.
+
+**Encode.** Given $x\in\mathbb{R}$, let $z=Q_L(x)\in\mathbb{Z}$. The digit is $b=z\bmod 2 \in\{0,1\}$.  
+**Decode.** Map $b$ to $\hat x_0\in A_2$ by $\hat x_0=b$. If $M=2$, repeat on $\tilde g/2$ to get $b_1$ and $\hat x_1\in A_2$, then output $\hat x=\hat x_0+2\hat x_1$.
+
+**Example.** $x=2.49\Rightarrow z=2\Rightarrow b_0=0\Rightarrow \hat x_0=0$. On the second layer, $\tilde g= z/2=1.0\Rightarrow Q_L(1.0)=1\Rightarrow b_1=1\Rightarrow \hat x_1=1$. Output $\hat x=0+2\cdot 1=2$, which equals $Q_L(x)$.
+
+
+
+::: {.callout-tip}
+This is exactly **bit-plane coding**: for $L=\mathbb{Z}$ and $q=2$, the digits $b_0, b_1, \dots, b_{M-1}$ are just the bits of $z$ (the quantized integer), from least significant (LSB) to most significant (MSB). For example, if $x \in \{0,1,\dots,255\}$, then $M=8$ and the encoder emits the 8 bits of $x$ in order, starting from the LSB. More generally, for any real $x$, we round to the nearest integer and then encode its bits hierarchically.
+
+Hierarchical nested lattice quantization with $L=\mathbb{Z}$, $q=2$ is memoryless progressive bit-plane coding. Each additional layer refines the reconstruction, and the process is lossless if enough layers are used.
+:::
+
+
+### Lattice $D_4$
+
+Use
+$$
+G=\big[\ (-1,-1,0,0)\ \ (1,-1,0,0)\ \ (0,1,-1,0)\ \ (0,0,1,-1)\ \big].
+$$
+We’ll quantize a single 4-D chunk with $q=2,M=2$.
+
+#### Encoding step-by-step
+
+Let $x=(1.20,\,-0.70,\,2.40,\,0.30)$. 
+
+**Layer 0.**
+
+1. $Q_L(x)=(1,-1,2,0)\in D_4$ (nearest even-sum integer vector). Set $\tilde g\leftarrow (1,-1,2,0)$.
+2. Digit: $z_0=G^{-1}\tilde g=(1,0,-2,0)\ \Rightarrow\ b_0=z_0\bmod 2=(1,0,0,0)$.
+3. Scale: $\tilde g\leftarrow \tilde g/2=(0.5,-0.5,1,0)$.
+
+**Layer 1.**
+
+1. $Q_L(0.5,-0.5,1,0)=(1,0,1,0)$.
+2. Digit: $z_1=G^{-1}(1,0,1,0)=(1,0,-1,0)\ \Rightarrow\ b_1=(1,0,1,0)$.
+
+**Output:** $b_0=(1,0,0,0)$, $b_1=(1,0,1,0)$.
+
+#### 6.2.2 Decoding step-by-step
+
+- Per layer, compute $\hat x_m \;=\; G\,b_m \;-\; 2\,Q_L\!\Big(\frac{G\,b_m}{2}\Big)\ \in A_2$
+  - For $b_0=(1,0,0,0)$: $G b_0=(-1,-1,0,0)$, $(G b_0)/2=(-0.5,-0.5,0,0)$, $Q_L(\cdot)=0$, so $\hat x_0=(-1,-1,0,0)$.
+  - For $b_1=(1,0,1,0)$: $G b_1=(-1,0,-1,0)$, $(G b_1)/2=(-0.5,0,-0.5,0)$, $Q_L(\cdot)=0$, so $\hat x_2=(-1,0,-1,0)$.
+- Finally,$\hat x \;=\; \hat x_0 + 2\,\hat x_1 \;=\; (-1,-1,0,0) + 2(-1,0,-1,0) \;=\; (-3,\,-1,\,-2,\,0)$
+
+When the composed quantizer $Q^{\circ 2}(x)=0$ (no overload), the hierarchical reconstruction equals the nearest lattice point $Q_L(x)$. Otherwise, $\hat x$ is the nearest point **inside** the hierarchical constellation $C_{L,2,2}=A_2+2A_2$.
+
+::: {.callout-tip}
+In this example, the reconstructed input differs significantly from the original. This occurs because some points lie exactly on lattice boundaries, and our consistent tie-breaking rule (always rounding down) determines their assignment. If a different or random tie-breaking rule were used, the reconstructed values could differ in sign or in individual components.
+:::
+
+## Observations
+
+
+### Choosing $q$ and $M$: trade-offs
+
+- **Rate:** $R=M\log_2 q$ bits per $d$-dimensional chunk.
+- **Final constellation size:** $|L/q^M L| = q^{Md} = 2^{dR}$ (same as single-layer at rate $R$).
+- **LUT size:** hierarchical $=2^{2dR/M}$ vs single-layer $=2^{2dR}$. For fixed $R$, increasing $M$ shrinks the LUT exponentially (in the exponent) but costs $M^2$ LUT lookups per inner product.
+- **Distortion:** Hierarchical codes closely track single-layer Voronoi performance at the same $R$ (especially for well-shaped lattices such as $D_4$).
+
+
+
+
+### Inner-product LUT savings
+
+If $\hat x=\sum_{i=0}^{M-1} q^i \hat x_i$ and $\hat y=\sum_{j=0}^{M-1} q^j \hat y_j$ with $\hat x_i,\hat y_j\in A_q$, then
+$$
+\hat x^\top \hat y \;=\; \sum_{i,j=0}^{M-1} q^{i+j}\,\langle \hat x_i, \hat y_j\rangle.
+$$
+You only need a **single** LUT over $A_q\times A_q$, size
+$$
+|A_q|^2 \;=\; q^{2d} \;=\; 2^{\frac{2dR}{M}},
+$$
+and do $M^2$ table lookups plus shifts/adds.  
+Compare to single-layer LUT size $2^{2dR}$: the exponent shrinks by a factor of $1/M$.
+
+::: {.callout-example}
+For $d=4$, $q=2$, $M=2$:  
+- $R=M\log_2 q=2$ bits per 4-D chunk.  
+- Hierarchical LUT size $=2^{2dR/M}=2^{8}=256$ entries.  
+- Single-layer LUT size at same $R$: $2^{2dR}=2^{16}=65{,}536$ entries.
+:::
+
+
+### Why digits eventually become zero
+
+Define the sequence $\tilde g_0=Q_L(x)$ and $\tilde g_m = Q_L(\tilde g_{m-1}/q)$.  
+Because $V=\{u:Q_L(u)=0\}$, once $\tilde g_{m-1}/q\in V$, we get $\tilde g_m=0$ and every later digit is $b_m=0$.
+
+A sufficient norm condition uses the **packing radius** $r_{\mathrm{pack}}(L)$ (radius of the largest ball inside $V$).
+If
+$$
+\frac{\|Q_L(x)\|}{q^m} \;\le\; r_{\mathrm{pack}}(L),
+$$
+then $\tilde g_{m}=0$ and all deeper digits vanish. For $D_4$, the shortest nonzero vector has length $\sqrt{2}$, so $r_{\mathrm{pack}}(D_4)=1/\sqrt{2}$. With $q=2$, a safe depth is
+$$
+m \;\ge\; \left\lceil \log_2\!\Big(\frac{\|Q_L(x)\|}{\,1/\sqrt{2}\,}\Big)\right\rceil.
+$$
+
+**Takeaway.** Choose $M$ large enough that you enter the all-zero tail (no extra information beyond that). Going deeper only appends zeros.
+
+
+---
+
+## Summary
+
+- **Cosets** $L/qL$ are remainder classes mod $qL$; 
+- **codebook** $A_q=L\cap(qV)$ chooses one representative per coset.
+- **Hierarchical** quantization sends $M$ base-$q$ digits ($b_m\in[q]^d$), reassembled as
+  $\hat x=\sum_{m=0}^{M-1} q^m \hat x_m$ with $\hat x_m\in A_q$.
+- **Rates & sizes.** $R=M\log_2 q$; final constellation $=2^{dR}$; LUT shrinks from $2^{2dR}$ to $2^{2dR/M}$.
+- **All-zero tail.** Once the scaled point enters $V$, all further digits are zeros.
+

@@ -1,0 +1,132 @@
+---
+title: "VQ with ${Z}_2$"
+---
+
+## Setup and Notation
+
+We use the **fine** lattice $\Lambda=\mathbb{Z}^2$ and the **coarse** lattice $\Lambda_c=2\mathbb{Z}^2\subseteq\Lambda$. The nearest–neighbor quantizers and modulo maps are
+$$
+Q_\Lambda(x)=\operatorname*{arg\,min}_{\lambda\in\Lambda}\|x-\lambda\|,\quad
+Q_{\Lambda_c}(x)=\operatorname*{arg\,min}_{\mu\in\Lambda_c}\|x-\mu\|,
+$$
+$$
+x\bmod\Lambda := x-Q_\Lambda(x)\in\mathcal{V}_\Lambda,\qquad
+x\bmod\Lambda_c := x-Q_{\Lambda_c}(x)\in\mathcal{V}_{\Lambda_c}.
+$$
+For $\mathbb{Z}^2$, quantization is **coordinatewise rounding**; for $2\mathbb{Z}^2$ it is rounding each coordinate to the **nearest even integer**.
+
+The **codebooks** are the lattice point sets:
+$$
+\mathcal{C}_\text{fine}=\Lambda=\mathbb{Z}^2,\qquad
+\mathcal{C}_\text{coarse}=\Lambda_c=2\mathbb{Z}^2.
+$$
+
+## Inputs and Assignments
+
+We quantize several inputs $x\in\mathbb{R}^2$ under both quantizers. For each, we show the assigned **codeword**, the **error** (difference), and its squared norm, and we record the **coset label** of the fine codeword modulo $2\mathbb{Z}^2$ (parity pair).
+
+### Summary (numbers)
+
+- $x=(0.33, -1.2)$:
+  - Fine $Q_\Lambda$: $Q_{\mathbb{Z}^2}(x)=(0, -1)$, error $e=(0.33, -0.2)$, $\|e\|^2=0.1489$.
+  - Coarse $Q_{2\mathbb{Z}^2}$: $Q_{2\mathbb{Z}^2}(x)=(0, -2)$, error $e_c=(0.33, 0.8)$, $\|e_c\|^2=0.7489$.
+  - Coset label (from fine codeword): $Q_\Lambda(x)\bmod 2\mathbb{Z}^2=(0, 1)$.
+- $x=(1.51, 0.49)$:
+  - Fine $Q_\Lambda$: $Q_{\mathbb{Z}^2}(x)=(2, 0)$, error $e=(-0.49, 0.49)$, $\|e\|^2=0.4802$.
+  - Coarse $Q_{2\mathbb{Z}^2}$: $Q_{2\mathbb{Z}^2}(x)=(2, 0)$, error $e_c=(-0.49, 0.49)$, $\|e_c\|^2=0.4802$.
+  - Coset label (from fine codeword): $Q_\Lambda(x)\bmod 2\mathbb{Z}^2=(0, 0)$.
+- $x=(-0.6, 0.6)$:
+  - Fine $Q_\Lambda$: $Q_{\mathbb{Z}^2}(x)=(-1, 1)$, error $e=(0.4, -0.4)$, $\|e\|^2=0.32$.
+  - Coarse $Q_{2\mathbb{Z}^2}$: $Q_{2\mathbb{Z}^2}(x)=(0, 0)$, error $e_c=(-0.6, 0.6)$, $\|e_c\|^2=0.72$.
+  - Coset label (from fine codeword): $Q_\Lambda(x)\bmod 2\mathbb{Z}^2=(1, 1)$.
+- $x=(1.2, 1.9)$:
+  - Fine $Q_\Lambda$: $Q_{\mathbb{Z}^2}(x)=(1, 2)$, error $e=(0.2, -0.1)$, $\|e\|^2=0.05$.
+  - Coarse $Q_{2\mathbb{Z}^2}$: $Q_{2\mathbb{Z}^2}(x)=(2, 2)$, error $e_c=(-0.8, -0.1)$, $\|e_c\|^2=0.65$.
+  - Coset label (from fine codeword): $Q_\Lambda(x)\bmod 2\mathbb{Z}^2=(1, 0)$.
+- $x=(-1.25, -0.75)$:
+  - Fine $Q_\Lambda$: $Q_{\mathbb{Z}^2}(x)=(-1, -1)$, error $e=(-0.25, 0.25)$, $\|e\|^2=0.125$.
+  - Coarse $Q_{2\mathbb{Z}^2}$: $Q_{2\mathbb{Z}^2}(x)=(-2, 0)$, error $e_c=(0.75, -0.75)$, $\|e_c\|^2=1.125$.
+  - Coset label (from fine codeword): $Q_\Lambda(x)\bmod 2\mathbb{Z}^2=(1, 1)$.
+- $x=(-0.49, -0.51)$:
+  - Fine $Q_\Lambda$: $Q_{\mathbb{Z}^2}(x)=(0, -1)$, error $e=(-0.49, 0.49)$, $\|e\|^2=0.4802$.
+  - Coarse $Q_{2\mathbb{Z}^2}$: $Q_{2\mathbb{Z}^2}(x)=(0, 0)$, error $e_c=(-0.49, -0.51)$, $\|e_c\|^2=0.5002$.
+  - Coset label (from fine codeword): $Q_\Lambda(x)\bmod 2\mathbb{Z}^2=(0, 1)$.
+
+## Two walk-throughs step by step
+
+### Example A: $x=(1.51,\,0.49)$
+- **Fine ($\mathbb{Z}^2$)**: Round each coordinate: $\operatorname{round}(1.51)=2$, $\operatorname{round}(0.49)=0$. So
+$$
+Q_\Lambda(x)=(2,0),\qquad e=x-Q_\Lambda(x)=(1.51-2,\ 0.49-0)=(-0.49,\ 0.49).
+$$
+$\|e\|^2=(-0.49)^2+(0.49)^2\approx 0.4802$.\
+Coset label (parity of the fine codeword): $(2\bmod 2,\ 0\bmod 2)=(0,0)$.
+
+- **Coarse ($2\mathbb{Z}^2$)**: Nearest multiples of 2: $\operatorname{round}(1.51/2)=1\Rightarrow 2$, $\operatorname{round}(0.49/2)=0\Rightarrow 0$. So
+$$
+Q_{\Lambda_c}(x)=(2,0),\qquad e_c=x-Q_{\Lambda_c}(x)=(-0.49,\ 0.49),
+$$
+which happens to coincide here with the fine result.
+
+### Example B: $x=(-0.60,\ 0.60)$
+- **Fine ($\mathbb{Z}^2$)**:
+$$
+Q_\Lambda(x)=(\operatorname{round}(-0.60),\ \operatorname{round}(0.60))=(-1,\ 1),\quad e=(0.40,\ -0.40),
+$$
+$\|e\|^2=0.32$. Coset label: $(-1\bmod 2,\ 1\bmod 2)=(1,1)$.
+
+- **Coarse ($2\mathbb{Z}^2$)**:
+$$
+Q_{\Lambda_c}(x)=(\operatorname{round}(-0.60/2)\cdot2,\ \operatorname{round}(0.60/2)\cdot2)=(0,\ 0),\quad e_c=(-0.60,\ 0.60),
+$$
+$\|e_c\|^2\approx 0.72$. The larger cell of $2\mathbb{Z}^2$ increases distortion here.
+
+
+## Coding rate vs. distortion: $\mathbb{Z}$ vs. $2\mathbb{Z}$
+
+### Standalone uniform quantizers over a fixed range
+
+Assume inputs are essentially confined to $[-A,A]$ (no overload). A 1D **uniform** quantizer with step $\Delta$ has high-rate MSE
+$$
+D \;\approx\; \frac{\Delta^2}{12}.
+$$
+- Using the **fine** lattice $\mathbb{Z}$ (step $\Delta=1$):
+  $$
+  R_{\mathbb{Z}} \;\approx\; \log_2\!\Big(\frac{2A}{1}\Big)\quad\text{bits/sample}, 
+  \qquad D_{\mathbb{Z}} \;\approx\; \frac{1}{12}.
+  $$
+- Using the **coarse** lattice $2\mathbb{Z}$ (step $\Delta=2$):
+  $$
+  R_{2\mathbb{Z}} \;\approx\; \log_2\!\Big(\frac{2A}{2}\Big) \;=\; \log_2 A \quad\text{bits/sample}, 
+  \qquad D_{2\mathbb{Z}} \;\approx\; \frac{4}{12} \;=\; \frac{1}{3}.
+  $$
+
+**Conclusion (1D):** moving from $\mathbb{Z}$ to $2\mathbb{Z}$ **saves $1$ bit/sample** (since $R_{\mathbb{Z}}-R_{2\mathbb{Z}}\approx 1$) but **multiplies the MSE by $4$** (from $1/12$ to $1/3$).
+
+### Vector case (Cartesian quantization)
+
+For $\mathbb{Z}^n$ vs. $2\mathbb{Z}^n$ over the same hyper-rectangle:
+
+- **Rate reduction:** coarsening by a factor $m=2$ reduces rate by $\log_2 m=1$ **bit per dimension** (so $n$ bits per $n$-vector).
+- **Distortion increase:** per-dimension MSE scales as $m^2=4$ (total MSE scales by $4$ per dimension).
+
+### Nested-lattice (coset) rate with modulo/shaping
+
+With a **fine** lattice $\Lambda=\mathbb{Z}^n$ and a **coarse** lattice $\Lambda_c=2\mathbb{Z}^n\subseteq\Lambda$, the **coding rate from coset labels** is
+$$
+[\Lambda:\Lambda_c] \;=\; \frac{\det(\Lambda_c)}{\det(\Lambda)} \;=\; 2^n,
+\qquad \text{so} \qquad
+R_{\text{coset}} \;=\; \log_2 [\Lambda:\Lambda_c] \;=\; n \;\;(\text{i.e., }1\ \text{bit/dim}).
+$$
+In this nested setting, **distortion** comes from the **fine** quantizer $Q_\Lambda$ (e.g., $Q_{\mathbb{Z}^n}$), while the **coarse** lattice $\Lambda_c$ provides **shaping** via $x\bmod\Lambda_c\in\mathcal{V}_{\Lambda_c}$ and determines the **number of labels**.
+
+
+- As **standalone quantizers**, $2\mathbb{Z}$ lowers **rate** (by $1$ bit/dim) but raises **MSE** (by a factor $4$).  
+- In **nested-lattice coding**, the **rate** is $\log_2[\Lambda:\Lambda_c]$ (here $1$ bit/dim), and the **distortion** is governed by the **fine** lattice; the **coarse** lattice controls shaping and the finite label set.
+
+
+## Notes
+
+- The Voronoi cells are squares: $\mathcal{V}_{\mathbb{Z}^2}=[-\tfrac12,\tfrac12]^2$ and $\mathcal{V}_{2\mathbb{Z}^2}=[-1,1]^2$.\
+- In nested coding, the **coset index** size is $[\Lambda:\Lambda_c]=[\mathbb{Z}^2:2\mathbb{Z}^2]=4$, carrying $\log_2 4=2$ bits per vector; modulo reduction $x\bmod\Lambda_c$ picks a bounded representative in $[-1,1]^2$.
+

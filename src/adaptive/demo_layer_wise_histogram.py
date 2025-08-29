@@ -13,7 +13,7 @@ from typing import List, Tuple
 import time
 
 from .layer_wise_histogram_matvec import LayerWiseHistogramMatVec
-from ..lattices.quantizers.hierarchical_nested_lattice_quantizer import HierarchicalNestedLatticeQuantizer
+from ..quantizers.lattice.hnlq import HNLQ
 
 
 def plot_histogram_comparison(
@@ -75,7 +75,7 @@ def demo_basic_usage():
     def Q_nn(x):
         return np.round(x)
 
-    quantizer = HierarchicalNestedLatticeQuantizer(
+    quantizer = HNLQ(
         G=G, Q_nn=Q_nn, q=q, beta=1.0, alpha=1.0, eps=1e-8, dither=np.zeros(n), M=M
     )
 
@@ -153,7 +153,7 @@ def demo_efficiency_comparison():
     def Q_nn(x):
         return np.round(x)
 
-    quantizer = HierarchicalNestedLatticeQuantizer(
+    quantizer = HNLQ(
         G=G, Q_nn=Q_nn, q=q, beta=1.0, alpha=1.0, eps=1e-8, dither=np.zeros(n), M=M
     )
 
@@ -219,7 +219,7 @@ def demo_layer_wise_histogram():
     def Q_nn(x):
         return np.round(x)
     
-    quantizer = HierarchicalNestedLatticeQuantizer(
+    quantizer = HNLQ(
         G=G, Q_nn=Q_nn, q=4, beta=1.0, alpha=1.0, eps=1e-8, dither=np.zeros(m), M=3
     )
     
@@ -267,7 +267,7 @@ def demo_histogram_analysis():
     def Q_nn(x):
         return np.round(x)
     
-    quantizer = HierarchicalNestedLatticeQuantizer(
+    quantizer = HNLQ(
         G=G, Q_nn=Q_nn, q=4, beta=1.0, alpha=1.0, eps=1e-8, dither=np.zeros(m), M=3
     )
     

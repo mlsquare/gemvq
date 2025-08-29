@@ -18,7 +18,7 @@ from src.adaptive.layer_wise_histogram_matvec import (
     create_example_from_paper,
     run_paper_example
 )
-from src.lattices.quantizers.hierarchical_nested_lattice_quantizer import HierarchicalNestedLatticeQuantizer
+from src.quantizers.lattice.hnlq import HNLQ
 
 
 def test_paper_example():
@@ -75,7 +75,7 @@ def test_simple_example():
     def Q_nn(x):
         return np.round(x)
     
-    quantizer = HierarchicalNestedLatticeQuantizer(
+    quantizer = HNLQ(
         G=G, Q_nn=Q_nn, q=q, beta=1.0, alpha=1.0, 
         eps=1e-8, dither=np.zeros(n), M=M
     )

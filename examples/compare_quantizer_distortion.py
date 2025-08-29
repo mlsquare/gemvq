@@ -1,7 +1,7 @@
-from src.lattices.quantizers.nested_lattice_quantizer import NestedLatticeQuantizer as NQuantizer
-from src.lattices.quantizers.hierarchical_nested_lattice_quantizer import HierarchicalNestedLatticeQuantizer as HQuantizer
-from src.lattices.utils import get_a2, get_d3, get_d4, get_e8, calculate_mse, calculate_t_entropy
-from src.lattices.utils import closest_point_A2, closest_point_Dn, closest_point_E8, custom_round
+from src.quantizers.lattice.nlq import NLQ as NQuantizer
+from src.quantizers.lattice.hnlq import HNLQ as HQuantizer
+from src.quantizers.lattice.utils import get_a2, get_d3, get_d4, get_e8, calculate_mse, calculate_t_entropy
+from src.quantizers.lattice.utils import closest_point_A2, closest_point_Dn, closest_point_E8, custom_round
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -74,7 +74,20 @@ def run_comparison_experiment(G, q_nn, q_values, n_samples, d, sigma_squared, M,
 
         for idx, scheme in enumerate(schemes):
             name, quantizer_class, nesting = scheme["name"], scheme["quantizer"], scheme["nesting"]
-            quantizer = quantizer_class(G, q_nn, q=nesting(q), beta=beta_min, alpha=1, eps=eps, M=2, dither=np.zeros(d))
+            
+            if quantizer_class == HQuantizer:
+                # HNLQ uses config-based constructor
+                config = {
+                    'q': nesting(q),
+                    'beta': beta_min,
+                    'alpha': 1,
+                    'eps': eps,
+                    'M': 2
+                }
+                quantizer = quantizer_class(G, q_nn, config, dither=np.zeros(d))
+            else:
+                # NLQ uses individual parameters
+                quantizer = quantizer_class(G, q_nn, q=nesting(q), beta=beta_min, alpha=1, eps=eps, M=2, dither=np.zeros(d))
 
             R, min_error, optimal_beta = calculate_rate_and_distortion(name, samples, quantizer, q, beta_min)
             results[name]["R"].append(R)

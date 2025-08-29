@@ -1,0 +1,102 @@
+---
+title: "$E_8$ Lattice"
+---
+
+## Overview
+
+The $E_8$ lattice is the **even unimodular** lattice in eight dimensions. It achieves the **optimal sphere packing density** in $\mathbb{R}^8$ and has kissing number $240$. Geometrically, its Voronoi cell is the $8$–dimensional **Gosset polytope** $(4_{21})$, and algebraically it admits elegant descriptions via parity constraints and via Construction~A from the $[8,4,4]$ extended Hamming code. This tutorial mirrors the 2D/4D notes but specializes all core ideas—definition, Voronoi/quantizer/modulo, nested pairs and cosets, packing/covering/kissing, duality, and quick exercises—to $E_8$.
+
+## Defining $E_8$
+
+### Set description (parity / half–integer shift)
+A standard description is
+$$
+E_8 \;=\; \Big\{ x\in\mathbb{Z}^8 : \sum_{i=1}^8 x_i \equiv 0 \pmod{2} \Big\}
+\;\cup\;
+\Big\{ x\in \big(\mathbb{Z}^8 + (\tfrac12,\dots,\tfrac12)\big) : \sum_{i=1}^8 x_i \equiv 0 \pmod{2} \Big\}.
+$$
+Equivalently: all coordinates are either integers or all are half–integers, and the sum is an **even** integer.
+
+### Basic invariants
+- **Even unimodular:** $E_8$ is **even** ($\|x\|^2\in 2\mathbb{Z}$ for all $x\in E_8$) and **unimodular** ($\det(E_8)=1$). Hence $E_8^*=E_8$ (self–dual).
+- **Minimum norm & distance:** $\min\{\|x\|^2:x\in E_8\setminus\{0\}\}=2$, so $d(E_8)=\sqrt{2}$ and $r_{\mathrm{pack}}(E_8)=\tfrac{1}{\sqrt{2}}$.
+- **Kissing number:** $\tau(E_8)=240$ (the $240$ roots of the $E_8$ root system).
+
+### Construction - A view
+Let $\mathcal{C}\subset\mathbb{F}_2^8$ be the $[8,4,4]$ extended Hamming code. Then
+$$
+E_8 \;=\; \Big\{ \frac{1}{\sqrt{2}}\,x : x\in\mathbb{Z}^8,\ x\bmod 2 \in \mathcal{C} \Big\},
+$$
+which makes coset labeling and fast modulo arithmetic explicit.
+
+## Voronoi Cell, Quantizer, and Modulo Map
+
+The Voronoi cell $\mathcal{V}_{E_8}$ is the Gosset polytope $(4_{21})$. The **nearest–neighbor quantizer** and the **modulo–lattice** map are
+$$
+Q_{E_8}(x) := \operatorname*{arg\,min}_{\lambda\in E_8}\|x-\lambda\|,\qquad
+x\bmod E_8 := x - Q_{E_8}(x)\in\mathcal{V}_{E_8},
+$$
+with a fixed tie–break rule on Voronoi boundaries to make $Q_{E_8}$ single–valued. In practice one often uses **Babai rounding** in a basis $B$ (compute $c=B^{-1}x$ and round to $\mathbb{Z}^8$) as an efficient approximation to $Q_{E_8}$.
+
+## Packing, Covering, and Kissing in $\mathbb{R}^8$
+
+The $8$–ball volume is $\mathrm{vol}\,\mathcal{B}_8(0,R)=\dfrac{\pi^4}{24}\,R^8$. With $r_{\mathrm{pack}}=1/\sqrt{2}$ and $\det(E_8)=1$, the **packing density** is
+$$
+\Delta(E_8)=\frac{\mathrm{vol}\,\mathcal{B}_8(0,\,1/\sqrt{2})}{\det(E_8)}
+\;=\;\frac{\pi^4}{24}\left(\frac{1}{\sqrt{2}}\right)^{\!8}
+\;=\;\frac{\pi^4}{384}
+\;\approx\;0.25367.
+$$
+The **kissing number** is $\tau(E_8)=240$. (The exact **covering radius** is larger than $r_{\mathrm{pack}}$; we focus on packing here since $E_8$ is optimal for packing in $\mathbb{R}^8$.)
+
+## Nested Pairs, Cosets, and Modulo
+
+A natural coarse sublattice is the dilation $\Lambda_c=mE_8\subset E_8$ for integer $m\ge 2$. The index is
+$$
+[\,E_8 : mE_8\,] = m^8,
+$$
+so there are $m^8$ cosets. In a basis $B$, writing $\lambda=Bk$ with $k\in\mathbb{Z}^8$, the **coset label** is $k\bmod m\in\mathbb{Z}_m^8$ (Smith normal form reduces to $D=mI_8$ here). The **modulo map** $x\bmod mE_8$ yields a representative in the larger Voronoi cell $\mathcal{V}_{mE_8}$. The coset index carries $\log_2[ E_8:mE_8 ]=8\log_2 m$ bits per symbol.
+
+## Dual Lattice and Fourier View
+
+Since $E_8$ is unimodular and even, it is **self–dual**:
+$$
+E_8^* = E_8,\qquad \det(E_8)=1.
+$$
+Characters on the torus $\mathbb{R}^8/E_8$ are indexed by $E_8$ itself, and the **Poisson summation formula** for $E_8$ ties spatial geometry to spectra (useful for theta series and error analyses of quantizers/codes).
+
+## Comparisons and Context
+
+- **Versus $\mathbb{Z}^8$:** $\Delta(\mathbb{Z}^8)=\dfrac{\pi^4}{24}\left(\tfrac12\right)^8 = \dfrac{\pi^4}{6144}$, so $E_8$ is **16 times denser** in packing.
+
+- **Optimality:** The $E_8$ packing is **proven optimal** in 8D; among all packings, no configuration beats $\Delta(E_8)$.
+
+- **Shaping:** The Voronoi cell of $E_8$ has a smaller second moment than that of $\mathbb{Z}^8$, improving high–rate quantization performance.
+
+## Practical Notes (Decoding/Quantization)
+
+- **Babai rounding:** Compute coefficients $c=B^{-1}x$ in a well–reduced basis $B$ and round; refine with a local search over the $240$ nearest–neighbor directions if needed.
+
+- **Construction A arithmetic:** Using the Hamming–code view, implement modulo/labeling via parity checks (syndromes) over $\mathbb{F}_2$ and a final scaling by $1/\sqrt{2}$.
+
+- **Shaping via $mE_8$:** Encode via a coset of $mE_8$ and reduce modulo $mE_8$ to enforce bounded energy (nested–lattice coding).
+
+## Exercises (Paper–and–pencil)
+
+1. **Roots and kissing number.** Show that the $240$ minimal vectors are the permutations of $(\pm1,\pm1,0,0,0,0,0,0)$ and the $\tfrac12$–vectors with an even number of $+1/2$ (total $240$), and hence $\tau(E_8)=240$.
+
+2. **Packing density.** Verify $\Delta(E_8)=\pi^4/384$ from $r_{\mathrm{pack}}=1/\sqrt{2}$ and $\det(E_8)=1$.
+
+3. **Coset count.** Prove $[E_8:mE_8]=m^8$ and list the labels for $m=2$.
+
+4. **Self–duality.** Using a basis of simple roots $B$ with $B^\top B$ integral, show $E_8^*=E_8$ and that $E_8$ is even (norms are even integers).
+
+## Quick Reference (Numbers for $E_8$)
+
+- $\det(E_8)=1$ (unimodular), $E_8^*=E_8$ (self–dual), even lattice.
+
+- $d=\sqrt{2}$, $r_{\mathrm{pack}}=1/\sqrt{2}$, $\tau=240$.
+
+- $\Delta=\pi^4/384\approx 0.25367$ (optimal in 8D).
+
+- Nested pair: $mE_8\subset E_8$ with index $m^8$; coset labels in $\mathbb{Z}_m^8$.

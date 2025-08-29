@@ -10,9 +10,9 @@ import sys
 import os
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-from src.lattices.quantizers.hierarchical_nested_lattice_quantizer import HierarchicalNestedLatticeQuantizer
-from src.lattices.utils import closest_point_Dn
-from src.lattices.utils import get_d4, calculate_mse
+from src.quantizers.lattice.hnlq import HNLQ
+from src.quantizers.lattice.utils import closest_point_Dn
+from src.quantizers.lattice.utils import get_d4, calculate_mse
 
 
 def test_all_decoding_methods():
@@ -31,7 +31,7 @@ def test_all_decoding_methods():
     dither = np.zeros(4)
     
     # Create hierarchical quantizer
-    hq = HierarchicalNestedLatticeQuantizer(
+    hq = HNLQ(
         G=G,
         Q_nn=closest_point_Dn,
         q=q,
@@ -120,7 +120,7 @@ def test_progressive_decoding_levels():
     dither = np.zeros(4)
     
     # Create hierarchical quantizer
-    hq = HierarchicalNestedLatticeQuantizer(
+    hq = HNLQ(
         G=G,
         Q_nn=closest_point_Dn,
         q=q,
@@ -181,7 +181,7 @@ def test_custom_decode_implementation():
     dither = np.zeros(4)
     
     # Create hierarchical quantizer
-    hq = HierarchicalNestedLatticeQuantizer(
+    hq = HNLQ(
         G=G,
         Q_nn=closest_point_Dn,
         q=q,
@@ -249,7 +249,7 @@ def test_multiple_d4_points():
     dither = np.zeros(4)
     
     # Create hierarchical quantizer
-    hq = HierarchicalNestedLatticeQuantizer(
+    hq = HNLQ(
         G=G,
         Q_nn=closest_point_Dn,
         q=q,

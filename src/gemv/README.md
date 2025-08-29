@@ -338,7 +338,7 @@ The GEMV module integrates seamlessly with the existing LatticeQuant framework:
 ```python
 from src.gemv import LatticeQuantizedGEMV
 from src.adaptive import adaptive_matvec_multiply
-from src.quantizers import HierarchicalNestedLatticeQuantizer
+from src.quantizers.lattice import HNLQ
 
 # Use GEMV for general matrix-vector multiplication
 gemv_processor = LatticeQuantizedGEMV(matrix, 'auto', 'D4', 2)

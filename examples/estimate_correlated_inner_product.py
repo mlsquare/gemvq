@@ -1,11 +1,10 @@
 import matplotlib.pyplot as plt
 import numpy as np
 
-from src.lattices.utils import (closest_point_A2, closest_point_Dn,
+from src.quantizers.lattice.utils import (closest_point_A2, closest_point_Dn,
                                custom_round)
-from src.lattices.quantizers.hierarchical_nested_lattice_quantizer import \
-    HierarchicalNestedLatticeQuantizer as HQ
-from src.lattices.utils import *
+from src.quantizers.lattice.hnlq import HNLQ as HQ
+from src.quantizers.lattice.utils import *
 
 
 def generate_rho_correlated_samples(rho, num_samples, vector_dim):
@@ -57,7 +56,7 @@ def calculate_distortion(x_samples, y_samples, quantizer, lut=None, use_dithers=
         First set of sample vectors.
     y_samples : numpy.ndarray
         Second set of sample vectors (correlated with x_samples).
-    quantizer : HierarchicalNestedLatticeQuantizer
+    quantizer : HNLQ
         Quantizer object for encoding/decoding.
     lut : dict, optional
         Lookup table for inner product estimation.
