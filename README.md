@@ -52,11 +52,23 @@ GEMV-Q provides efficient implementations of:
 git clone <repository-url>
 cd gemvq
 
+# Install the package in development mode
+pip install -e .
+
 # Install dependencies
 pip install -r requirements.txt
 
 # For development
 pip install -r requirements-dev.txt
+```
+
+### Package Installation
+After installation, you can import the package directly:
+
+```python
+# Clean imports from the installed package
+from gemvq import NLQ, HNLQ, get_d4
+from gemvq.gemv.columnwise import ColumnwiseMatVecProcessor
 ```
 
 ## Quick Start
@@ -65,11 +77,11 @@ pip install -r requirements-dev.txt
 
 ```python
 import numpy as np
-from src.gemv.columnwise.columnwise_matvec_processor import ColumnwiseMatvecProcessor
+from gemvq.gemv.columnwise import ColumnwiseMatVecProcessor
 
 # Create a matrix and quantize it using D4 lattice
 matrix = np.random.uniform(0, 1, (100, 50)) * 256  # Scale by q^M
-processor = ColumnwiseMatvecProcessor(matrix, 'D4', M=3)
+processor = ColumnwiseMatVecProcessor(matrix, 'D4', M=3)
 
 # Perform matrix-vector multiplication with coarse-to-fine decoding
 vector = np.random.uniform(0, 1, 50) * 256
@@ -81,15 +93,13 @@ print(f"Matrix-vector multiplication result shape: {result.shape}")
 
 ```python
 # Using nested lattice quantizer (single-level)
-from src.quantizers.lattice.nlq import NLQ
-from src.quantizers.lattice.utils import get_d4
+from gemvq import NLQ, get_d4
 
 G = get_d4()
-nested_quantizer = NLQ(G=G, q=4, beta=0.2)
+nested_quantizer = NLQ(G=G, Q_nn=closest_point_Dn, q=4, beta=0.2, alpha=1/3, eps=1e-8, dither=np.zeros(4))
 
 # Using hierarchical nested lattice quantizer (multi-level)
-from src.quantizers.lattice.hnlq import HNLQ
-from src.quantizers.lattice.utils import closest_point_Dn
+from gemvq import HNLQ, closest_point_Dn
 
 hierarchical_quantizer = HNLQ(
     G=G, Q_nn=closest_point_Dn, q=4, beta=0.2,
@@ -110,12 +120,12 @@ for level in range(3):
 ### Adaptive Matrix-Vector Multiplication
 
 ```python
-from src.adaptive.adaptive_matvec import AdaptiveMatvecProcessor
-from src.quantizers.lattice.utils import get_d4
+from gemvq import get_d4
+from gemvq.gemv.adaptive_processor import AdaptiveProcessor
 
 # Create adaptive processor with D4 lattice
 G = get_d4()
-processor = AdaptiveMatvecProcessor(G=G, q=4, beta=0.2, M=3)
+processor = AdaptiveProcessor(G=G, q=4, beta=0.2, M=3)
 
 # Create matrix and vector
 matrix = np.random.uniform(0, 1, (100, 50)) * 256
@@ -130,56 +140,40 @@ print(f"Adaptive GEMV result shape: {result.shape}")
 
 ```
 gemvq/
-├── 📁 src/                          # Main source code
+├── 📁 gemvq/                        # Main package (installable)
 │   ├── 📁 quantizers/               # Quantization core
-│   │   ├── 📁 lattice/              # Lattice algorithms
-│   │   │   ├── hnlq.py              # Multi-level quantization
-│   │   │   ├── nlq.py               # Single-level quantization
-│   │   │   └── utils.py             # Lattice utilities (D4, A2, E8, etc.)
+│   │   ├── nlq.py                   # Single-level quantization
+│   │   ├── hnlq.py                  # Multi-level quantization
+│   │   ├── utils.py                 # Lattice utilities (D4, A2, E8, etc.)
+│   │   └── __init__.py
 │   │
-│   ├── 📁 gemv/                     # Matrix-vector multiplication with lattice quantizers
-│   │   ├── 📁 base/                 # Base classes and factory patterns
-│   │   │   ├── gemv_factory.py      # Factory for creating GEMV processors
-│   │   │   └── gemv_processor.py    # Base processor interface
-│   │   │
+│   ├── 📁 gemv/                     # Matrix-vector multiplication
 │   │   ├── 📁 columnwise/           # Column-wise GEMV implementations
-│   │   │   ├── columnwise_processor.py      # Column-wise processing logic
-│   │   │   ├── column_wise_gemv.py          # Column-wise GEMV implementation
 │   │   │   ├── columnwise_matvec_processor.py # Main column-wise processor
 │   │   │   ├── columnwise_matvec_factory.py  # Factory functions
+│   │   │   ├── columnwise_processor.py       # Column-wise processing logic
+│   │   │   ├── column_wise_gemv.py           # Column-wise GEMV implementation
 │   │   │   ├── simple_columnwise_matvec.py   # Simplified column-wise processor
 │   │   │   ├── standard_dot_processor.py     # Standard dot product
 │   │   │   └── __init__.py
 │   │   │
 │   │   ├── 📁 rowwise/              # Row-wise GEMV implementations
-│   │   │   ├── rowwise_processor.py         # Row-wise processing logic
-│   │   │   ├── row_wise_gemv.py             # Row-wise GEMV implementation
+│   │   │   ├── rowwise_processor.py          # Row-wise processing logic
+│   │   │   ├── row_wise_gemv.py              # Row-wise GEMV implementation
 │   │   │   └── __init__.py
 │   │   │
 │   │   ├── 📁 svd/                  # SVD-based GEMV
-│   │   │   ├── svd_gemv_processor.py        # SVD decomposition approach
+│   │   │   ├── svd_gemv_processor.py         # SVD decomposition approach
 │   │   │   └── __init__.py
 │   │   │
 │   │   ├── 📁 utils/                # GEMV utilities
 │   │   │   ├── padder.py            # Matrix padding utilities
-│   │   │   ├── lookup_table_processor.py    # Lookup table approach
+│   │   │   ├── lookup_table_processor.py     # Lookup table approach
 │   │   │   └── __init__.py
 │   │   │
-│   │   ├── 📁 demos/                # Demonstration scripts
-│   │   │   ├── demo_new_structure.py        # New structure demo
-│   │   │   ├── demo_columnwise_options_comprehensive.py # Comprehensive demo
-│   │   │   ├── demo_columnwise_matvec_options.py # Column-wise options demo
-│   │   │   └── columnwise_matvec_options.md # Documentation
-│   │   │
-│   │   ├── adaptive_processor.py            # Adaptive processing
-│   │   └── __init__.py
-│   │
-│   ├── 📁 adaptive/                 # Adaptive quantization
-│   │   ├── adaptive_matvec.py       # Adaptive matrix-vector multiplication
-│   │   ├── layer_wise_histogram_matvec.py   # Layer-wise histogram approach
-│   │   ├── demo_adaptive_matvec.py          # Adaptive GEMV demonstrations
-│   │   ├── demo_layer_wise_histogram.py     # Histogram demo
-│   │   ├── ada_matmul.md            # Adaptive approach documentation
+│   │   ├── gemv_processor.py        # Base processor interface
+│   │   ├── gemv_factory.py          # Factory for creating GEMV processors
+│   │   ├── adaptive_processor.py    # Adaptive processing
 │   │   └── __init__.py
 │   │
 │   └── __init__.py                  # Main package initialization
@@ -297,18 +291,22 @@ The library follows clean Python practices with minimal `__init__.py` files and 
 
 ### 📦 **Import Patterns**
 ```python
+# Clean, intuitive imports from the main package
+from gemvq import NLQ, HNLQ, get_d4, closest_point_Dn
+
 # Import specific modules directly
-from src.gemv.columnwise.columnwise_matvec_processor import ColumnwiseMatvecProcessor
-from src.gemv.rowwise.rowwise_processor import RowwiseGEMVProcessor
-from src.gemv.utils.padder import BlockingStrategy
-from src.quantizers.lattice.utils import get_d4, closest_point_Dn
-from src.quantizers.lattice.nlq import NLQ
-from src.quantizers.lattice.hnlq import HNLQ
-from src.adaptive.adaptive_matvec import AdaptiveMatvecProcessor
+from gemvq.gemv.columnwise import ColumnwiseMatVecProcessor
+from gemvq.gemv.rowwise import RowwiseGEMVProcessor
+from gemvq.gemv.svd import SVDGEMVProcessor
+from gemvq.gemv.utils import BlockingStrategy, LookupTableProcessor
+from gemvq.gemv.adaptive_processor import AdaptiveProcessor
+
+# Import quantizers directly
+from gemvq.quantizers import NLQ, HNLQ, get_d4, get_a2, get_e8
 
 # Run modules directly
-python -m src.gemv.columnwise.columnwise_matvec_processor
-python -m src.quantizers.lattice.utils
+python -m gemvq.gemv.columnwise.columnwise_matvec_processor
+python -m gemvq.quantizers.utils
 python -m tests.test_nested_lattice_quantizer
 ```
 
@@ -376,7 +374,7 @@ Comprehensive documentation is available in the `docs/` folder:
 - **Beta Selection**: Parameter optimization for HNLQ
 - **Improvements**: Recent enhancements and optimizations
 
-#### **Adaptive Approach** (`src/adaptive/ada_matmul.md`)
+#### **Adaptive Approach** (`docs/gemv/adaptive_matvec_approach.qmd`)
 - **Mathematical Framework**: Complete mathematical formulation of adaptive GEMV
 - **Column-wise Interpretation**: Matrix-vector multiplication as linear combination of columns
 - **Adaptive Quantization Strategy**: Dynamic bit rate allocation per column
