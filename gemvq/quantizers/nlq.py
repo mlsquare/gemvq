@@ -492,7 +492,7 @@ class NLQ:
     
     def __repr__(self) -> str:
         """String representation of the quantizer."""
-        return (f"NestedLatticeQuantizer(dim={self._dim}, q={self.q}, "
+        return (f"NLQ(dim={self._dim}, q={self.q}, "
                 f"beta={self.beta:.3f}, alpha={self.alpha:.3f}, "
                 f"overload={self.overload})")
     
@@ -502,7 +502,7 @@ class NLQ:
     
     @classmethod
     def create_z2_quantizer(cls, q: int, beta: float = 1.0, alpha: float = 1.0, 
-                           eps: float = 1e-8, overload: bool = True) -> 'NestedLatticeQuantizer':
+                           eps: float = 1e-8, overload: bool = True) -> 'NLQ':
         """
         Create a quantizer for the Z² lattice (identity matrix).
         
@@ -537,7 +537,7 @@ class NLQ:
     
     @classmethod
     def create_d4_quantizer(cls, q: int, beta: float = 1.0, alpha: float = 1.0,
-                           eps: float = 1e-8, overload: bool = True) -> 'NestedLatticeQuantizer':
+                           eps: float = 1e-8, overload: bool = True) -> 'NLQ':
         """
         Create a quantizer for the D₄ lattice.
         
@@ -563,13 +563,14 @@ class NLQ:
         
         G = get_d4()
         dither = np.zeros(4)
+        EPS  = eps*np.random.normal(0, 1, size=len(G))
         config = QuantizerConfig(q, beta, alpha, eps, overload)
         
         return cls(G, closest_point_Dn, q, beta, alpha, eps, dither, config=config)
     
     @classmethod
     def create_e8_quantizer(cls, q: int, beta: float = 1.0, alpha: float = 1.0,
-                           eps: float = 1e-8, overload: bool = True) -> 'NestedLatticeQuantizer':
+                           eps: float = 1e-8, overload: bool = True) -> 'NLQ':
         """
         Create a quantizer for the E₈ lattice.
         

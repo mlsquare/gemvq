@@ -19,7 +19,6 @@ __all__ = [
     "NLQ",
     "HNLQ", 
     "get_d4",
-    "get_a2",
     "get_e8",
     "closest_point_Dn"
 ]

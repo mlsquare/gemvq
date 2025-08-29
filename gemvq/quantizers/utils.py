@@ -366,8 +366,11 @@ def g_x(x):
     g_x_ = f_x.copy()
 
     # Ensure we're working with scalar values
-    x_k = x.flat[k] if hasattr(x, 'flat') else x[k]
-    f_x_k = f_x.flat[k] if hasattr(f_x, 'flat') else f_x[k]
+    #x_k = x.flat[k] if hasattr(x, 'flat') else x[k]
+    #f_x_k = f_x.flat[k] if hasattr(f_x, 'flat') else f_x[k]
+    
+    x_k = x[k]
+    f_x_k = f_x[k]
     
     if x_k >= 0:
         g_x_[k] = f_x_k + 1 if f_x_k < x_k else f_x_k - 1
@@ -375,7 +378,6 @@ def g_x(x):
         g_x_[k] = f_x_k + 1 if f_x_k <= x_k else f_x_k - 1
 
     return g_x_
-
 
 def closest_point_Dn(x):
     """
