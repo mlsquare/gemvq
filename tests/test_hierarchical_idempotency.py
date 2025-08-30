@@ -10,10 +10,9 @@ import numpy as np
 import sys
 import os
 
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-from src.quantizers.lattice.hnlq import HNLQ
-from src.quantizers.lattice.utils import closest_point_Dn, custom_round
-from src.quantizers.lattice.utils import get_d4, calculate_mse
+from gemvq.quantizers.hnlq import HNLQ, HNLQConfig
+from gemvq.quantizers.utils import closest_point_Dn, custom_round
+from gemvq.quantizers.utils import get_d4, calculate_mse
 
 
 def generate_d4_lattice_samples(G, num_samples=20, max_coeff=3, beta=1.0):
@@ -88,15 +87,12 @@ def test_idempotency_at_full_depth():
     dither = np.zeros(4)
     
     # Create hierarchical quantizer
+    config = HNLQConfig(q=q, beta=beta, alpha=alpha, eps=eps, M=M)
     hq = HNLQ(
         G=G,
         Q_nn=closest_point_Dn,
-        q=q,
-        beta=beta,
-        alpha=alpha,
-        eps=eps,
-        dither=dither,
-        M=M
+        config=config,
+        dither=dither
     )
     
     # Generate D4 lattice samples
@@ -147,15 +143,12 @@ def test_idempotency_at_different_depths():
     dither = np.zeros(4)
     
     # Create hierarchical quantizer
+    config = HNLQConfig(q=q, beta=beta, alpha=alpha, eps=eps, M=M)
     hq = HNLQ(
         G=G,
         Q_nn=closest_point_Dn,
-        q=q,
-        beta=beta,
-        alpha=alpha,
-        eps=eps,
-        dither=dither,
-        M=M
+        config=config,
+        dither=dither
     )
     
     # Generate a few D4 lattice samples
@@ -206,15 +199,12 @@ def test_progressive_idempotency():
     dither = np.zeros(4)
     
     # Create hierarchical quantizer
+    config = HNLQConfig(q=q, beta=beta, alpha=alpha, eps=eps, M=M)
     hq = HNLQ(
         G=G,
         Q_nn=closest_point_Dn,
-        q=q,
-        beta=beta,
-        alpha=alpha,
-        eps=eps,
-        dither=dither,
-        M=M
+        config=config,
+        dither=dither
     )
     
     # Generate a few D4 lattice samples
@@ -284,15 +274,12 @@ def test_idempotency_with_different_parameters():
         samples, sample_betas = generate_d4_lattice_samples(G, num_samples=3, beta=beta)
         
         # Create hierarchical quantizer
+        config = HNLQConfig(q=q, beta=beta, alpha=alpha, eps=eps, M=M)
         hq = HNLQ(
             G=G,
             Q_nn=closest_point_Dn,
-            q=q,
-            beta=beta,
-            alpha=alpha,
-            eps=eps,
-            dither=dither,
-            M=M
+            config=config,
+            dither=dither
         )
         
         all_mse = []
@@ -334,15 +321,12 @@ def test_idempotency_edge_cases():
     dither = np.zeros(4)
     
     # Create hierarchical quantizer
+    config = HNLQConfig(q=q, beta=beta, alpha=alpha, eps=eps, M=M)
     hq = HNLQ(
         G=G,
         Q_nn=closest_point_Dn,
-        q=q,
-        beta=beta,
-        alpha=alpha,
-        eps=eps,
-        dither=dither,
-        M=M
+        config=config,
+        dither=dither
     )
     
     # Test edge cases
@@ -401,15 +385,12 @@ def debug_beta_issue():
     dither = np.zeros(4)
     
     # Create hierarchical quantizer
+    config = HNLQConfig(q=q, beta=beta, alpha=alpha, eps=eps, M=M)
     hq = HNLQ(
         G=G,
         Q_nn=closest_point_Dn,
-        q=q,
-        beta=beta,
-        alpha=alpha,
-        eps=eps,
-        dither=dither,
-        M=M
+        config=config,
+        dither=dither
     )
     
     # Test a simple case

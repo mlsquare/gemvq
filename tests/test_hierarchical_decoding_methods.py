@@ -9,10 +9,8 @@ import numpy as np
 import sys
 import os
 
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-from src.quantizers.lattice.hnlq import HNLQ
-from src.quantizers.lattice.utils import closest_point_Dn
-from src.quantizers.lattice.utils import get_d4, calculate_mse
+from gemvq.quantizers.hnlq import HNLQ
+from gemvq.quantizers.utils import closest_point_Dn, get_d4, calculate_mse
 
 
 def test_all_decoding_methods():
@@ -28,18 +26,15 @@ def test_all_decoding_methods():
     beta = 1.0
     alpha = 1.0
     eps = 1e-8
-    dither = np.zeros(4)
     
     # Create hierarchical quantizer
+    from gemvq.quantizers.hnlq import HNLQConfig
+    config = HNLQConfig(q=q, beta=beta, alpha=alpha, eps=eps, M=M)
     hq = HNLQ(
         G=G,
         Q_nn=closest_point_Dn,
-        q=q,
-        beta=beta,
-        alpha=alpha,
-        eps=eps,
-        dither=dither,
-        M=M
+        config=config,
+        dither=np.zeros(4)
     )
     
     # Test with a simple D4 lattice point
@@ -66,7 +61,7 @@ def test_all_decoding_methods():
     
     # Method 2: decode_coarse_to_fine at full depth
     try:
-        reconstructed_coarse_full = hq.decode_coarse_to_fine(b_list, T, with_dither=False, max_level=M-1)
+        reconstructed_coarse_full = hq.decode_coarse_to_fine(b_list, T, with_dither=False, depth=M-1)
         mse_coarse_full = calculate_mse(test_point, reconstructed_coarse_full)
         print(f"2. decode_coarse_to_fine (full): MSE = {mse_coarse_full:.6f}")
         print(f"   Reconstructed: {reconstructed_coarse_full}")
@@ -117,18 +112,15 @@ def test_progressive_decoding_levels():
     beta = 1.0
     alpha = 1.0
     eps = 1e-8
-    dither = np.zeros(4)
     
     # Create hierarchical quantizer
+    from gemvq.quantizers.hnlq import HNLQConfig
+    config = HNLQConfig(q=q, beta=beta, alpha=alpha, eps=eps, M=M)
     hq = HNLQ(
         G=G,
         Q_nn=closest_point_Dn,
-        q=q,
-        beta=beta,
-        alpha=alpha,
-        eps=eps,
-        dither=dither,
-        M=M
+        config=config,
+        dither=np.zeros(4)
     )
     
     # Test with a simple D4 lattice point
@@ -178,18 +170,15 @@ def test_custom_decode_implementation():
     beta = 1.0
     alpha = 1.0
     eps = 1e-8
-    dither = np.zeros(4)
     
     # Create hierarchical quantizer
+    from gemvq.quantizers.hnlq import HNLQConfig
+    config = HNLQConfig(q=q, beta=beta, alpha=alpha, eps=eps, M=M)
     hq = HNLQ(
         G=G,
         Q_nn=closest_point_Dn,
-        q=q,
-        beta=beta,
-        alpha=alpha,
-        eps=eps,
-        dither=dither,
-        M=M
+        config=config,
+        dither=np.zeros(4)
     )
     
     # Test with a simple D4 lattice point
@@ -246,18 +235,15 @@ def test_multiple_d4_points():
     beta = 1.0
     alpha = 1.0
     eps = 1e-8
-    dither = np.zeros(4)
     
     # Create hierarchical quantizer
+    from gemvq.quantizers.hnlq import HNLQConfig
+    config = HNLQConfig(q=q, beta=beta, alpha=alpha, eps=eps, M=M)
     hq = HNLQ(
         G=G,
         Q_nn=closest_point_Dn,
-        q=q,
-        beta=beta,
-        alpha=alpha,
-        eps=eps,
-        dither=dither,
-        M=M
+        config=config,
+        dither=np.zeros(4)
     )
     
     # Generate D4 lattice points
@@ -285,7 +271,7 @@ def test_multiple_d4_points():
             mse_regular = calculate_mse(point, regular_recon)
             
             # Coarse-to-fine full depth
-            coarse_recon = hq.decode_coarse_to_fine(b_list, T, with_dither=False, max_level=M-1)
+            coarse_recon = hq.decode_coarse_to_fine(b_list, T, with_dither=False, depth=M-1)
             mse_coarse = calculate_mse(point, coarse_recon)
             
             # Progressive finest level

@@ -33,6 +33,10 @@ class HNLQConfig:
         Default decoding method ('full', 'coarse_to_fine', 'progressive').
     max_scaling_iterations : int
         Maximum number of scaling iterations to prevent infinite loops.
+    with_tie_dither : bool
+        Whether to add dither to the input for tie breaking.
+    with_dither : bool
+        Whether to add dither to the input for randomized quantization.
     """
     q: int
     beta: float
@@ -42,6 +46,8 @@ class HNLQConfig:
     overload: bool = True
     decoding: str = "full"
     max_scaling_iterations: int = 10
+    with_tie_dither: bool = True
+    with_dither: bool = False
     
     def __post_init__(self):
         """Validate parameters after initialization."""
@@ -57,6 +63,10 @@ class HNLQConfig:
             raise ValueError("max_scaling_iterations must be positive")
         if self.decoding not in ["full", "coarse_to_fine", "progressive"]:
             raise ValueError(f"Unknown decoding method: {self.decoding}")
+        if not isinstance(self.with_tie_dither, bool):
+            raise ValueError("with_tie_dither must be a Boolean")
+        if not isinstance(self.with_dither, bool):
+            raise ValueError("with_dither must be a Boolean")
     
     @classmethod
     def from_dict(cls, config_dict: Dict[str, Any]) -> 'HNLQConfig':
@@ -73,7 +83,9 @@ class HNLQConfig:
             'M': self.M,
             'overload': self.overload,
             'decoding': self.decoding,
-            'max_scaling_iterations': self.max_scaling_iterations
+            'max_scaling_iterations': self.max_scaling_iterations,
+            'with_tie_dither': self.with_tie_dither,
+            'with_dither': self.with_dither
         }
 
 
@@ -132,12 +144,19 @@ class HNLQ:
             config = HNLQConfig.from_dict(config)
         
         self.G = G
-        # Handle eps as either scalar or vector for backward compatibility
-        if np.isscalar(config.eps):
-            self.Q_nn = lambda x: Q_nn(x + config.eps)
-        else:
-            self.Q_nn = lambda x: Q_nn(x + config.eps)
         self.config = config
+        
+        # Handle tie dither for breaking ties in lattice quantization
+        if self.config.with_tie_dither:
+            from .utils import generate_tie_dither
+            self._original_eps = generate_tie_dither(G.shape[0])
+        else:
+            self._original_eps = config.eps
+            
+        # Set up Q_nn with appropriate tie dither
+        
+        self.Q_nn = lambda x: Q_nn(x + self._original_eps)
+
         self.dither = dither
         self.G_inv = np.linalg.inv(G)
         
@@ -199,6 +218,16 @@ class HNLQ:
     def decoding(self) -> str:
         """Get default decoding method."""
         return self.config.decoding
+    
+    @property
+    def with_tie_dither(self) -> bool:
+        """Get tie dither flag."""
+        return self.config.with_tie_dither
+    
+    @property
+    def with_dither(self) -> bool:
+        """Get dither flag."""
+        return self.config.with_dither
 
     # ============================================================================
     # Encoding Methods
@@ -350,7 +379,7 @@ class HNLQ:
         b_list: Tuple[np.ndarray, ...], 
         T: int, 
         with_dither: bool, 
-        max_level: Optional[int] = None
+        depth: Optional[int] = None
     ) -> np.ndarray:
         """
         Decode hierarchical encoding vectors with coarse-to-fine reconstruction.
@@ -367,32 +396,33 @@ class HNLQ:
             Number of scaling operations that were applied during encoding.
         with_dither : bool
             Whether dithering was applied during encoding.
-        max_level : int, optional
-            Maximum level to decode up to (0 <= max_level < M).
+        depth : int, optional
+            Maximum level to decode up to (M >= depth >= 1).
             If None, decodes all levels (equivalent to decode method).
-            Higher max_level means coarser reconstruction.
+            Higher depth means more detailed reconstruction.
 
         Returns:
         --------
         numpy.ndarray
             Reconstructed vector at the specified level of detail.
         """
-        if max_level is None:
+        if depth is None:
             # Default behavior: decode all levels
             return self.decode(b_list, T, with_dither)
 
-        if not (0 <= max_level < self.M):
-            raise ValueError(f"max_level must be between 0 and {self.M-1}, got {max_level}")
+        if not (0 <= depth < self.M):
+            raise ValueError(f"depth must be between 1 and {self.M}, got {depth}")
 
         # Use the same reconstruction formula as _decode method for consistency
         x_hat_list = []
-        for i in range(max_level + 1):
+        for i in range(self.M):
             b = b_list[i]
             # Use q_Q to properly handle quantization error (same as _decode)
             x_i_hat = np.dot(self.G, b) - self.q_Q(np.dot(self.G, b))
             x_hat_list.append(x_i_hat)
         
-        x_hat = sum([np.power(self.q, i) * x_i for i, x_i in enumerate(x_hat_list)])
+        # Sum backwards based on depth: M-1, M-2, ..., M-depth
+        x_hat = sum([np.power(self.q, i) * x_hat_list[i] for i in range(self.M - depth, self.M)])
         
         if with_dither:
             x_hat = x_hat - self.dither
@@ -436,7 +466,7 @@ class HNLQ:
         b_list: Tuple[np.ndarray, ...], 
         T: int, 
         with_dither: bool, 
-        max_level: Optional[int] = None
+        depth: Optional[int] = None
     ) -> Union[np.ndarray, List[np.ndarray]]:
         """
         Get the default decoding based on the decoding parameter.
@@ -449,7 +479,7 @@ class HNLQ:
             Number of scaling operations that were applied during encoding.
         with_dither : bool
             Whether dithering was applied during encoding.
-        max_level : int, optional
+        depth : int, optional
             Maximum level for coarse-to-fine decoding.
 
         Returns:
@@ -460,7 +490,7 @@ class HNLQ:
         if self.decoding == "full":
             return self.decode(b_list, T, with_dither)
         elif self.decoding == "coarse_to_fine":
-            return self.decode_coarse_to_fine(b_list, T, with_dither, max_level)
+            return self.decode_coarse_to_fine(b_list, T, with_dither, depth=depth)
         elif self.decoding == "progressive":
             return self.decode_progressive(b_list, T, with_dither)
         else:
@@ -495,7 +525,7 @@ class HNLQ:
         if depth < 0 or depth >= self.M:
             raise ValueError(f"Depth must be between 0 and {self.M-1}, got {depth}")
 
-        return self.decode_coarse_to_fine(b_list, T, with_dither, max_level=depth)
+        return self.decode_coarse_to_fine(b_list, T, with_dither, depth)
 
     # ============================================================================
     # Combined Methods
@@ -597,5 +627,7 @@ class HNLQ:
             'alpha': self.alpha,
             'overload': self.overload,
             'decoding': self.decoding,
-            'max_scaling_iterations': self.config.max_scaling_iterations
+            'max_scaling_iterations': self.config.max_scaling_iterations,
+            'with_tie_dither': self.with_tie_dither,
+            'with_dither': self.with_dither
         }

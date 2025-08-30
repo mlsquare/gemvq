@@ -10,15 +10,12 @@ import numpy as np
 import sys
 import os
 
-# Add the src directory to the path so we can import our modules
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
-
-from src.adaptive.layer_wise_histogram_matvec import (
+from gemvq.gemv.utils.lookup_table_processor import (
     LayerWiseHistogramMatVec, 
     create_example_from_paper,
     run_paper_example
 )
-from src.quantizers.lattice.hnlq import HNLQ
+from gemvq.quantizers.hnlq import HNLQ, HNLQConfig
 
 
 def test_paper_example():
@@ -75,9 +72,9 @@ def test_simple_example():
     def Q_nn(x):
         return np.round(x)
     
+    config = HNLQConfig(q=q, beta=1.0, alpha=1.0, eps=1e-8, M=M)
     quantizer = HNLQ(
-        G=G, Q_nn=Q_nn, q=q, beta=1.0, alpha=1.0, 
-        eps=1e-8, dither=np.zeros(n), M=M
+        G=G, Q_nn=Q_nn, config=config, dither=np.zeros(n)
     )
     
     # Create matvec object
