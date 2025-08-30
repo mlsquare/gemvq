@@ -96,7 +96,7 @@ print(f"Matrix-vector multiplication result shape: {result.shape}")
 from gemvq import NLQ, get_d4
 
 G = get_d4()
-nested_quantizer = NLQ(G=G, Q_nn=closest_point_Dn, q=4, beta=0.2, alpha=1/3, eps=1e-8, dither=np.zeros(4))
+nested_quantizer = NLQ(G=G, Q_nn=closest_point_Dn, q=4, beta=0.2, alpha=1/3, eps=1e-8)
 
 # Using hierarchical nested lattice quantizer (multi-level)
 from gemvq import HNLQ, closest_point_Dn

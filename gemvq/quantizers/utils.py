@@ -301,6 +301,29 @@ def calculate_weighted_sum(a_list, b_list, lut, q):
 
     return total_sum
 
+# lattice agnostic dither (for breaking ties. not to be confused with the subtractive dither)
+
+def generate_tie_dither(d, beta=1.0, Rin=0.5, magnitude='auto'):
+    # a constant, sample independent dither, to break ties
+    
+    # direction with irrational components -> avoids alignment with faces
+    irr = np.array([np.sqrt(p) for p in [2,3,5,7,11,13,17,19][:d]])
+    u = (irr - np.floor(irr)) - 0.5
+    u /= np.linalg.norm(u)
+
+    if magnitude == 'auto':
+        # very small relative to scale & lattice packing radius
+        eta = 2.0**-40   # use 2**-20 if float32 end-to-end
+        delta = eta * beta * Rin
+    else:
+        delta = float(magnitude)
+
+    return delta * u  # add to x before Q_L(x)
+
+# usage:
+# eps = fixed_tie_dither(d=4, beta=beta, Rin=1/np.sqrt(2))  # e.g., for D4
+# z = Q_L(x + eps)  # your lattice nearest-point algorithm
+
 
 # Closest Point Algorithms
 

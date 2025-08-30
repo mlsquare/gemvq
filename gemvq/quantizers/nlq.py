@@ -2,6 +2,8 @@ import numpy as np
 from typing import Tuple, Optional, Callable, Dict, Any, List
 import warnings
 from dataclasses import dataclass
+from .utils import generate_tie_dither
+
 
 
 @dataclass
@@ -26,6 +28,10 @@ class QuantizerConfig:
         Whether to handle overload by scaling.
     max_scaling_iterations : int
         Maximum number of scaling iterations.
+    with_tie_dither : Boolean
+        Whether to add dither to the input for tie breaking.
+    with_dither : Boolean
+        Whether to add dither to the input for randomized quantization.
     """
     q: int
     beta: float
@@ -33,6 +39,8 @@ class QuantizerConfig:
     eps: float
     overload: bool = True
     max_scaling_iterations: int = 10
+    with_tie_dither: bool = True
+    with_dither: bool = False
     
     def __post_init__(self):
         """Validate parameters after initialization."""
@@ -44,6 +52,11 @@ class QuantizerConfig:
             raise ValueError("Scaling parameter alpha must be positive")
         if self.max_scaling_iterations <= 0:
             raise ValueError("max_scaling_iterations must be positive")
+        if not isinstance(self.with_tie_dither, bool):
+            raise ValueError("with_tie_dither must be a Boolean")
+        if not isinstance(self.with_dither, bool):
+            raise ValueError("with_dither must be a Boolean")
+        
     
     @classmethod
     def from_dict(cls, config_dict: Dict[str, Any]) -> 'QuantizerConfig':
@@ -58,7 +71,9 @@ class QuantizerConfig:
             'alpha': self.alpha,
             'eps': self.eps,
             'overload': self.overload,
-            'max_scaling_iterations': self.max_scaling_iterations
+            'max_scaling_iterations': self.max_scaling_iterations,
+            'with_tie_dither': self.with_tie_dither,
+            'with_dither': self.with_dither
         }
 
 
@@ -84,9 +99,11 @@ class NLQ:
     alpha : float
         Scaling parameter for overload handling.
     eps : float
-        Small perturbation parameter added to input before quantization.
-    dither : numpy.ndarray
-        Dither vector for randomized quantization.
+        Small perturbation parameter added to input before quantization for tie breaking.
+    with_tie_dither : Boolean
+        Whether to add dither to the input for tie breaking.
+    with_dither : Boolean or None
+        Dither vector for randomized quantization. Generated on-demand when with_dither=True.
     overload : bool
         Whether to handle overload by scaling the input vector.
     G_inv : numpy.ndarray
@@ -98,10 +115,12 @@ class NLQ:
     ------
     The quantizer works by:
     1. Scaling the input by beta
-    2. Adding dither if specified
+    2. Adding dither if with_dither=True (otherwise adds zeros)
     3. Finding the closest lattice point using Q_nn
     4. Encoding the result modulo q
     5. If overload occurs and overload=True, scale the input and repeat
+    
+    Dither is generated on-demand when with_dither=True and can be reset using reset_dither().
     
     References:
     -----------
@@ -117,8 +136,9 @@ class NLQ:
         q: int, 
         beta: float, 
         alpha: float, 
-        eps: float, 
-        dither: np.ndarray, 
+        eps: float,
+        with_tie_dither: bool = True,
+        with_dither: bool = False,
         M: Optional[int] = None, 
         overload: bool = True,
         max_scaling_iterations: int = 10,
@@ -140,9 +160,11 @@ class NLQ:
         alpha : float
             Scaling parameter for overload handling.
         eps : float
-            Small perturbation parameter.
-        dither : numpy.ndarray
-            Dither vector for randomized quantization.
+            Small perturbation parameter for breaking ties in the lattice.
+        with_tie_dither : Boolean
+            Whether to add dither to the input for tie breaking.
+        with_dither : Boolean
+            Whether to add dither to the input for randomized quantization.
         M : int, optional
             Number of hierarchical levels (unused in this implementation).
         overload : bool, optional
@@ -160,8 +182,6 @@ class NLQ:
         """
         if G.shape[0] != G.shape[1]:
             raise ValueError("Generator matrix G must be square")
-        if dither.shape[0] != G.shape[0]:
-            raise ValueError("Dither vector dimension must match lattice dimension")
         
         # Use config if provided, otherwise use individual parameters
         if config is not None:
@@ -172,25 +192,32 @@ class NLQ:
             self.eps = config.eps
             self.overload = config.overload
             self.max_scaling_iterations = config.max_scaling_iterations
+            self.with_tie_dither = config.with_tie_dither
+            self.with_dither = config.with_dither
         else:
-            self.config = QuantizerConfig(q, beta, alpha, eps, overload, max_scaling_iterations)
+            self.config = QuantizerConfig(q, beta, alpha, eps, overload, max_scaling_iterations, with_tie_dither, with_dither)
             self.q = q
             self.beta = beta
             self.alpha = alpha
             self.eps = eps
             self.overload = overload
             self.max_scaling_iterations = max_scaling_iterations
+            self.with_tie_dither = with_tie_dither
+            self.with_dither = with_dither
+            
+        if self.with_tie_dither:
+            self._original_eps = generate_tie_dither(G.shape[0])
+        else:
+            self._original_eps = eps
             
         # Store original eps for backward compatibility
-        self._original_eps = eps
-            
         self.G = G
-        # Handle eps as either scalar or vector for backward compatibility
-        if np.isscalar(self._original_eps):
-            self.Q_nn = lambda x: Q_nn(x + self._original_eps)
-        else:
-            self.Q_nn = lambda x: Q_nn(x + self._original_eps)
-        self.dither = dither
+        self.Q_nn = lambda x: Q_nn(x + self._original_eps)
+        
+        # Initialize dither as None - will be generated on demand when with_dither=True
+        # At this time, this feature is not supported.
+        self.dither = np.zeros(self.G.shape[0])
+        
         self.G_inv = np.linalg.inv(G)
         
         # Precompute some values for efficiency
@@ -218,8 +245,9 @@ class NLQ:
         x = np.asarray(x, dtype=np.float64)
         
         x_tag = (x / self.beta)
-        if with_dither:
+        if with_dither:    
             x_tag = x_tag + self.dither
+        
         t = self.Q_nn(x_tag)
         y = np.dot(self.G_inv, t)
         enc = np.mod(np.round(y), self.q).astype(int)
@@ -294,10 +322,11 @@ class NLQ:
         """
         # Ensure input is a numpy array
         y = np.asarray(y, dtype=np.float64)
-        
         x_p = np.dot(self.G, y)
-        if with_dither:
+        
+        if with_dither: 
             x_p = x_p - self.dither
+        
         x_pp = self.q * self.Q_nn(x_p / self.q)
         return self.beta * (x_p - x_pp)
 
@@ -502,7 +531,8 @@ class NLQ:
     
     @classmethod
     def create_z2_quantizer(cls, q: int, beta: float = 1.0, alpha: float = 1.0, 
-                           eps: float = 1e-8, overload: bool = True) -> 'NLQ':
+                           eps: float = 1e-8, overload: bool = True, 
+                           with_tie_dither: bool = True, with_dither: bool = False) -> 'NLQ':
         """
         Create a quantizer for the Z² lattice (identity matrix).
         
@@ -530,14 +560,15 @@ class NLQ:
             return np.floor(x + 0.5)
         
         G = get_z2()
-        dither = np.zeros(2)
-        config = QuantizerConfig(q, beta, alpha, eps, overload)
+
+        config = QuantizerConfig(q, beta, alpha, eps, overload, 10, with_tie_dither, with_dither)
         
-        return cls(G, closest_point_zn, q, beta, alpha, eps, dither, config=config)
+        return cls(G, closest_point_zn, q, beta, alpha, eps, with_tie_dither=with_tie_dither, with_dither=with_dither, config=config)
     
     @classmethod
     def create_d4_quantizer(cls, q: int, beta: float = 1.0, alpha: float = 1.0,
-                           eps: float = 1e-8, overload: bool = True) -> 'NLQ':
+                           eps: float = 1e-8, overload: bool = True,
+                           with_tie_dither: bool = True, with_dither: bool = False) -> 'NLQ':
         """
         Create a quantizer for the D₄ lattice.
         
@@ -562,15 +593,14 @@ class NLQ:
         from .utils import get_d4, closest_point_Dn
         
         G = get_d4()
-        dither = np.zeros(4)
-        EPS  = eps*np.random.normal(0, 1, size=len(G))
-        config = QuantizerConfig(q, beta, alpha, eps, overload)
+        config = QuantizerConfig(q, beta, alpha, eps, overload, 10, with_tie_dither, with_dither)
         
-        return cls(G, closest_point_Dn, q, beta, alpha, eps, dither, config=config)
+        return cls(G, closest_point_Dn, q, beta, alpha, eps, with_tie_dither=with_tie_dither, with_dither=with_dither, config=config)
     
     @classmethod
     def create_e8_quantizer(cls, q: int, beta: float = 1.0, alpha: float = 1.0,
-                           eps: float = 1e-8, overload: bool = True) -> 'NLQ':
+                           eps: float = 1e-8, overload: bool = True,
+                           with_tie_dither: bool = True, with_dither: bool = False) -> 'NLQ':
         """
         Create a quantizer for the E₈ lattice.
         
@@ -595,10 +625,9 @@ class NLQ:
         from .utils import get_e8, closest_point_E8
         
         G = get_e8()
-        dither = np.zeros(8)
-        config = QuantizerConfig(q, beta, alpha, eps, overload)
+        config = QuantizerConfig(q, beta, alpha, eps, overload, 10, with_tie_dither, with_dither)
         
-        return cls(G, closest_point_E8, q, beta, alpha, eps, dither, config=config)
+        return cls(G, closest_point_E8, q, beta, alpha, eps, with_tie_dither=with_tie_dither, with_dither=with_dither, config=config)
     
     def get_config(self) -> QuantizerConfig:
         """

@@ -5,10 +5,10 @@ import os
 from itertools import product
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-from src.quantizers.lattice.nlq import NLQ as NQ
-from src.quantizers.lattice.hnlq import HNLQ as HQ
-from src.quantizers.lattice.utils import closest_point_Dn, closest_point_E8, closest_point_A2, custom_round
-from src.quantizers.lattice.utils import *
+from gemvq.quantizers.nlq import NLQ as NQ
+from gemvq.quantizers.hnlq import HNLQ as HQ
+from gemvq.quantizers.utils import closest_point_Dn, closest_point_E8, closest_point_A2, custom_round
+from gemvq.quantizers.utils import *
 
 def closest_point_Zn(x):
     return np.floor(x + 0.5)
@@ -18,7 +18,7 @@ class TestQuantizer(unittest.TestCase):
     def test_Z2_lattice(self):
         """Test the Quantizer on Z² lattice (identity matrix)."""
         G = np.eye(2)
-        quantizer = NQ(G, closest_point_Zn, beta=1, q=4, alpha=1, eps=np.zeros(2), dither=np.zeros(2))
+        quantizer = NQ(G, closest_point_Zn, beta=1, q=4, alpha=1, eps=np.zeros(2))
 
         x = np.array([3.6, 3.3])
         encoded, _ = quantizer._encode(x, with_dither=False)
@@ -28,7 +28,7 @@ class TestQuantizer(unittest.TestCase):
 
     def test_Z2_with_beta(self):
         G = get_z2()
-        quantizer = NQ(G, closest_point_Zn, beta=0.5, q=20, alpha=1, eps=np.zeros(2), dither=np.zeros(2))
+        quantizer = NQ(G, closest_point_Zn, beta=0.5, q=20, alpha=1, eps=np.zeros(2))
 
         x = np.array([3.6, 3.2])
         encoded, _ = quantizer._encode(x, with_dither=False)
@@ -38,7 +38,7 @@ class TestQuantizer(unittest.TestCase):
 
     def test_z2_fundamental_cell(self):
         G = get_z2()
-        quantizer = NQ(G, closest_point_Zn, beta=1, q=3, alpha=1, eps=np.zeros(2), dither=np.zeros(2))
+        quantizer = NQ(G, closest_point_Zn, beta=1, q=3, alpha=1, eps=np.zeros(2))
 
         x = np.array([2,0])
         encoded, _ = quantizer._encode(x, with_dither=False)
@@ -49,7 +49,7 @@ class TestQuantizer(unittest.TestCase):
     def test_D3_lattice(self):
         """Test the Quantizer on D₃ lattice."""
         G = get_d3()
-        quantizer = NQ(G, closest_point_Dn, beta=1, q=4, alpha=1, eps=np.zeros(3), dither=np.zeros(3))
+        quantizer = NQ(G, closest_point_Dn, beta=1, q=4, alpha=1, eps=np.zeros(3))
 
         x = np.array([1.5, 2.3, -1.8])
         np.testing.assert_almost_equal(closest_point_Dn(x), [2, 2, -2], decimal=5, err_msg="D₃ closest point failed")
@@ -61,7 +61,7 @@ class TestQuantizer(unittest.TestCase):
 
     def test_D4_lattice(self):
         G = get_d4()
-        quantizer = NQ(G, closest_point_Dn, beta=1, q=4, alpha=1, eps=np.zeros(4), dither=np.zeros(4))
+        quantizer = NQ(G, closest_point_Dn, beta=1, q=4, alpha=1, eps=np.zeros(4))
         x = np.array([0.6, -1.1, 1.7, 0.1])
         expected = np.array([1, -1, 2, 0])
 
@@ -72,7 +72,7 @@ class TestQuantizer(unittest.TestCase):
     def test_E8_lattice(self):
         """Test the Quantizer on E₈ lattice."""
         G = get_e8()
-        quantizer = NQ(G, closest_point_E8, beta=1, q=4, alpha=1, eps=np.zeros(8), dither=np.zeros(8))
+        quantizer = NQ(G, closest_point_E8, beta=1, q=4, alpha=1, eps=np.zeros(8))
 
         x = np.array([1.5, 2.3, -1.8, 1.1, 0.9, -0.5, 1.2, -0.7])
         encoded, _ = quantizer._encode(x, with_dither=False)
@@ -83,7 +83,7 @@ class TestQuantizer(unittest.TestCase):
     def test_has_all_cosets(self):
         G = get_d2()
         q = 4
-        quantizer = NQ(G, closest_point_Dn, q=q,  beta=1, alpha=1, eps=np.zeros(2), dither=np.zeros(2))
+        quantizer = NQ(G, closest_point_Dn, q=q,  beta=1, alpha=1, eps=np.zeros(2))
         points = []
         for i in range(q):
             for j in range(q):
@@ -96,7 +96,7 @@ class TestQuantizer(unittest.TestCase):
 
     def test_codebook(self):
         q = 4
-        quantizer = NQ(get_d2(), closest_point_Dn, q=q, beta=1, alpha=1, eps=np.zeros(2), dither=np.zeros(2))
+        quantizer = NQ(get_d2(), closest_point_Dn, q=q, beta=1, alpha=1, eps=np.zeros(2))
         codebook = quantizer.create_codebook(with_dither=False)
 
         assert len(codebook) == q ** 2, "Wrong codebook size for 2D lattice."
@@ -104,7 +104,7 @@ class TestQuantizer(unittest.TestCase):
         lattice_points = np.array(list(codebook.values()))
         assert len(np.unique(lattice_points, axis=0)) == q ** 2, "Lattice points are not unique for 2D lattice."
 
-        quantizer = NQ(get_d3(), closest_point_Dn, q=q, beta=1, alpha=1, eps=np.zeros(3), dither=np.zeros(3))
+        quantizer = NQ(get_d3(), closest_point_Dn, q=q, beta=1, alpha=1, eps=np.zeros(3))
         codebook = quantizer.create_codebook(with_dither=False)
 
         assert len(codebook) == q ** 3, "Wrong codebook size for 3D lattice."
@@ -118,7 +118,7 @@ class TestQuantizer(unittest.TestCase):
         G = np.eye(d)
         beta = d / (d + 2)
         x = np.array([20.3, 20.4])
-        quantizer = NQ(G, custom_round, q, beta, alpha=1, eps=np.zeros(2), dither=np.zeros(2))
+        quantizer = NQ(G, custom_round, q, beta, alpha=1, eps=np.zeros(2))
         enc, i_0 = quantizer.encode(x, with_dither=False)
         np.testing.assert_equal(i_0, 5, err_msg="Overload mechanism did not calculate i_0 correctly")
 
@@ -174,7 +174,7 @@ class TestHQuantizer(unittest.TestCase):
     def test_D2_h_dec(self):
         G = get_d2()
         quantizer = HQ(G, closest_point_Dn, q=5, beta=1, M=2, alpha=1, eps=np.zeros(2), dither=np.zeros(2))
-        n_quantizer = NQ(G, closest_point_Dn, q=5, beta=1, alpha=1, eps=np.zeros(2), dither=np.zeros(2))
+        n_quantizer = NQ(G, closest_point_Dn, q=5, beta=1, alpha=1, eps=np.zeros(2))
 
         x = np.array([10.8, 20.3])
         b_list, i_0 = quantizer.encode(x, with_dither=False)
