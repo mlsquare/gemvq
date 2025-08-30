@@ -85,7 +85,7 @@ processor = ColumnwiseMatVecProcessor(matrix, 'D4', M=3)
 
 # Perform matrix-vector multiplication with coarse-to-fine decoding
 vector = np.random.uniform(0, 1, 50) * 256
-result = processor.multiply_coarse_to_fine(vector, max_level=1)  # Use 2 levels
+result = processor.multiply_coarse_to_fine(vector, max_level=0)  # Use 1 level
 print(f"Matrix-vector multiplication result shape: {result.shape}")
 ```
 

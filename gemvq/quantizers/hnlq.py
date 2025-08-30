@@ -335,8 +335,9 @@ class HNLQ:
         """
         x_hat_list = []
         for b in b_list:
-            # Use q_Q to properly handle quantization error
-            x_i_hat = np.dot(self.G, b) - self.q_Q(np.dot(self.G, b))
+            # Compute quantization error directly
+            Gb = np.dot(self.G, b)
+            x_i_hat = Gb - self.q * self.Q_nn(Gb / self.q)
             x_hat_list.append(x_i_hat)
         
         x_hat = sum([np.power(self.q, i) * x_i for i, x_i in enumerate(x_hat_list)])
@@ -417,8 +418,9 @@ class HNLQ:
         x_hat_list = []
         for i in range(self.M):
             b = b_list[i]
-            # Use q_Q to properly handle quantization error (same as _decode)
-            x_i_hat = np.dot(self.G, b) - self.q_Q(np.dot(self.G, b))
+            # Compute quantization error directly (same as _decode)
+            Gb = np.dot(self.G, b)
+            x_i_hat = Gb - self.q * self.Q_nn(Gb / self.q)
             x_hat_list.append(x_i_hat)
         
         # Sum backwards based on depth: M-1, M-2, ..., M-depth
@@ -557,21 +559,7 @@ class HNLQ:
     # Utility Methods
     # ============================================================================
 
-    def q_Q(self, x: np.ndarray) -> np.ndarray:
-        """
-        Quantization function that maps x to the nearest lattice point.
 
-        Parameters:
-        -----------
-        x : numpy.ndarray
-            Input vector.
-
-        Returns:
-        --------
-        numpy.ndarray
-            Quantized vector.
-        """
-        return self.q * self.Q_nn(x / self.q)
 
     def create_q_codebook(self, with_dither: bool) -> Dict[Tuple[int, ...], np.ndarray]:
         """

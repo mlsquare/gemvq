@@ -271,7 +271,7 @@ x_reconstructed = hnlq.decode(b_list, T, with_dither=True)
 progressive_results = hnlq.decode_progressive(b_list, T, with_dither=True)
 
 # Coarse-to-fine decoding
-x_coarse = hnlq.decode_coarse_to_fine(b_list, T, with_dither=True, max_level=1)
+x_coarse = hnlq.decode_coarse_to_fine(b_list, T, with_dither=True, max_level=0)
 
 # Get configuration info
 info = hnlq.get_rate_distortion_info()

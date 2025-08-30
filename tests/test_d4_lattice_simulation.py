@@ -9,9 +9,9 @@ This serves as a validation test for the hierarchical quantizer implementation.
 import numpy as np
 import pytest
 
-from src.quantizers.lattice.utils import get_d4, calculate_mse
-from src.quantizers.lattice.utils import closest_point_Dn
-from src.quantizers.lattice.hnlq import HNLQ
+from gemvq.quantizers.utils import get_d4, calculate_mse
+from gemvq.quantizers.utils import closest_point_Dn
+from gemvq.quantizers.hnlq import HNLQ, HNLQConfig
 
 
 def generate_d4_lattice_points(G, num_points=100, scale_factor=1.0):
@@ -62,16 +62,13 @@ def test_d4_lattice_simulation_zero_error():
     dither = np.zeros(4)  # No dithering for this test
     
     # Create hierarchical quantizer
+    from gemvq.quantizers.hnlq import HNLQConfig
+    config = HNLQConfig(q=q, beta=beta, alpha=alpha, eps=eps, M=M, decoding="full")
     hq = HNLQ(
         G=G,
         Q_nn=closest_point_Dn,
-        q=q,
-        beta=beta,
-        alpha=alpha,
-        eps=eps,
-        dither=dither,
-        M=M,
-        decoding="full"
+        config=config,
+        dither=dither
     )
     
     # Generate D4 lattice points that should work with q=3, M=3
@@ -131,15 +128,12 @@ def test_d4_lattice_quantization_consistency():
     dither = np.zeros(4)
     
     # Create hierarchical quantizer
+    config = HNLQConfig(q=q, beta=beta, alpha=alpha, eps=eps, M=M)
     hq = HNLQ(
         G=G,
         Q_nn=closest_point_Dn,
-        q=q,
-        beta=beta,
-        alpha=alpha,
-        eps=eps,
-        dither=dither,
-        M=M
+        config=config,
+        dither=dither
     )
     
     # Test with basis vectors
@@ -193,15 +187,12 @@ def test_d4_lattice_known_issues():
     dither = np.zeros(4)
     
     # Create hierarchical quantizer
+    config = HNLQConfig(q=q, beta=beta, alpha=alpha, eps=eps, M=M)
     hq = HNLQ(
         G=G,
         Q_nn=closest_point_Dn,
-        q=q,
-        beta=beta,
-        alpha=alpha,
-        eps=eps,
-        dither=dither,
-        M=M
+        config=config,
+        dither=dither
     )
     
     # Test with a simple D4 lattice point
@@ -253,15 +244,12 @@ def test_d4_lattice_debug():
     dither = np.zeros(4)
     
     # Create hierarchical quantizer
+    config = HNLQConfig(q=q, beta=beta, alpha=alpha, eps=eps, M=M)
     hq = HNLQ(
         G=G,
         Q_nn=closest_point_Dn,
-        q=q,
-        beta=beta,
-        alpha=alpha,
-        eps=eps,
-        dither=dither,
-        M=M
+        config=config,
+        dither=dither
     )
     
     # Test with actual D4 lattice points

@@ -436,7 +436,8 @@ def debug_beta_issue():
     # Simulate the decoding steps
     x_hat_list = []
     for i, b in enumerate(b_list):
-        x_i_hat = np.dot(G, b) - hq.q_Q(np.dot(G, b))
+        Gb = np.dot(G, b)
+        x_i_hat = Gb - hq.q * hq.Q_nn(Gb / hq.q)
         x_hat_list.append(x_i_hat)
         print(f"Level {i}: b = {b}, x_i_hat = {x_i_hat}")
     
