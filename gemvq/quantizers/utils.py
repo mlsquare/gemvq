@@ -327,11 +327,11 @@ def generate_tie_dither(d, beta=1.0, Rin=0.5, magnitude='auto'):
 
 # Closest Point Algorithms
 
-def custom_round(x):
+def custom_round_old(x):
     """
-    Custom rounding function that handles edge cases for lattice quantization.
+    DEPRECATED: Old custom rounding function that handles edge cases for lattice quantization.
 
-    This function implements a rounding scheme that ensures consistent behavior
+    This function implements the original rounding scheme that ensures consistent behavior
     at boundary points (0.5) for lattice quantization algorithms.
 
     Parameters:
@@ -346,18 +346,63 @@ def custom_round(x):
 
     Notes:
     ------
+    DEPRECATED: Use custom_round() instead.
     For positive values: rounds down if fractional part is exactly 0.5,
     otherwise rounds to nearest integer.
     For negative values: rounds up if fractional part is exactly 0.5,
     otherwise rounds to nearest integer.
     """
     if isinstance(x, np.ndarray):
-        return np.array([custom_round(val) for val in x])
+        return np.array([custom_round_old(val) for val in x])
     else:
         if x > 0:
             return np.floor(x + 0.5) - 1 if (x - np.floor(x)) == 0.5 else np.floor(x + 0.5)
         else:
             return np.ceil(x - 0.5) + 1 if (np.ceil(x) - x) == 0.5 else np.ceil(x - 0.5)
+
+
+def custom_round(x, tiny=None):
+    """
+    Custom rounding function that handles edge cases for lattice quantization.
+
+    This function implements a rounding scheme that ensures consistent behavior
+    at boundary points (0.5) for lattice quantization algorithms by nudging
+    toward zero so exact .5 falls to the nearer-integer toward zero.
+
+    Parameters:
+    -----------
+    x : float or numpy.ndarray
+        The value(s) to be rounded. Can be a scalar or array.
+    tiny : float, optional
+        A microscopic nudge relative to dtype. If None, uses machine epsilon.
+
+    Returns:
+    --------
+    float or numpy.ndarray
+        The rounded value(s) using the custom rounding scheme.
+
+    Notes:
+    ------
+    Uses round_half_to_zero approach: nudges toward zero so exact .5 falls
+    to the nearer-integer toward zero, then rounds to nearest via floor(x+0.5).
+    """
+    x = np.asarray(x)
+    
+    if tiny is None:
+        # choose a microscopic nudge relative to dtype
+        tiny = np.finfo(x.dtype if x.dtype.kind in 'fc' else np.float64).eps
+    
+    # nudge toward zero so exact .5 falls to the nearer-integer toward zero
+    y = x - np.sign(x) * tiny
+    
+    # round-to-nearest via floor(x+0.5) works for all signs after the nudge
+    result = np.floor(y + 0.5)
+    
+    # Preserve original type if scalar, otherwise return array
+    if x.ndim == 0:  # scalar
+        return result.item()
+    else:
+        return result
 
 
 def g_x(x):
