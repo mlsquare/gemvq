@@ -559,6 +559,110 @@ class HNLQ:
     # Utility Methods
     # ============================================================================
 
+    @classmethod
+    def create_z2_quantizer(cls, q: int, M: int, beta: float = 1.0, alpha: float = 1.0,
+                           eps: float = 1e-8, overload: bool = True) -> 'HNLQ':
+        """
+        Create a hierarchical quantizer for the Z² lattice (identity matrix).
+        
+        Parameters:
+        -----------
+        q : int
+            Quantization parameter.
+        M : int
+            Number of hierarchical levels.
+        beta : float, optional
+            Scaling parameter. Default is 1.0.
+        alpha : float, optional
+            Scaling parameter for overload handling. Default is 1.0.
+        eps : float, optional
+            Small perturbation parameter. Default is 1e-8.
+        overload : bool, optional
+            Whether to handle overload by scaling. Default is True.
+            
+        Returns:
+        --------
+        HNLQ
+            Configured hierarchical quantizer for Z² lattice.
+        """
+        from .utils import get_z2
+
+        def closest_point_zn(x):
+            return np.floor(x + 0.5)
+        
+        G = get_z2()
+        dither = np.zeros(2)
+        config = HNLQConfig(q=q, beta=beta, alpha=alpha, eps=eps, M=M, overload=overload)
+        
+        return cls(G, closest_point_zn, q, beta, alpha, eps, dither, M, config=config)
+
+    @classmethod
+    def create_d4_quantizer(cls, q: int, M: int, beta: float = 1.0, alpha: float = 1.0,
+                           eps: float = 1e-8, overload: bool = True) -> 'HNLQ':
+        """
+        Create a hierarchical quantizer for the D₄ lattice.
+        
+        Parameters:
+        -----------
+        q : int
+            Quantization parameter.
+        M : int
+            Number of hierarchical levels.
+        beta : float, optional
+            Scaling parameter. Default is 1.0.
+        alpha : float, optional
+            Scaling parameter for overload handling. Default is 1.0.
+        eps : float, optional
+            Small perturbation parameter. Default is 1e-8.
+        overload : bool, optional
+            Whether to handle overload by scaling. Default is True.
+            
+        Returns:
+        --------
+        HNLQ
+            Configured hierarchical quantizer for D₄ lattice.
+        """
+        from .utils import get_d4, closest_point_Dn
+        
+        G = get_d4()
+        dither = np.zeros(4)
+        config = HNLQConfig(q=q, beta=beta, alpha=alpha, eps=eps, M=M, overload=overload)
+        
+        return cls(G, closest_point_Dn, q, beta, alpha, eps, dither, M, config=config)
+
+    @classmethod
+    def create_e8_quantizer(cls, q: int, M: int, beta: float = 1.0, alpha: float = 1.0,
+                           eps: float = 1e-8, overload: bool = True) -> 'HNLQ':
+        """
+        Create a hierarchical quantizer for the E₈ lattice.
+        
+        Parameters:
+        -----------
+        q : int
+            Quantization parameter.
+        M : int
+            Number of hierarchical levels.
+        beta : float, optional
+            Scaling parameter. Default is 1.0.
+        alpha : float, optional
+            Scaling parameter for overload handling. Default is 1.0.
+        eps : float, optional
+            Small perturbation parameter. Default is 1e-8.
+        overload : bool, optional
+            Whether to handle overload by scaling. Default is True.
+            
+        Returns:
+        --------
+        HNLQ
+            Configured hierarchical quantizer for E₈ lattice.
+        """
+        from .utils import get_e8, closest_point_E8
+        
+        G = get_e8()
+        dither = np.zeros(8)
+        config = HNLQConfig(q=q, beta=beta, alpha=alpha, eps=eps, M=M, overload=overload)
+        
+        return cls(G, closest_point_E8, q, beta, alpha, eps, dither, M, config=config)
 
 
     def create_q_codebook(self, with_dither: bool) -> Dict[Tuple[int, ...], np.ndarray]:

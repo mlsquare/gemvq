@@ -1,5 +1,5 @@
 import numpy as np
-from typing import Tuple, Optional, Callable, Dict, Any, List
+from typing import Tuple, Optional, Callable, Dict, Any, List, Union
 import warnings
 from dataclasses import dataclass
 from .utils import generate_tie_dither
@@ -16,6 +16,8 @@ class QuantizerConfig:
     
     Attributes:
     -----------
+    lattice_type : str
+        Type of lattice ('D4', 'E8', 'A2', 'Z2', 'Z3').
     q : int
         Quantization parameter (alphabet size).
     beta : float
@@ -28,11 +30,12 @@ class QuantizerConfig:
         Whether to handle overload by scaling.
     max_scaling_iterations : int
         Maximum number of scaling iterations.
-    with_tie_dither : Boolean
+    with_tie_dither : bool
         Whether to add dither to the input for tie breaking.
-    with_dither : Boolean
+    with_dither : bool
         Whether to add dither to the input for randomized quantization.
     """
+    lattice_type: str
     q: int
     beta: float
     alpha: float
@@ -44,6 +47,8 @@ class QuantizerConfig:
     
     def __post_init__(self):
         """Validate parameters after initialization."""
+        if self.lattice_type not in ['D4', 'E8', 'A2', 'Z2', 'Z3']:
+            raise ValueError(f"Unsupported lattice type: {self.lattice_type}")
         if self.q <= 0:
             raise ValueError("Quantization parameter q must be positive")
         if self.beta <= 0:
@@ -56,8 +61,6 @@ class QuantizerConfig:
             raise ValueError("with_tie_dither must be a Boolean")
         if not isinstance(self.with_dither, bool):
             raise ValueError("with_dither must be a Boolean")
-        
-    
     @classmethod
     def from_dict(cls, config_dict: Dict[str, Any]) -> 'QuantizerConfig':
         """Create configuration from dictionary."""
@@ -66,6 +69,7 @@ class QuantizerConfig:
     def to_dict(self) -> Dict[str, Any]:
         """Convert configuration to dictionary."""
         return {
+            'lattice_type': self.lattice_type,
             'q': self.q,
             'beta': self.beta,
             'alpha': self.alpha,
@@ -131,84 +135,48 @@ class NLQ:
     
     def __init__(
         self, 
-        G: np.ndarray, 
-        Q_nn: Callable[[np.ndarray], np.ndarray], 
-        q: int, 
-        beta: float, 
-        alpha: float, 
-        eps: float,
-        with_tie_dither: bool = True,
-        with_dither: bool = False,
-        M: Optional[int] = None, 
-        overload: bool = True,
-        max_scaling_iterations: int = 10,
-        config: Optional[QuantizerConfig] = None
+        config: Union[QuantizerConfig, Dict[str, Any]],
+        G: Optional[np.ndarray] = None,
+        Q_nn: Optional[Callable[[np.ndarray], np.ndarray]] = None,
+        **kwargs
     ) -> None:
         """
         Initialize the nested lattice quantizer.
         
         Parameters:
         -----------
-        G : numpy.ndarray
-            Generator matrix for the lattice.
-        Q_nn : Callable
-            Closest point function for the lattice.
-        q : int
-            Quantization parameter (alphabet size).
-        beta : float
-            Scaling parameter for quantization.
-        alpha : float
-            Scaling parameter for overload handling.
-        eps : float
-            Small perturbation parameter for breaking ties in the lattice.
-        with_tie_dither : Boolean
-            Whether to add dither to the input for tie breaking.
-        with_dither : Boolean
-            Whether to add dither to the input for randomized quantization.
-        M : int, optional
-            Number of hierarchical levels (unused in this implementation).
-        overload : bool, optional
-            Whether to handle overload by scaling. Default is True.
-        max_scaling_iterations : int, optional
-            Maximum number of scaling iterations to prevent infinite loops.
-            Default is 10.
-        config : QuantizerConfig, optional
-            Configuration object. If provided, overrides individual parameters.
+        config : QuantizerConfig or Dict[str, Any]
+            Configuration object or dictionary with quantizer parameters.
+        G : numpy.ndarray, optional
+            Generator matrix for the lattice. If not provided, will be loaded based on lattice_type.
+        Q_nn : Callable, optional
+            Closest point function for the lattice. If not provided, will be loaded based on lattice_type.
+        **kwargs : Additional parameters (for backward compatibility)
             
         Raises:
         -------
         ValueError
-            If G is not a square matrix or if dither dimension doesn't match.
+            If G is not a square matrix or if config is invalid.
         """
+        # Handle configuration
+        if isinstance(config, dict):
+            config = QuantizerConfig.from_dict(config)
+        elif not isinstance(config, QuantizerConfig):
+            raise ValueError("config must be QuantizerConfig or dict")
+        
+        self.config = config
+        
+        # Load lattice components if not provided
+        if G is None or Q_nn is None:
+            G, Q_nn = self._load_lattice_components(config.lattice_type)
+        
         if G.shape[0] != G.shape[1]:
             raise ValueError("Generator matrix G must be square")
-        
-        # Use config if provided, otherwise use individual parameters
-        if config is not None:
-            self.config = config
-            self.q = config.q
-            self.beta = config.beta
-            self.alpha = config.alpha
-            self.eps = config.eps
-            self.overload = config.overload
-            self.max_scaling_iterations = config.max_scaling_iterations
-            self.with_tie_dither = config.with_tie_dither
-            self.with_dither = config.with_dither
-        else:
-            self.config = QuantizerConfig(q, beta, alpha, eps, overload, max_scaling_iterations, with_tie_dither, with_dither)
-            self.q = q
-            self.beta = beta
-            self.alpha = alpha
-            self.eps = eps
-            self.overload = overload
-            self.max_scaling_iterations = max_scaling_iterations
-            self.with_tie_dither = with_tie_dither
-            self.with_dither = with_dither
             
         if self.with_tie_dither:
             self._original_eps = generate_tie_dither(G.shape[0])
         else:
-            self._original_eps = eps
+            self._original_eps = config.eps
             
         # Store original eps for backward compatibility
         self.G = G
@@ -223,6 +191,98 @@ class NLQ:
         # Precompute some values for efficiency
         self._dim = G.shape[0]
         self._q_squared = self.q ** 2
+
+    def _load_lattice_components(self, lattice_type: str) -> Tuple[np.ndarray, Callable]:
+        """
+        Load generator matrix and closest point function for the specified lattice type.
+        
+        Parameters:
+        -----------
+        lattice_type : str
+            Type of lattice ('D4', 'E8', 'A2', 'Z2', 'Z3').
+            
+        Returns:
+        --------
+        tuple
+            (G, Q_nn) where G is the generator matrix and Q_nn is the closest point function.
+        """
+        from .utils import get_d4, get_e8, get_a2, get_z2, get_z3, closest_point_Dn, closest_point_E8
+        
+        if lattice_type == 'D4':
+            return get_d4(), closest_point_Dn
+        elif lattice_type == 'E8':
+            return get_e8(), closest_point_E8
+        elif lattice_type == 'A2':
+            return get_a2(), closest_point_Dn
+        elif lattice_type == 'Z2':
+            def closest_point_zn(x):
+                return np.floor(x + 0.5)
+            return get_z2(), closest_point_zn
+        elif lattice_type == 'Z3':
+            def closest_point_zn(x):
+                return np.floor(x + 0.5)
+            return get_z3(), closest_point_zn
+        else:
+            raise ValueError(f"Unsupported lattice type: {lattice_type}")
+
+    # ============================================================================
+    # Properties
+    # ============================================================================
+
+    @property
+    def lattice_type(self) -> str:
+        """Get lattice type."""
+        return self.config.lattice_type
+    
+    @property
+    def q(self) -> int:
+        """Get quantization parameter."""
+        return self.config.q
+    
+    @property
+    def beta(self) -> float:
+        """Get scaling parameter."""
+        return self.config.beta
+    
+    @beta.setter
+    def beta(self, value: float) -> None:
+        """Set scaling parameter."""
+        self.config.beta = value
+    
+    @property
+    def alpha(self) -> float:
+        """Get overload scaling parameter."""
+        return self.config.alpha
+    
+    @alpha.setter
+    def alpha(self, value: float) -> None:
+        """Set overload scaling parameter."""
+        self.config.alpha = value
+    
+    @property
+    def eps(self) -> float:
+        """Get perturbation parameter."""
+        return self.config.eps
+    
+    @property
+    def overload(self) -> bool:
+        """Get overload handling flag."""
+        return self.config.overload
+    
+    @property
+    def max_scaling_iterations(self) -> int:
+        """Get maximum scaling iterations."""
+        return self.config.max_scaling_iterations
+    
+    @property
+    def with_tie_dither(self) -> bool:
+        """Get tie dither flag."""
+        return self.config.with_tie_dither
+    
+    @property
+    def with_dither(self) -> bool:
+        """Get dither flag."""
+        return self.config.with_dither
 
     def _encode(self, x: np.ndarray, with_dither: bool) -> Tuple[np.ndarray, bool]:
         """
@@ -559,11 +619,9 @@ class NLQ:
         def closest_point_zn(x):
             return np.floor(x + 0.5)
         
-        G = get_z2()
-
-        config = QuantizerConfig(q, beta, alpha, eps, overload, 10, with_tie_dither, with_dither)
+        config = QuantizerConfig('Z2', q, beta, alpha, eps, overload, 10, with_tie_dither, with_dither)
         
-        return cls(G, closest_point_zn, q, beta, alpha, eps, with_tie_dither=with_tie_dither, with_dither=with_dither, config=config)
+        return cls(config)
     
     @classmethod
     def create_d4_quantizer(cls, q: int, beta: float = 1.0, alpha: float = 1.0,
@@ -592,10 +650,9 @@ class NLQ:
         """
         from .utils import get_d4, closest_point_Dn
         
-        G = get_d4()
-        config = QuantizerConfig(q, beta, alpha, eps, overload, 10, with_tie_dither, with_dither)
+        config = QuantizerConfig('D4', q, beta, alpha, eps, overload, 10, with_tie_dither, with_dither)
         
-        return cls(G, closest_point_Dn, q, beta, alpha, eps, with_tie_dither=with_tie_dither, with_dither=with_dither, config=config)
+        return cls(config)
     
     @classmethod
     def create_e8_quantizer(cls, q: int, beta: float = 1.0, alpha: float = 1.0,
@@ -624,10 +681,9 @@ class NLQ:
         """
         from .utils import get_e8, closest_point_E8
         
-        G = get_e8()
-        config = QuantizerConfig(q, beta, alpha, eps, overload, 10, with_tie_dither, with_dither)
+        config = QuantizerConfig('E8', q, beta, alpha, eps, overload, 10, with_tie_dither, with_dither)
         
-        return cls(G, closest_point_E8, q, beta, alpha, eps, with_tie_dither=with_tie_dither, with_dither=with_dither, config=config)
+        return cls(config)
     
     def get_config(self) -> QuantizerConfig:
         """
@@ -650,10 +706,24 @@ class NLQ:
             New configuration to apply.
         """
         self.config = new_config
-        self.q = new_config.q
-        self.beta = new_config.beta
-        self.alpha = new_config.alpha
-        self.eps = new_config.eps
-        self.overload = new_config.overload
-        self.max_scaling_iterations = new_config.max_scaling_iterations
         self._q_squared = self.q ** 2
+
+    def validate_config(self) -> None:
+        """Validate the current configuration."""
+        self.config.__post_init__()
+
+    def get_config_summary(self) -> Dict[str, Any]:
+        """Get a summary of the current configuration."""
+        return {
+            'lattice_dimension': self._dim,
+            'quantization_parameter': self.q,
+            'scaling_parameters': {'beta': self.beta, 'alpha': self.alpha},
+            'perturbation': self.eps,
+            'overload_handling': self.overload,
+            'max_iterations': self.max_scaling_iterations,
+            'dither_settings': {
+                'with_tie_dither': self.with_tie_dither,
+                'with_dither': self.with_dither
+            }
+        }
+
