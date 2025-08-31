@@ -49,6 +49,7 @@ book:
         -  docs/notebooks/hnlq_01.ipynb
         -  docs/notebooks/hnlq_02.ipynb
         -  docs/notebooks/hnlq_03.ipynb
+        -  docs/notebooks/hnlq_04.ipynb
     - part: Papers
       chapters:
         -  docs/papers/hnlq_paper.qmd
