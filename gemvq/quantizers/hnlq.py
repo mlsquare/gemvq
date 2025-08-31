@@ -470,8 +470,9 @@ class HNLQ:
             x_i_hat = Gb - self.q * self.Q_nn(Gb / self.q)
             x_hat_list.append(x_i_hat)
         
-        # Sum backwards based on depth: M-1, M-2, ..., M-depth
-        x_hat = sum([np.power(self.q, i) * x_hat_list[i] for i in range(self.M - depth, self.M)])
+        # Sum backwards based on depth: 1 to M
+        #x_hat = sum([np.power(self.q, i) * x_hat_list[i] for i in range(0, depth, 1)] )
+        x_hat = sum([np.power(self.q, i) * x_hat_list[i] for i in range(self.M-1, self.M-1-depth, -1)] )
         
         if with_dither:
             x_hat = x_hat - self.dither
@@ -564,7 +565,7 @@ class HNLQ:
         with_dither : bool, optional
             Whether dithering was applied during encoding. Default is False.
         depth : int
-            Decoding depth (0 to M-1). Higher depth means finer reconstruction.
+            Decoding depth (1 to M). Higher depth means finer reconstruction.
 
         Returns:
         --------
