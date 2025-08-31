@@ -721,6 +721,82 @@ class HNLQ:
         """String representation of the quantizer."""
         return self.__repr__()
 
+    def batch_encode(self, X: np.ndarray, with_dither: bool = False) -> Tuple[List[Tuple[np.ndarray, ...]], List[int]]:
+        """
+        Encode multiple vectors efficiently using hierarchical nested lattice quantization.
+        
+        Parameters:
+        -----------
+        X : numpy.ndarray
+            Input matrix where each row is a vector to encode.
+        with_dither : bool, optional
+            Whether to apply dithering during quantization. Default is False.
+            
+        Returns:
+        --------
+        tuple
+            (encoded_vectors, scaling_counts) where encoded_vectors is a list
+            of tuples of M encoding vectors and scaling_counts is a list of scaling counts.
+        """
+        if X.ndim == 1:
+            X = X.reshape(1, -1)
+            
+        encoded_vectors = []
+        scaling_counts = []
+        
+        for i in range(X.shape[0]):
+            b_list, T = self.encode(X[i], with_dither)
+            encoded_vectors.append(b_list)
+            scaling_counts.append(T)
+            
+        return encoded_vectors, scaling_counts
+    
+    def batch_decode(self, encoded_vectors: List[Tuple[np.ndarray, ...]], scaling_counts: List[int], 
+                    with_dither: bool = False, decoding: str = "full") -> np.ndarray:
+        """
+        Decode multiple vectors efficiently using hierarchical nested lattice quantization.
+        
+        Parameters:
+        -----------
+        encoded_vectors : list
+            List of tuples of M encoding vectors.
+        scaling_counts : list
+            List of scaling counts corresponding to each encoded vector.
+        with_dither : bool, optional
+            Whether dithering was applied during encoding. Default is False.
+        decoding : str, optional
+            Decoding method to use ('full', 'coarse_to_fine', 'progressive').
+            Default is "full".
+            
+        Returns:
+        --------
+        numpy.ndarray
+            Matrix where each row is a decoded vector.
+        """
+        if len(encoded_vectors) != len(scaling_counts):
+            raise ValueError("Number of encoded vectors must match number of scaling counts")
+            
+        decoded_vectors = []
+        for b_list, T in zip(encoded_vectors, scaling_counts):
+            if decoding == "full":
+                decoded = self.decode(b_list, T, with_dither)
+            elif decoding == "coarse_to_fine":
+                decoded = self.decode_coarse_to_fine(b_list, T, with_dither)
+            elif decoding == "progressive":
+                # For progressive, we take the finest level (last element)
+                progressive_results = self.decode_progressive(b_list, T, with_dither)
+                decoded = progressive_results[-1]  # Take the finest reconstruction
+            else:
+                raise ValueError(f"Unknown decoding method: {decoding}")
+            
+            decoded_vectors.append(decoded)
+            
+        return np.array(decoded_vectors)
+
+    # ============================================================================
+    # Class Methods for Creating Quantizers
+    # ============================================================================
+
     @classmethod
     def create_z2_quantizer(cls, q: int, M: int, beta: float = 1.0, alpha: float = 1.0,
                            eps: float = 1e-8, overload: bool = True, 
