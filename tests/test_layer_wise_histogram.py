@@ -72,7 +72,7 @@ def test_simple_example():
     def Q_nn(x):
         return np.round(x)
     
-    config = HNLQConfig(q=q, beta=1.0, alpha=1.0, eps=1e-8, M=M)
+    config = HNLQConfig(lattice_type='D4', q=q, M=M)
     quantizer = HNLQ(
         G=G, Q_nn=Q_nn, config=config, dither=np.zeros(n)
     )

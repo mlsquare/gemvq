@@ -37,9 +37,9 @@ class QuantizerConfig:
     """
     lattice_type: str
     q: int
-    beta: float
-    alpha: float
-    eps: float
+    beta: float = 1.0
+    alpha: float = 1.0
+    eps: float = 1e-8
     overload: bool = True
     max_scaling_iterations: int = 10
     with_tie_dither: bool = True
@@ -619,7 +619,17 @@ class NLQ:
         def closest_point_zn(x):
             return np.floor(x + 0.5)
         
-        config = QuantizerConfig('Z2', q, beta, alpha, eps, overload, 10, with_tie_dither, with_dither)
+        config = QuantizerConfig(
+            lattice_type='Z2',
+            q=q,
+            beta=beta,
+            alpha=alpha,
+            eps=eps,
+            overload=overload,
+            max_scaling_iterations=10,
+            with_tie_dither=with_tie_dither,
+            with_dither=with_dither
+        )
         
         return cls(config)
     
@@ -650,7 +660,17 @@ class NLQ:
         """
         from .utils import get_d4, closest_point_Dn
         
-        config = QuantizerConfig('D4', q, beta, alpha, eps, overload, 10, with_tie_dither, with_dither)
+        config = QuantizerConfig(
+            lattice_type='D4',
+            q=q,
+            beta=beta,
+            alpha=alpha,
+            eps=eps,
+            overload=overload,
+            max_scaling_iterations=10,
+            with_tie_dither=with_tie_dither,
+            with_dither=with_dither
+        )
         
         return cls(config)
     
@@ -681,7 +701,17 @@ class NLQ:
         """
         from .utils import get_e8, closest_point_E8
         
-        config = QuantizerConfig('E8', q, beta, alpha, eps, overload, 10, with_tie_dither, with_dither)
+        config = QuantizerConfig(
+            lattice_type='E8',
+            q=q,
+            beta=beta,
+            alpha=alpha,
+            eps=eps,
+            overload=overload,
+            max_scaling_iterations=10,
+            with_tie_dither=with_tie_dither,
+            with_dither=with_dither
+        )
         
         return cls(config)
     

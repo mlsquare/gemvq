@@ -29,7 +29,7 @@ def test_all_decoding_methods():
     
     # Create hierarchical quantizer
     from gemvq.quantizers.hnlq import HNLQConfig
-    config = HNLQConfig(q=q, beta=beta, alpha=alpha, eps=eps, M=M)
+    config = HNLQConfig(lattice_type='D4', q=q, M=M)
     hq = HNLQ(
         G=G,
         Q_nn=closest_point_Dn,
@@ -115,7 +115,7 @@ def test_progressive_decoding_levels():
     
     # Create hierarchical quantizer
     from gemvq.quantizers.hnlq import HNLQConfig
-    config = HNLQConfig(q=q, beta=beta, alpha=alpha, eps=eps, M=M)
+    config = HNLQConfig(lattice_type='D4', q=q, M=M)
     hq = HNLQ(
         G=G,
         Q_nn=closest_point_Dn,
@@ -173,7 +173,7 @@ def test_custom_decode_implementation():
     
     # Create hierarchical quantizer
     from gemvq.quantizers.hnlq import HNLQConfig
-    config = HNLQConfig(q=q, beta=beta, alpha=alpha, eps=eps, M=M)
+    config = HNLQConfig(lattice_type='D4', q=q, M=M)
     hq = HNLQ(
         G=G,
         Q_nn=closest_point_Dn,
@@ -238,7 +238,7 @@ def test_multiple_d4_points():
     
     # Create hierarchical quantizer
     from gemvq.quantizers.hnlq import HNLQConfig
-    config = HNLQConfig(q=q, beta=beta, alpha=alpha, eps=eps, M=M)
+    config = HNLQConfig(lattice_type='D4', q=q, M=M)
     hq = HNLQ(
         G=G,
         Q_nn=closest_point_Dn,

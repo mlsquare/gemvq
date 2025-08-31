@@ -31,13 +31,8 @@ def test_hierarchical_encoding_process():
     dither = np.zeros(4)
     
     # Create hierarchical quantizer
-    config = HNLQConfig(q=q, beta=beta, alpha=alpha, eps=eps, M=M)
-    hq = HNLQ(
-        G=G,
-        Q_nn=closest_point_Dn,
-        config=config,
-        dither=dither
-    )
+    config = HNLQConfig(lattice_type='D4', q=q, M=M)
+    hq = HNLQ(config)
     
     # Test with a simple vector (not necessarily a D4 lattice point)
     test_point = np.array([0.5, -0.3, 0.8, -0.2])
@@ -93,17 +88,16 @@ def test_hierarchical_vs_voronoi_encoding():
     dither = np.zeros(4)
     
     # Create quantizers
-    config = HNLQConfig(q=q, beta=beta, alpha=alpha, eps=eps, M=M)
-    hq = HNLQ(
-        G=G, Q_nn=closest_point_Dn, config=config, dither=dither
-    )
+    config = HNLQConfig(lattice_type='D4', q=q, M=M)
+    hq = HNLQ(config)
     
     # Create Voronoi quantizer with equivalent parameters
     effective_q = q**M  # 3^3 = 27
-    vq = NLQ(
-        G=G, Q_nn=closest_point_Dn, q=effective_q, beta=beta, alpha=alpha,
-        eps=eps
-    )
+    nlq_config = {
+        'lattice_type': 'D4',
+        'q': effective_q
+    }
+    vq = NLQ(nlq_config)
     
     # Test with random vectors
     np.random.seed(42)  # For reproducibility
@@ -147,13 +141,8 @@ def test_rate_calculation():
     dither = np.zeros(4)
     
     # Create hierarchical quantizer
-    config = HNLQConfig(q=q, beta=beta, alpha=alpha, eps=eps, M=M)
-    hq = HNLQ(
-        G=G,
-        Q_nn=closest_point_Dn,
-        config=config,
-        dither=dither
-    )
+    config = HNLQConfig(lattice_type='D4', q=q, M=M)
+    hq = HNLQ(config)
     
     # Generate test samples
     np.random.seed(42)
@@ -208,10 +197,8 @@ def test_parameter_sensitivity():
     print("-" * 20)
     
     for beta in beta_values:
-        config = HNLQConfig(q=q, beta=beta, alpha=alpha, eps=eps, M=M)
-        hq = HNLQ(
-            G=G, Q_nn=closest_point_Dn, config=config, dither=dither
-        )
+        config = HNLQConfig(lattice_type='D4', q=q, M=M)
+        hq = HNLQ(config)
         
         b_list, T = hq.encode(test_vector, with_dither=False)
         reconstructed = hq.decode(b_list, T, with_dither=False)
@@ -245,10 +232,8 @@ def test_m_values():
     print("-" * 25)
     
     for M in M_values:
-        config = HNLQConfig(q=q, beta=beta, alpha=alpha, eps=eps, M=M)
-        hq = HNLQ(
-            G=G, Q_nn=closest_point_Dn, config=config, dither=dither
-        )
+        config = HNLQConfig(lattice_type='D4', q=q, M=M)
+        hq = HNLQ(config)
         
         b_list, T = hq.encode(test_vector, with_dither=False)
         reconstructed = hq.decode(b_list, T, with_dither=False)

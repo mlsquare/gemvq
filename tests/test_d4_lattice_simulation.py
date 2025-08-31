@@ -63,13 +63,8 @@ def test_d4_lattice_simulation_zero_error():
     
     # Create hierarchical quantizer
     from gemvq.quantizers.hnlq import HNLQConfig
-    config = HNLQConfig(q=q, beta=beta, alpha=alpha, eps=eps, M=M, decoding="full")
-    hq = HNLQ(
-        G=G,
-        Q_nn=closest_point_Dn,
-        config=config,
-        dither=dither
-    )
+    config = HNLQConfig(lattice_type='D4', q=q, M=M, decoding='full')
+    hq = HNLQ(config)
     
     # Generate D4 lattice points that should work with q=3, M=3
     # Use small integer coefficients to keep points within quantization range
@@ -128,13 +123,8 @@ def test_d4_lattice_quantization_consistency():
     dither = np.zeros(4)
     
     # Create hierarchical quantizer
-    config = HNLQConfig(q=q, beta=beta, alpha=alpha, eps=eps, M=M)
-    hq = HNLQ(
-        G=G,
-        Q_nn=closest_point_Dn,
-        config=config,
-        dither=dither
-    )
+    config = HNLQConfig(lattice_type='D4', q=q, M=M)
+    hq = HNLQ(config)
     
     # Test with basis vectors
     coeffs = np.array([
@@ -187,13 +177,8 @@ def test_d4_lattice_known_issues():
     dither = np.zeros(4)
     
     # Create hierarchical quantizer
-    config = HNLQConfig(q=q, beta=beta, alpha=alpha, eps=eps, M=M)
-    hq = HNLQ(
-        G=G,
-        Q_nn=closest_point_Dn,
-        config=config,
-        dither=dither
-    )
+    config = HNLQConfig(lattice_type='D4', q=q, M=M)
+    hq = HNLQ(config)
     
     # Test with a simple D4 lattice point
     test_point = np.array([-1.0, -1.0, 0.0, 0.0])  # G[:, 0]
@@ -211,7 +196,7 @@ def test_d4_lattice_known_issues():
     print(f"Regular decode MSE: {mse_regular}")
     
     # Test decode_coarse_to_fine at full depth
-    reconstructed_coarse = hq.decode_coarse_to_fine(b_list, T, with_dither=False, max_level=M-1)
+    reconstructed_coarse = hq.decode_coarse_to_fine(b_list, T, with_dither=False, depth=M-1)
     mse_coarse = calculate_mse(test_point, reconstructed_coarse)
     print(f"Coarse-to-fine full depth MSE: {mse_coarse}")
     
@@ -244,13 +229,8 @@ def test_d4_lattice_debug():
     dither = np.zeros(4)
     
     # Create hierarchical quantizer
-    config = HNLQConfig(q=q, beta=beta, alpha=alpha, eps=eps, M=M)
-    hq = HNLQ(
-        G=G,
-        Q_nn=closest_point_Dn,
-        config=config,
-        dither=dither
-    )
+    config = HNLQConfig(lattice_type='D4', q=q, M=M)
+    hq = HNLQ(config)
     
     # Test with actual D4 lattice points
     # Generate some actual D4 lattice points using the generator matrix
@@ -292,7 +272,7 @@ def test_d4_lattice_debug():
         
         # Try different decoding depths
         print("Decoding at different depths:")
-        for depth in range(M):
+        for depth in range(1, M + 1):  # 1 to M
             recon_depth = hq.decode_with_depth(b_list, T, with_dither=False, depth=depth)
             mse_depth = calculate_mse(point, recon_depth)
             print(f"  Depth {depth}: MSE = {mse_depth}")
