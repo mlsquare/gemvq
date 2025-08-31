@@ -12,7 +12,7 @@ import numpy as np
 
 from ...quantizers.utils import (closest_point_A2, closest_point_Dn,
                               closest_point_E8)
-from ...quantizers.hnlq import HNLQ
+from ...quantizers.hnlq import HNLQ, HNLQConfig
 from ...quantizers.utils import get_a2, get_d4, get_e8, get_z2, get_z3
 from ..utils.padder import BlockingStrategy
 
@@ -31,12 +31,16 @@ class RowWiseGEMV:
         matrix: np.ndarray,
         lattice_type: str = "D4",
         M: int = 2,
-        alpha: float = 1 / 3,
+        alpha: float = 1.0,
         eps: float = 1e-8,
         q: int = 4,
-        beta: float = 0.2,
+        beta: float = 1.0,
         decoding: str = "full",
         decoding_depths: Optional[List[int]] = None,
+        overload: bool = True,
+        max_scaling_iterations: int = 10,
+        with_tie_dither: bool = True,
+        with_dither: bool = False,
     ):
         """
         Initialize the row-wise GEMV processor.
@@ -61,8 +65,16 @@ class RowWiseGEMV:
             Default decoding method to use ('full', 'coarse_to_fine', 'progressive').
             Default is 'full'.
         decoding_depths : List[int], optional
-            Decoding depth for each row (0 to M-1). If None, uses M-1 for all rows.
+            Decoding depth for each row (1 to M). If None, uses M for all rows.
             Only used when decoding='adaptive_depth'.
+        overload : bool, optional
+            Whether to handle overload by scaling. Default is True.
+        max_scaling_iterations : int, optional
+            Maximum number of scaling iterations to prevent infinite loops. Default is 10.
+        with_tie_dither : bool, optional
+            Whether to add dither to the input for tie breaking. Default is True.
+        with_dither : bool, optional
+            Whether to add dither to the input for randomized quantization. Default is False.
         """
         self.original_matrix = matrix
         self.original_m, self.original_n = matrix.shape
@@ -73,11 +85,15 @@ class RowWiseGEMV:
         self.q = q
         self.beta = beta
         self.decoding = decoding
+        self.overload = overload
+        self.max_scaling_iterations = max_scaling_iterations
+        self.with_tie_dither = with_tie_dither
+        self.with_dither = with_dither
 
         # Set up decoding depths for each row
         if decoding_depths is None:
-            # Default to full depth (M-1) for all rows
-            self.decoding_depths = [M - 1] * self.original_m
+            # Default to full depth (M) for all rows
+            self.decoding_depths = [M] * self.original_m
         else:
             if len(decoding_depths) != self.original_m:
                 raise ValueError(
@@ -85,8 +101,8 @@ class RowWiseGEMV:
                 )
             # Validate decoding depths
             for i, depth in enumerate(decoding_depths):
-                if depth < 0 or depth >= M:
-                    raise ValueError(f"decoding_depths[{i}] = {depth} must be between 0 and {M-1}")
+                if depth < 1 or depth > M:
+                    raise ValueError(f"decoding_depths[{i}] = {depth} must be between 1 and {M}")
             self.decoding_depths = decoding_depths.copy()
 
         # Initialize blocking strategy
@@ -132,18 +148,26 @@ class RowWiseGEMV:
             # Get matrix block
             matrix_block = self.matrix[start_row:end_row, :]
 
-            # Create quantizer for this block
-            dither = np.zeros(self.dimension)
-            self.quantizers[block_idx] = HNLQ(
-                G=self.G,
-                Q_nn=self.Q_nn,
+            # Create HNLQ configuration for this block
+            config = HNLQConfig(
+                lattice_type=self.lattice_type,
                 q=self.q,
+                M=self.M,
                 beta=self.beta,
                 alpha=self.alpha,
                 eps=self.eps,
-                dither=dither,
-                M=self.M,
+                overload=self.overload,
                 decoding=self.decoding,
+                max_scaling_iterations=self.max_scaling_iterations,
+                with_tie_dither=self.with_tie_dither,
+                with_dither=self.with_dither,
+            )
+
+            # Create quantizer for this block
+            self.quantizers[block_idx] = HNLQ(
+                config=config,
+                G=self.G,
+                Q_nn=self.Q_nn,
             )
 
             # Encode each row in the block
@@ -168,7 +192,7 @@ class RowWiseGEMV:
                 row_encodings = []
                 row_scalings = []
                 for chunk in row_chunks:
-                    encoding, scaling = self.quantizers[block_idx].encode(chunk, with_dither=False)
+                    encoding, scaling = self.quantizers[block_idx].encode(chunk, with_dither=self.with_dither)
                     row_encodings.append(encoding)
                     row_scalings.append(scaling)
 
@@ -208,10 +232,10 @@ class RowWiseGEMV:
                 # Decode all chunks of the row
                 decoded_chunks = []
                 for chunk_idx in range(len(self.encoded_rows[block_idx][row_idx])):
-                    decoded_chunk = self.quantizers[block_idx].get_default_decoding(
+                    decoded_chunk = self.quantizers[block_idx].decode(
                         self.encoded_rows[block_idx][row_idx][chunk_idx],
                         self.overload_scalings[block_idx][row_idx][chunk_idx],
-                        with_dither=False,
+                        with_dither=self.with_dither,
                     )
                     decoded_chunks.append(decoded_chunk)
 
@@ -276,10 +300,10 @@ class RowWiseGEMV:
                 # Decode all chunks of the row
                 decoded_chunks = []
                 for chunk_idx in range(len(self.encoded_rows[block_idx][row_idx])):
-                    decoded_chunk = self.quantizers[block_idx].get_default_decoding(
+                    decoded_chunk = self.quantizers[block_idx].decode(
                         self.encoded_rows[block_idx][row_idx][chunk_idx],
                         self.overload_scalings[block_idx][row_idx][chunk_idx],
-                        with_dither=False,
+                        with_dither=self.with_dither,
                     )
                     decoded_chunks.append(decoded_chunk)
 
@@ -320,7 +344,7 @@ class RowWiseGEMV:
         vector : np.ndarray
             Input vector x.
         max_level : int, optional
-            Maximum level to decode up to (0 <= max_level < M).
+            Maximum level to decode up to (1 <= max_level <= M).
             If None, decodes all levels (equivalent to multiply method).
             Higher max_level means coarser reconstruction.
         sparsity_pattern : List[int], optional
@@ -353,8 +377,8 @@ class RowWiseGEMV:
                     decoded_chunk = self.quantizers[block_idx].decode_coarse_to_fine(
                         self.encoded_rows[block_idx][row_idx][chunk_idx],
                         self.overload_scalings[block_idx][row_idx][chunk_idx],
-                        with_dither=False,
-                        max_level=max_level,
+                        with_dither=self.with_dither,
+                        depth=max_level,
                     )
                     decoded_chunks.append(decoded_chunk)
 
@@ -417,7 +441,7 @@ class RowWiseGEMV:
                     chunk_reconstructions = self.quantizers[block_idx].decode_progressive(
                         self.encoded_rows[block_idx][row_idx][chunk_idx],
                         self.overload_scalings[block_idx][row_idx][chunk_idx],
-                        with_dither=False,
+                        with_dither=self.with_dither,
                     )
                     progressive_chunks.append(chunk_reconstructions)
 
@@ -490,7 +514,7 @@ class RowWiseGEMV:
                         decoded_chunk = self.quantizers[block_idx].decode(
                             self.encoded_rows[block_idx][row_idx][chunk_idx],
                             self.overload_scalings[block_idx][row_idx][chunk_idx],
-                            with_dither=False,
+                            with_dither=self.with_dither,
                         )
                         decoded_chunks.append(decoded_chunk)
 
@@ -536,7 +560,7 @@ class RowWiseGEMV:
         # from the paper for more accurate estimation
 
         # For now, decode and compute exact dot product
-        decoded_row = self.quantizers[0].decode(encoding, 1, with_dither=False)
+        decoded_row = self.quantizers[0].decode(encoding, 0, with_dither=self.with_dither)
 
         if len(decoded_row) > len(vector):
             decoded_row = decoded_row[: len(vector)]
@@ -624,6 +648,7 @@ def row_wise_gemv(
     M: int = 2,
     sparsity_pattern: Optional[List[int]] = None,
     use_lookup: bool = False,
+    **kwargs
 ) -> np.ndarray:
     """
     Perform row-wise matrix-vector multiplication.
@@ -642,13 +667,14 @@ def row_wise_gemv(
         Indices of non-zero elements in the vector.
     use_lookup : bool
         Whether to use lookup tables for computation.
+    **kwargs : Additional parameters for HNLQ configuration
 
     Returns:
     --------
     np.ndarray
         Result vector y = Wx.
     """
-    processor = RowWiseGEMV(matrix, lattice_type, M)
+    processor = RowWiseGEMV(matrix, lattice_type, M, **kwargs)
 
     if use_lookup:
         return processor.multiply_with_lookup(vector)

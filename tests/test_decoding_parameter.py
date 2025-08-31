@@ -5,11 +5,10 @@ Test script to verify that the decoding parameter is working correctly.
 
 import numpy as np
 
-from src.quantizers.lattice.hnlq import HNLQ
-from src.quantizers.lattice.utils import closest_point_Dn
-from src.quantizers.lattice.utils import get_d4
-from src.gemv.columnwise.column_wise_gemv import ColumnWiseGEMV
-from src.gemv.rowwise.row_wise_gemv import RowWiseGEMV
+from gemvq.quantizers.hnlq import HNLQ, HNLQConfig
+from gemvq.quantizers.utils import closest_point_Dn, get_d4
+from gemvq.gemv.columnwise.column_wise_gemv import ColumnWiseGEMV
+from gemvq.gemv.rowwise.row_wise_gemv import RowWiseGEMV
 
 def test_decoding_parameter():
     """Test that the decoding parameter works correctly."""
@@ -18,7 +17,6 @@ def test_decoding_parameter():
     
     # Setup lattice parameters
     G = get_d4()
-    dither = np.zeros(4)
     
     # Test data
     x = np.random.randn(4)
@@ -26,30 +24,33 @@ def test_decoding_parameter():
     print("Testing HNLQ with different decoding methods...")
     
     # Test with full decoding
-    quantizer_full = HNLQ(
-        G=G, Q_nn=closest_point_Dn, q=4, beta=0.2, alpha=1/3, 
-        eps=1e-8, dither=dither, M=2, decoding='full'
+    config_full = HNLQConfig(
+        lattice_type='D4', q=4, M=2, beta=1.0, alpha=1.0, 
+        eps=1e-8, decoding='full'
     )
+    quantizer_full = HNLQ(config=config_full, G=G, Q_nn=closest_point_Dn)
     
     # Test with coarse_to_fine decoding
-    quantizer_coarse = HNLQ(
-        G=G, Q_nn=closest_point_Dn, q=4, beta=0.2, alpha=1/3, 
-        eps=1e-8, dither=dither, M=2, decoding='coarse_to_fine'
+    config_coarse = HNLQConfig(
+        lattice_type='D4', q=4, M=2, beta=1.0, alpha=1.0, 
+        eps=1e-8, decoding='coarse_to_fine'
     )
+    quantizer_coarse = HNLQ(config=config_coarse, G=G, Q_nn=closest_point_Dn)
     
     # Test with progressive decoding
-    quantizer_progressive = HNLQ(
-        G=G, Q_nn=closest_point_Dn, q=4, beta=0.2, alpha=1/3, 
-        eps=1e-8, dither=dither, M=2, decoding='progressive'
+    config_progressive = HNLQConfig(
+        lattice_type='D4', q=4, M=2, beta=1.0, alpha=1.0, 
+        eps=1e-8, decoding='progressive'
     )
+    quantizer_progressive = HNLQ(config=config_progressive, G=G, Q_nn=closest_point_Dn)
     
     # Encode the test vector
     b_list, T = quantizer_full.encode(x, with_dither=False)
     
     # Test default decoding for each quantizer
-    result_full = quantizer_full.get_default_decoding(b_list, T, with_dither=False)
-    result_coarse = quantizer_coarse.get_default_decoding(b_list, T, with_dither=False, max_level=0)
-    result_progressive = quantizer_progressive.get_default_decoding(b_list, T, with_dither=False)
+    result_full = quantizer_full.decode(b_list, T, with_dither=False)
+    result_coarse = quantizer_coarse.decode_coarse_to_fine(b_list, T, with_dither=False, depth=1)
+    result_progressive = quantizer_progressive.decode_progressive(b_list, T, with_dither=False)
     
     print(f"✓ Full decoding result shape: {result_full.shape}")
     print(f"✓ Coarse-to-fine decoding result shape: {result_coarse.shape}")
@@ -82,8 +83,8 @@ def test_decoding_parameter():
     print(f"✓ Row-wise GEMV result shape: {result_row.shape}")
     
     # Test coarse-to-fine methods
-    result_column_coarse = column_gemv.multiply_coarse_to_fine(vector, max_level=0)
-    result_row_coarse = row_gemv.multiply_coarse_to_fine(vector, max_level=0)
+    result_column_coarse = column_gemv.multiply_coarse_to_fine(vector, max_level=1)
+    result_row_coarse = row_gemv.multiply_coarse_to_fine(vector, max_level=1)
     
     print(f"✓ Column-wise coarse-to-fine result shape: {result_column_coarse.shape}")
     print(f"✓ Row-wise coarse-to-fine result shape: {result_row_coarse.shape}")

@@ -5,8 +5,9 @@ This module provides row-wise processing strategies for matrix-vector
 multiplication with lattice quantization support.
 """
 
-from .rowwise_processor import RowwiseGEMVProcessor
+from .row_wise_gemv import RowWiseGEMV, row_wise_gemv
 
 __all__ = [
-    "RowwiseGEMVProcessor"
+    "RowWiseGEMV",
+    "row_wise_gemv"
 ]
