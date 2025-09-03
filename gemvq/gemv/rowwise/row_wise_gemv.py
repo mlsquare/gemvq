@@ -10,10 +10,17 @@ from typing import Dict, List, Optional, Tuple
 
 import numpy as np
 
-from ...quantizers.utils import (closest_point_A2, closest_point_Dn,
-                              closest_point_E8)
 from ...quantizers.hnlq import HNLQ, HNLQConfig
-from ...quantizers.utils import get_a2, get_d4, get_e8, get_z2, get_z3
+from ...quantizers.utils import (
+    closest_point_A2,
+    closest_point_Dn,
+    closest_point_E8,
+    get_a2,
+    get_d4,
+    get_e8,
+    get_z2,
+    get_z3,
+)
 from ..utils.padder import BlockingStrategy
 
 
@@ -102,7 +109,9 @@ class RowWiseGEMV:
             # Validate decoding depths
             for i, depth in enumerate(decoding_depths):
                 if depth < 1 or depth > M:
-                    raise ValueError(f"decoding_depths[{i}] = {depth} must be between 1 and {M}")
+                    raise ValueError(
+                        f"decoding_depths[{i}] = {depth} must be between 1 and {M}"
+                    )
             self.decoding_depths = decoding_depths.copy()
 
         # Initialize blocking strategy
@@ -192,7 +201,9 @@ class RowWiseGEMV:
                 row_encodings = []
                 row_scalings = []
                 for chunk in row_chunks:
-                    encoding, scaling = self.quantizers[block_idx].encode(chunk, with_dither=self.with_dither)
+                    encoding, scaling = self.quantizers[block_idx].encode(
+                        chunk, with_dither=self.with_dither
+                    )
                     row_encodings.append(encoding)
                     row_scalings.append(scaling)
 
@@ -214,7 +225,9 @@ class RowWiseGEMV:
             Result vector y = Wx.
         """
         if len(vector) != self.original_n:
-            raise ValueError(f"Vector dimension {len(vector)} != matrix columns {self.original_n}")
+            raise ValueError(
+                f"Vector dimension {len(vector)} != matrix columns {self.original_n}"
+            )
 
         # Pad vector to match padded matrix
         padded_vector = self.blocking.pad_vector(vector)
@@ -274,7 +287,9 @@ class RowWiseGEMV:
             Result vector y = Wx.
         """
         if len(vector) != self.original_n:
-            raise ValueError(f"Vector dimension {len(vector)} != matrix columns {self.original_n}")
+            raise ValueError(
+                f"Vector dimension {len(vector)} != matrix columns {self.original_n}"
+            )
 
         # Pad vector to match padded matrix
         padded_vector = self.blocking.pad_vector(vector)
@@ -356,7 +371,9 @@ class RowWiseGEMV:
             Result vector y = Wx at the specified level of detail.
         """
         if len(vector) != self.original_n:
-            raise ValueError(f"Vector dimension {len(vector)} != matrix columns {self.original_n}")
+            raise ValueError(
+                f"Vector dimension {len(vector)} != matrix columns {self.original_n}"
+            )
 
         # Pad vector to match padded matrix
         padded_vector = self.blocking.pad_vector(vector)
@@ -420,7 +437,9 @@ class RowWiseGEMV:
             List of result vectors at each level of detail, from coarsest to finest.
         """
         if len(vector) != self.original_n:
-            raise ValueError(f"Vector dimension {len(vector)} != matrix columns {self.original_n}")
+            raise ValueError(
+                f"Vector dimension {len(vector)} != matrix columns {self.original_n}"
+            )
 
         # Pad vector to match padded matrix
         padded_vector = self.blocking.pad_vector(vector)
@@ -438,7 +457,9 @@ class RowWiseGEMV:
                 # Get progressive reconstructions for all chunks
                 progressive_chunks = []
                 for chunk_idx in range(len(self.encoded_rows[block_idx][row_idx])):
-                    chunk_reconstructions = self.quantizers[block_idx].decode_progressive(
+                    chunk_reconstructions = self.quantizers[
+                        block_idx
+                    ].decode_progressive(
                         self.encoded_rows[block_idx][row_idx][chunk_idx],
                         self.overload_scalings[block_idx][row_idx][chunk_idx],
                         with_dither=self.with_dither,
@@ -462,7 +483,9 @@ class RowWiseGEMV:
                     results[level_idx][start_row + row_idx] = dot_product
 
         # Unpad all results to original matrix rows
-        results = [self.blocking.unpad_vector(result, self.original_m) for result in results]
+        results = [
+            self.blocking.unpad_vector(result, self.original_m) for result in results
+        ]
 
         return results
 
@@ -485,7 +508,9 @@ class RowWiseGEMV:
             Result vector y = Wx.
         """
         if len(vector) != self.original_n:
-            raise ValueError(f"Vector dimension {len(vector)} != matrix columns {self.original_n}")
+            raise ValueError(
+                f"Vector dimension {len(vector)} != matrix columns {self.original_n}"
+            )
 
         # Pad vector to match padded matrix
         padded_vector = self.blocking.pad_vector(vector)
@@ -560,7 +585,9 @@ class RowWiseGEMV:
         # from the paper for more accurate estimation
 
         # For now, decode and compute exact dot product
-        decoded_row = self.quantizers[0].decode(encoding, 0, with_dither=self.with_dither)
+        decoded_row = self.quantizers[0].decode(
+            encoding, 0, with_dither=self.with_dither
+        )
 
         if len(decoded_row) > len(vector):
             decoded_row = decoded_row[: len(vector)]
@@ -608,7 +635,9 @@ class RowWiseGEMV:
         )
 
         # Calculate quantizer storage
-        quantizer_size = len(self.quantizers) * self.dimension * 8  # Assuming 8 bytes per element
+        quantizer_size = (
+            len(self.quantizers) * self.dimension * 8
+        )  # Assuming 8 bytes per element
 
         return {
             "encoded_rows_mb": encoded_size * 4 / (1024 * 1024),
@@ -648,7 +677,7 @@ def row_wise_gemv(
     M: int = 2,
     sparsity_pattern: Optional[List[int]] = None,
     use_lookup: bool = False,
-    **kwargs
+    **kwargs,
 ) -> np.ndarray:
     """
     Perform row-wise matrix-vector multiplication.

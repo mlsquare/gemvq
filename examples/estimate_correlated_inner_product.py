@@ -1,10 +1,9 @@
 import matplotlib.pyplot as plt
 import numpy as np
 
-from gemvq.quantizers.utils import (closest_point_A2, closest_point_Dn,
-                               custom_round)
 from gemvq.quantizers.hnlq import HNLQ as HQ
 from gemvq.quantizers.utils import *
+from gemvq.quantizers.utils import closest_point_A2, closest_point_Dn, custom_round
 
 
 def generate_rho_correlated_samples(rho, num_samples, vector_dim):
@@ -131,7 +130,9 @@ def plot_distortion_rho():
     vector_dim = 80
 
     # nested_quantizer = NQuantizer(G, Q_nn, q=q**m, beta=1, alpha=alpha, d=eps)
-    hierarchical_quantizer = HQuantizer(G, Q_nn=Q_nn, q=q, beta=beta, alpha=alpha, M=m, d=eps)
+    hierarchical_quantizer = HQuantizer(
+        G, Q_nn=Q_nn, q=q, beta=beta, alpha=alpha, M=m, d=eps
+    )
 
     lookup_table = precompute_hq_lut(G, Q_nn, q, m, eps)
 
@@ -139,10 +140,16 @@ def plot_distortion_rho():
     # distortions_with_dithers = []
 
     for rho in rho_values:
-        x_samples, y_samples = generate_rho_correlated_samples(rho, num_samples, vector_dim)
+        x_samples, y_samples = generate_rho_correlated_samples(
+            rho, num_samples, vector_dim
+        )
 
         distortion_no_dither = calculate_distortion(
-            x_samples, y_samples, hierarchical_quantizer, lut=lookup_table, use_dithers=False
+            x_samples,
+            y_samples,
+            hierarchical_quantizer,
+            lut=lookup_table,
+            use_dithers=False,
         )
         distortions_no_dithers.append(distortion_no_dither)
 
@@ -154,7 +161,13 @@ def plot_distortion_rho():
 
     # Plot results
     plt.figure(figsize=(10, 6))
-    plt.plot(rho_values, distortions_no_dithers, label="Without Dithers", color="blue", marker="o")
+    plt.plot(
+        rho_values,
+        distortions_no_dithers,
+        label="Without Dithers",
+        color="blue",
+        marker="o",
+    )
     # plt.plot(rho_values, distortions_with_dithers, label="With Dithers", color="red", marker="s")
 
     plt.xlabel("$\\rho$")

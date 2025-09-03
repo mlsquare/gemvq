@@ -61,7 +61,9 @@ def demo_coarse_to_fine_decoding():
 
     # Test full decoding (all levels)
     full_result = processor.multiply_coarse_to_fine(sparse_vector, max_level=None)
-    full_error = np.linalg.norm(full_result - exact_result) / np.linalg.norm(exact_result)
+    full_error = np.linalg.norm(full_result - exact_result) / np.linalg.norm(
+        exact_result
+    )
     print(f"Full decoding (all levels): Relative error = {full_error:.6f}")
 
     # Test progressive decoding
@@ -115,7 +117,9 @@ def visualize_results(exact_result, results, progressive_results, M):
     levels = list(range(M - 1, -1, -1))
     errors = []
     for level in levels:
-        error = np.linalg.norm(results[level] - exact_result) / np.linalg.norm(exact_result)
+        error = np.linalg.norm(results[level] - exact_result) / np.linalg.norm(
+            exact_result
+        )
         errors.append(error)
 
     ax3.bar(levels, errors, color=colors[: len(levels)])
@@ -177,9 +181,14 @@ def demo_compression_vs_quality():
             error = np.linalg.norm(result - exact_result) / np.linalg.norm(exact_result)
             compression_ratio = processor.get_compression_ratio()
 
-            level_results[level] = {"error": error, "compression_ratio": compression_ratio}
+            level_results[level] = {
+                "error": error,
+                "compression_ratio": compression_ratio,
+            }
 
-            print(f"  Level {level}: Error = {error:.6f}, Compression = {compression_ratio:.2f}x")
+            print(
+                f"  Level {level}: Error = {error:.6f}, Compression = {compression_ratio:.2f}x"
+            )
 
         results[M] = level_results
 
@@ -197,7 +206,9 @@ def visualize_compression_tradeoff(results):
 
     for i, (M, level_results) in enumerate(results.items()):
         errors = [level_results[level]["error"] for level in range(M)]
-        compression_ratios = [level_results[level]["compression_ratio"] for level in range(M)]
+        compression_ratios = [
+            level_results[level]["compression_ratio"] for level in range(M)
+        ]
 
         plt.plot(
             compression_ratios,
@@ -212,7 +223,11 @@ def visualize_compression_tradeoff(results):
         # Annotate points
         for j, (comp, err) in enumerate(zip(compression_ratios, errors)):
             plt.annotate(
-                f"L{j}", (comp, err), xytext=(5, 5), textcoords="offset points", fontsize=8
+                f"L{j}",
+                (comp, err),
+                xytext=(5, 5),
+                textcoords="offset points",
+                fontsize=8,
             )
 
     plt.xlabel("Compression Ratio")

@@ -7,7 +7,4 @@ multiplication with lattice quantization support.
 
 from .row_wise_gemv import RowWiseGEMV, row_wise_gemv
 
-__all__ = [
-    "RowWiseGEMV",
-    "row_wise_gemv"
-]
+__all__ = ["RowWiseGEMV", "row_wise_gemv"]

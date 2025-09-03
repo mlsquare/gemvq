@@ -8,8 +8,10 @@ using hierarchical nested quantizers with column-wise encoding.
 
 import numpy as np
 
-from gemvq.gemv.adaptive_processor import (adaptive_matvec_multiply,
-                                          create_adaptive_matvec_processor)
+from gemvq.gemv.adaptive_processor import (
+    adaptive_matvec_multiply,
+    create_adaptive_matvec_processor,
+)
 
 
 def main():
@@ -35,7 +37,9 @@ def main():
     print(f"Matrix shape: {matrix.shape}")
     print(f"Sparsity pattern: {sparsity_pattern}")
     print(f"Non-zero elements: {sparse_vector[sparsity_pattern]}")
-    print(f"Target rates range: {min(target_rates):.1f} - {max(target_rates):.1f} bits/dimension")
+    print(
+        f"Target rates range: {min(target_rates):.1f} - {max(target_rates):.1f} bits/dimension"
+    )
 
     # Perform exact computation for comparison
     print("\nPerforming exact matrix-vector multiplication...")
@@ -48,7 +52,9 @@ def main():
     )
 
     # Compare results
-    error = np.linalg.norm(adaptive_result - exact_result) / np.linalg.norm(exact_result)
+    error = np.linalg.norm(adaptive_result - exact_result) / np.linalg.norm(
+        exact_result
+    )
 
     print(f"\nResults:")
     print(f"Exact result norm: {np.linalg.norm(exact_result):.6f}")
@@ -57,7 +63,9 @@ def main():
 
     # Create processor for additional analysis
     print("\nCreating processor for detailed analysis...")
-    processor = create_adaptive_matvec_processor(matrix, target_rates, sparsity_pattern, "D4", 2)
+    processor = create_adaptive_matvec_processor(
+        matrix, target_rates, sparsity_pattern, "D4", 2
+    )
 
     # Get compression statistics
     compression_ratio = processor.get_compression_ratio()
@@ -94,7 +102,9 @@ def main():
         matrix_2d, sparse_vector_2d, target_rates_2d, sparsity_pattern_2d, "A2", 2
     )
     exact_result_2d = matrix_2d @ sparse_vector_2d
-    error_2d = np.linalg.norm(result_2d - exact_result_2d) / np.linalg.norm(exact_result_2d)
+    error_2d = np.linalg.norm(result_2d - exact_result_2d) / np.linalg.norm(
+        exact_result_2d
+    )
     print(f"A2 lattice (2D matrix) - Error: {error_2d:.6f}")
 
     print("\nExample completed successfully!")

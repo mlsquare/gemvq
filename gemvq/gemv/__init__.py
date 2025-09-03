@@ -12,6 +12,6 @@ columnwise, rowwise, and SVD-based approaches with support for quantization.
 
 __all__ = [
     # "ColumnwiseMatVecProcessor",
-    # "RowwiseGEMVProcessor", 
+    # "RowwiseGEMVProcessor",
     # "SVDGEMVProcessor"
 ]

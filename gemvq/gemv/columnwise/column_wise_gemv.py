@@ -11,10 +11,17 @@ from typing import Dict, List, Optional, Tuple
 
 import numpy as np
 
-from ...quantizers.utils import (closest_point_A2, closest_point_Dn,
-                              closest_point_E8)
 from ...quantizers.hnlq import HNLQ
-from ...quantizers.utils import get_a2, get_d4, get_e8, get_z2, get_z3
+from ...quantizers.utils import (
+    closest_point_A2,
+    closest_point_Dn,
+    closest_point_E8,
+    get_a2,
+    get_d4,
+    get_e8,
+    get_z2,
+    get_z3,
+)
 from ..utils.padder import BlockingStrategy
 
 
@@ -87,7 +94,9 @@ class ColumnWiseGEMV:
             # Validate decoding depths
             for i, depth in enumerate(decoding_depths):
                 if depth < 0 or depth >= M:
-                    raise ValueError(f"decoding_depths[{i}] = {depth} must be between 0 and {M-1}")
+                    raise ValueError(
+                        f"decoding_depths[{i}] = {depth} must be between 0 and {M-1}"
+                    )
             self.decoding_depths = decoding_depths.copy()
 
         # Initialize blocking strategy
@@ -169,7 +178,9 @@ class ColumnWiseGEMV:
                 column_encodings = []
                 column_scalings = []
                 for chunk in column_chunks:
-                    encoding, scaling = self.quantizers[block_idx].encode(chunk, with_dither=False)
+                    encoding, scaling = self.quantizers[block_idx].encode(
+                        chunk, with_dither=False
+                    )
                     column_encodings.append(encoding)
                     column_scalings.append(scaling)
 
@@ -191,7 +202,9 @@ class ColumnWiseGEMV:
             Result vector y = Wx.
         """
         if len(vector) != self.original_n:
-            raise ValueError(f"Vector dimension {len(vector)} != matrix columns {self.original_n}")
+            raise ValueError(
+                f"Vector dimension {len(vector)} != matrix columns {self.original_n}"
+            )
 
         # Pad vector to match padded matrix
         padded_vector = self.blocking.pad_vector(vector)
@@ -212,7 +225,9 @@ class ColumnWiseGEMV:
                 if abs(weight) > 1e-10:  # Check for non-zero
                     # Decode all chunks of the column
                     decoded_chunks = []
-                    for chunk_idx in range(len(self.encoded_columns[block_idx][col_idx])):
+                    for chunk_idx in range(
+                        len(self.encoded_columns[block_idx][col_idx])
+                    ):
                         decoded_chunk = self.quantizers[block_idx].get_default_decoding(
                             self.encoded_columns[block_idx][col_idx][chunk_idx],
                             self.overload_scalings[block_idx][col_idx][chunk_idx],
@@ -254,7 +269,9 @@ class ColumnWiseGEMV:
             Result vector y = Wx.
         """
         if len(vector) != self.original_n:
-            raise ValueError(f"Vector dimension {len(vector)} != matrix columns {self.original_n}")
+            raise ValueError(
+                f"Vector dimension {len(vector)} != matrix columns {self.original_n}"
+            )
 
         # Pad vector to match padded matrix
         padded_vector = self.blocking.pad_vector(vector)
@@ -336,7 +353,9 @@ class ColumnWiseGEMV:
             Result vector y = Wx at the specified level of detail.
         """
         if len(vector) != self.original_n:
-            raise ValueError(f"Vector dimension {len(vector)} != matrix columns {self.original_n}")
+            raise ValueError(
+                f"Vector dimension {len(vector)} != matrix columns {self.original_n}"
+            )
 
         # Pad vector to match padded matrix
         padded_vector = self.blocking.pad_vector(vector)
@@ -357,8 +376,12 @@ class ColumnWiseGEMV:
                 if abs(weight) > 1e-10:  # Check for non-zero
                     # Decode all chunks of the column at specified level
                     decoded_chunks = []
-                    for chunk_idx in range(len(self.encoded_columns[block_idx][col_idx])):
-                        decoded_chunk = self.quantizers[block_idx].decode_coarse_to_fine(
+                    for chunk_idx in range(
+                        len(self.encoded_columns[block_idx][col_idx])
+                    ):
+                        decoded_chunk = self.quantizers[
+                            block_idx
+                        ].decode_coarse_to_fine(
                             self.encoded_columns[block_idx][col_idx][chunk_idx],
                             self.overload_scalings[block_idx][col_idx][chunk_idx],
                             with_dither=False,
@@ -403,7 +426,9 @@ class ColumnWiseGEMV:
             List of result vectors at each level of detail, from coarsest to finest.
         """
         if len(vector) != self.original_n:
-            raise ValueError(f"Vector dimension {len(vector)} != matrix columns {self.original_n}")
+            raise ValueError(
+                f"Vector dimension {len(vector)} != matrix columns {self.original_n}"
+            )
 
         # Pad vector to match padded matrix
         padded_vector = self.blocking.pad_vector(vector)
@@ -424,8 +449,12 @@ class ColumnWiseGEMV:
                 if abs(weight) > 1e-10:  # Check for non-zero
                     # Get progressive reconstructions for all chunks
                     progressive_chunks = []
-                    for chunk_idx in range(len(self.encoded_columns[block_idx][col_idx])):
-                        chunk_reconstructions = self.quantizers[block_idx].decode_progressive(
+                    for chunk_idx in range(
+                        len(self.encoded_columns[block_idx][col_idx])
+                    ):
+                        chunk_reconstructions = self.quantizers[
+                            block_idx
+                        ].decode_progressive(
                             self.encoded_columns[block_idx][col_idx][chunk_idx],
                             self.overload_scalings[block_idx][col_idx][chunk_idx],
                             with_dither=False,
@@ -448,7 +477,9 @@ class ColumnWiseGEMV:
                         results[level_idx] += weight * decoded_column
 
         # Unpad all results to original matrix rows
-        results = [self.blocking.unpad_vector(result, self.original_m) for result in results]
+        results = [
+            self.blocking.unpad_vector(result, self.original_m) for result in results
+        ]
 
         return results
 
@@ -475,7 +506,9 @@ class ColumnWiseGEMV:
             Result vector y = Wx with adaptive decoding depths.
         """
         if len(vector) != self.original_n:
-            raise ValueError(f"Vector dimension {len(vector)} != matrix columns {self.original_n}")
+            raise ValueError(
+                f"Vector dimension {len(vector)} != matrix columns {self.original_n}"
+            )
 
         # Use provided depths or default depths
         if decoding_depths is None:
@@ -513,7 +546,9 @@ class ColumnWiseGEMV:
 
                     # Decode all chunks of the column with specified depth
                     decoded_chunks = []
-                    for chunk_idx in range(len(self.encoded_columns[block_idx][col_idx])):
+                    for chunk_idx in range(
+                        len(self.encoded_columns[block_idx][col_idx])
+                    ):
                         decoded_chunk = self.quantizers[block_idx].decode_with_depth(
                             self.encoded_columns[block_idx][col_idx][chunk_idx],
                             self.overload_scalings[block_idx][col_idx][chunk_idx],
@@ -556,7 +591,9 @@ class ColumnWiseGEMV:
             Result vector y = Wx.
         """
         if len(vector) != self.original_n:
-            raise ValueError(f"Vector dimension {len(vector)} != matrix columns {self.original_n}")
+            raise ValueError(
+                f"Vector dimension {len(vector)} != matrix columns {self.original_n}"
+            )
 
         # Pad vector to match padded matrix
         padded_vector = self.blocking.pad_vector(vector)
@@ -577,15 +614,19 @@ class ColumnWiseGEMV:
                 if abs(weight) > 1e-10:  # Check for non-zero
                     # Estimate column contribution using lookup tables if available
                     if lookup_tables is not None and block_idx in lookup_tables:
-                        column_contribution = self._estimate_column_contribution_with_lookup(
-                            self.encoded_columns[block_idx][col_idx],
-                            weight,
-                            lookup_tables[block_idx],
+                        column_contribution = (
+                            self._estimate_column_contribution_with_lookup(
+                                self.encoded_columns[block_idx][col_idx],
+                                weight,
+                                lookup_tables[block_idx],
+                            )
                         )
                     else:
                         # Fall back to regular decoding
                         decoded_chunks = []
-                        for chunk_idx in range(len(self.encoded_columns[block_idx][col_idx])):
+                        for chunk_idx in range(
+                            len(self.encoded_columns[block_idx][col_idx])
+                        ):
                             decoded_chunk = self.quantizers[block_idx].decode(
                                 self.encoded_columns[block_idx][col_idx][chunk_idx],
                                 self.overload_scalings[block_idx][col_idx][chunk_idx],
@@ -638,7 +679,9 @@ class ColumnWiseGEMV:
         # For now, decode and compute exact column contribution
         decoded_chunks = []
         for chunk_encoding in encoding:
-            decoded_chunk = self.quantizers[0].decode(chunk_encoding, 1, with_dither=False)
+            decoded_chunk = self.quantizers[0].decode(
+                chunk_encoding, 1, with_dither=False
+            )
             decoded_chunks.append(decoded_chunk)
 
         # Concatenate all chunks to reconstruct the full column
@@ -687,7 +730,9 @@ class ColumnWiseGEMV:
         )
 
         # Calculate quantizer storage
-        quantizer_size = len(self.quantizers) * self.dimension * 8  # Assuming 8 bytes per element
+        quantizer_size = (
+            len(self.quantizers) * self.dimension * 8
+        )  # Assuming 8 bytes per element
 
         return {
             "encoded_columns_mb": encoded_size * 4 / (1024 * 1024),

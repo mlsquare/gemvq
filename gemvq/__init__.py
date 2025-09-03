@@ -10,15 +10,10 @@ __version__ = "0.1.0"
 __author__ = "MLSquare"
 __email__ = "contact@mlsquare.com"
 
+from .quantizers.hnlq import HNLQ
+
 # Import main classes for easier access
 from .quantizers.nlq import NLQ
-from .quantizers.hnlq import HNLQ
-from .quantizers.utils import get_d4, get_a2, get_e8, closest_point_Dn
+from .quantizers.utils import closest_point_Dn, get_a2, get_d4, get_e8
 
-__all__ = [
-    "NLQ",
-    "HNLQ", 
-    "get_d4",
-    "get_e8",
-    "closest_point_Dn"
-]
+__all__ = ["NLQ", "HNLQ", "get_d4", "get_e8", "closest_point_Dn"]

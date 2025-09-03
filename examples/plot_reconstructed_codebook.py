@@ -2,10 +2,9 @@ import numpy as np
 from matplotlib import pyplot as plt
 from scipy.spatial import Voronoi
 
-from gemvq.quantizers.utils import closest_point_A2
 from gemvq.quantizers.hnlq import HNLQ as HQuantizer
 from gemvq.quantizers.nlq import NLQ as NQuantizer
-from gemvq.quantizers.utils import get_a2
+from gemvq.quantizers.utils import closest_point_A2, get_a2
 
 
 def generate_codebook(G, closest_point, q, with_plot=True):
@@ -204,12 +203,18 @@ def plot_with_voronoi(lattice_points, q, r_qM, M=2):
     """
     plt.figure(figsize=(8, 8))
     plt.scatter(
-        lattice_points[:, 0], lattice_points[:, 1], c="blue", s=1, label=r"$\mathcal{C}_{L,q,M}$"
+        lattice_points[:, 0],
+        lattice_points[:, 1],
+        c="blue",
+        s=1,
+        label=r"$\mathcal{C}_{L,q,M}$",
     )
 
     vor = Voronoi(lattice_points)
 
-    origin_idx = np.where(np.isclose(lattice_points, np.array([0, 0]), atol=1e-2).all(axis=1))[0][0]
+    origin_idx = np.where(
+        np.isclose(lattice_points, np.array([0, 0]), atol=1e-2).all(axis=1)
+    )[0][0]
     region_idx = vor.point_region[origin_idx]
     vertices = vor.vertices[vor.regions[region_idx]]
 

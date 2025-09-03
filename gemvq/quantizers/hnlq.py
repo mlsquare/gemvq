@@ -1,20 +1,21 @@
-import numpy as np
-from typing import Tuple, Optional, Callable, Dict, Any, List, Union
-from dataclasses import dataclass
 import warnings
+from dataclasses import dataclass
+from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
-from .utils import custom_round, generate_tie_dither
+import numpy as np
+
 from .nlq import NLQ as NQ
+from .utils import custom_round, generate_tie_dither
 
 
 @dataclass
 class HNLQConfig:
     """
     Configuration class for hierarchical nested lattice quantizer parameters.
-    
+
     This class provides a structured way to manage HNLQ parameters
     with built-in validation and default values.
-    
+
     Attributes:
     -----------
     lattice_type : str
@@ -40,6 +41,7 @@ class HNLQConfig:
     with_dither : bool
         Whether to add dither to the input for randomized quantization.
     """
+
     lattice_type: str
     q: int
     M: int
@@ -51,10 +53,10 @@ class HNLQConfig:
     max_scaling_iterations: int = 10
     with_tie_dither: bool = True
     with_dither: bool = False
-    
+
     def __post_init__(self):
         """Validate parameters after initialization."""
-        if self.lattice_type not in ['D4', 'E8', 'A2', 'Z2', 'Z3']:
+        if self.lattice_type not in ["D4", "E8", "A2", "Z2", "Z3"]:
             raise ValueError(f"Unsupported lattice type: {self.lattice_type}")
         if self.q <= 0:
             raise ValueError("Quantization parameter q must be positive")
@@ -72,26 +74,26 @@ class HNLQConfig:
             raise ValueError("with_tie_dither must be a Boolean")
         if not isinstance(self.with_dither, bool):
             raise ValueError("with_dither must be a Boolean")
-    
+
     @classmethod
-    def from_dict(cls, config_dict: Dict[str, Any]) -> 'HNLQConfig':
+    def from_dict(cls, config_dict: Dict[str, Any]) -> "HNLQConfig":
         """Create configuration from dictionary."""
         return cls(**config_dict)
-    
+
     def to_dict(self) -> Dict[str, Any]:
         """Convert configuration to dictionary."""
         return {
-            'lattice_type': self.lattice_type,
-            'q': self.q,
-            'beta': self.beta,
-            'alpha': self.alpha,
-            'eps': self.eps,
-            'M': self.M,
-            'overload': self.overload,
-            'decoding': self.decoding,
-            'max_scaling_iterations': self.max_scaling_iterations,
-            'with_tie_dither': self.with_tie_dither,
-            'with_dither': self.with_dither
+            "lattice_type": self.lattice_type,
+            "q": self.q,
+            "beta": self.beta,
+            "alpha": self.alpha,
+            "eps": self.eps,
+            "M": self.M,
+            "overload": self.overload,
+            "decoding": self.decoding,
+            "max_scaling_iterations": self.max_scaling_iterations,
+            "with_tie_dither": self.with_tie_dither,
+            "with_dither": self.with_dither,
         }
 
 
@@ -103,6 +105,11 @@ class HNLQ:
     levels of quantization to achieve better rate-distortion performance. The
     hierarchical structure allows for successive refinement and efficient inner
     product estimation using small lookup tables.
+
+    Note:
+    ----
+    To use single-level quantization (equivalent to NLQ), set M=1 in the configuration.
+    The NLQ class is deprecated and will not be maintained.
 
     Attributes:
     -----------
@@ -126,11 +133,11 @@ class HNLQ:
     """
 
     def __init__(
-        self, 
+        self,
         config: Union[HNLQConfig, Dict[str, Any]],
         G: Optional[np.ndarray] = None,
         Q_nn: Optional[Callable[[np.ndarray], np.ndarray]] = None,
-        **kwargs
+        **kwargs,
     ):
         """
         Initialize the Hierarchical Nested Lattice Quantizer.
@@ -150,64 +157,78 @@ class HNLQ:
             config = HNLQConfig.from_dict(config)
         elif not isinstance(config, HNLQConfig):
             raise ValueError("config must be HNLQConfig or dict")
-        
+
         self.config = config
-        
+
         # Load lattice components if not provided
         if G is None or Q_nn is None:
             G, Q_nn = self._load_lattice_components(config.lattice_type)
-        
+
         if G.shape[0] != G.shape[1]:
             raise ValueError("Generator matrix G must be square")
-        
+
         self.G = G
-        
+
         # Handle tie dither for breaking ties in lattice quantization
         if self.config.with_tie_dither:
             self._original_eps = generate_tie_dither(G.shape[0])
         else:
             self._original_eps = config.eps
-            
+
         # Set up Q_nn with appropriate tie dither
         self.Q_nn = lambda x: Q_nn(x + self._original_eps)
 
         # Initialize dither as zeros - will be generated on demand when with_dither=True
         self.dither = np.zeros(self.G.shape[0])
-        
+
         self.G_inv = np.linalg.inv(G)
-        
+
         # Precompute some values for efficiency
         self._dim = G.shape[0]
 
-    def _load_lattice_components(self, lattice_type: str) -> Tuple[np.ndarray, Callable]:
+    def _load_lattice_components(
+        self, lattice_type: str
+    ) -> Tuple[np.ndarray, Callable]:
         """
         Load generator matrix and closest point function for the specified lattice type.
-        
+
         Parameters:
         -----------
         lattice_type : str
             Type of lattice ('D4', 'E8', 'A2', 'Z2', 'Z3').
-            
+
         Returns:
         --------
         tuple
             (G, Q_nn) where G is the generator matrix and Q_nn is the closest point function.
         """
-        from .utils import get_d4, get_e8, get_a2, get_z2, get_z3, closest_point_Dn, closest_point_E8
-        
-        if lattice_type == 'D4':
+        from .utils import (
+            closest_point_Dn,
+            closest_point_E8,
+            get_a2,
+            get_d4,
+            get_e8,
+            get_z2,
+            get_z3,
+        )
+
+        if lattice_type == "D4":
             return get_d4(), closest_point_Dn
-        elif lattice_type == 'E8':
+        elif lattice_type == "E8":
             return get_e8(), closest_point_E8
-        elif lattice_type == 'A2':
+        elif lattice_type == "A2":
             return get_a2(), closest_point_Dn
-        elif lattice_type == 'Z2':
+        elif lattice_type == "Z2":
+
             def closest_point_zn(x):
                 return np.floor(x + 0.5)
+
             return get_z2(), closest_point_zn
-        elif lattice_type == 'Z3':
+        elif lattice_type == "Z3":
+
             def closest_point_zn(x):
                 return np.floor(x + 0.5)
+
             return get_z3(), closest_point_zn
         else:
             raise ValueError(f"Unsupported lattice type: {lattice_type}")
@@ -220,57 +241,57 @@ class HNLQ:
     def lattice_type(self) -> str:
         """Get lattice type."""
         return self.config.lattice_type
-    
+
     @property
     def q(self) -> int:
         """Get quantization parameter."""
         return self.config.q
-    
+
     @property
     def beta(self) -> float:
         """Get scaling parameter."""
         return self.config.beta
-    
+
     @beta.setter
     def beta(self, value: float) -> None:
         """Set scaling parameter."""
         self.config.beta = value
-    
+
     @property
     def alpha(self) -> float:
         """Get overload scaling parameter."""
         return self.config.alpha
-    
+
     @alpha.setter
     def alpha(self, value: float) -> None:
         """Set overload scaling parameter."""
         self.config.alpha = value
-    
+
     @property
     def eps(self) -> float:
         """Get perturbation parameter."""
         return self.config.eps
-    
+
     @property
     def M(self) -> int:
         """Get number of hierarchical levels."""
         return self.config.M
-    
+
     @property
     def overload(self) -> bool:
         """Get overload handling flag."""
         return self.config.overload
-    
+
     @property
     def decoding(self) -> str:
         """Get default decoding method."""
         return self.config.decoding
-    
+
     @property
     def with_tie_dither(self) -> bool:
         """Get tie dither flag."""
         return self.config.with_tie_dither
-    
+
     @property
     def with_dither(self) -> bool:
         """Get dither flag."""
@@ -280,7 +301,9 @@ class HNLQ:
     # Encoding Methods
     # ============================================================================
 
-    def _encode(self, x: np.ndarray, with_dither: bool) -> Tuple[Tuple[np.ndarray, ...], bool]:
+    def _encode(
+        self, x: np.ndarray, with_dither: bool
+    ) -> Tuple[Tuple[np.ndarray, ...], bool]:
         """
         Internal encoding function that performs hierarchical quantization.
 
@@ -318,7 +341,9 @@ class HNLQ:
         overload_error = not np.allclose(self.Q_nn(x_l), 0, atol=1e-8)
         return tuple(encoding_vectors), overload_error
 
-    def encode(self, x: np.ndarray, with_dither: bool = False) -> Tuple[Tuple[np.ndarray, ...], int]:
+    def encode(
+        self, x: np.ndarray, with_dither: bool = False
+    ) -> Tuple[Tuple[np.ndarray, ...], int]:
         """
         Encode a vector using hierarchical nested lattice quantization.
 
@@ -340,13 +365,13 @@ class HNLQ:
         """
         b_list, did_overload = self._encode(x, with_dither)
         t = 0
-        
+
         if self.overload:
             while did_overload and t < self.config.max_scaling_iterations:
                 t += 1
                 x = x / (2**self.alpha)
                 b_list, did_overload = self._encode(x, with_dither)
-            
+
             if did_overload:
                 warnings.warn(
                     f"Overload not resolved after {self.config.max_scaling_iterations} iterations. "
@@ -354,7 +379,7 @@ class HNLQ:
                 )
         else:
             b_list, did_overload = self._encode(x, with_dither)
-            
+
         return b_list, t
 
     # ============================================================================
@@ -386,19 +411,16 @@ class HNLQ:
             Gb = np.dot(self.G, b)
             x_i_hat = Gb - self.q * self.Q_nn(Gb / self.q)
             x_hat_list.append(x_i_hat)
-        
+
         x_hat = sum([np.power(self.q, i) * x_i for i, x_i in enumerate(x_hat_list)])
-        
+
         if with_dither:
             x_hat = x_hat - self.dither
-            
+
         return self.beta * x_hat
 
     def decode(
-        self, 
-        b_list: Tuple[np.ndarray, ...], 
-        T: int, 
-        with_dither: bool = False
+        self, b_list: Tuple[np.ndarray, ...], T: int, with_dither: bool = False
     ) -> np.ndarray:
         """
         Decode hierarchical encoding vectors back to the original space.
@@ -423,11 +445,11 @@ class HNLQ:
         return self._decode(b_list, with_dither) * (2 ** (self.alpha * T))
 
     def decode_coarse_to_fine(
-        self, 
-        b_list: Tuple[np.ndarray, ...], 
-        T: int, 
-        with_dither: bool = False, 
-        depth: Optional[int] = None
+        self,
+        b_list: Tuple[np.ndarray, ...],
+        T: int,
+        with_dither: bool = False,
+        depth: Optional[int] = None,
     ) -> np.ndarray:
         """
         Decode hierarchical encoding vectors with coarse-to-fine reconstruction.
@@ -469,21 +491,23 @@ class HNLQ:
             Gb = np.dot(self.G, b)
             x_i_hat = Gb - self.q * self.Q_nn(Gb / self.q)
             x_hat_list.append(x_i_hat)
-        
+
         # Sum backwards based on depth: 1 to M
-        #x_hat = sum([np.power(self.q, i) * x_hat_list[i] for i in range(0, depth, 1)] )
-        x_hat = sum([np.power(self.q, i) * x_hat_list[i] for i in range(self.M-1, self.M-1-depth, -1)] )
-        
+        # x_hat = sum([np.power(self.q, i) * x_hat_list[i] for i in range(0, depth, 1)] )
+        x_hat = sum(
+            [
+                np.power(self.q, i) * x_hat_list[i]
+                for i in range(self.M - 1, self.M - 1 - depth, -1)
+            ]
+        )
+
         if with_dither:
             x_hat = x_hat - self.dither
 
         return self.beta * x_hat * (2 ** (self.alpha * T))
 
     def decode_progressive(
-        self, 
-        b_list: Tuple[np.ndarray, ...], 
-        T: int, 
-        with_dither: bool = False
+        self, b_list: Tuple[np.ndarray, ...], T: int, with_dither: bool = False
     ) -> List[np.ndarray]:
         """
         Generate progressive reconstructions from coarse to fine.
@@ -512,11 +536,11 @@ class HNLQ:
         return reconstructions
 
     def get_default_decoding(
-        self, 
-        b_list: Tuple[np.ndarray, ...], 
-        T: int, 
-        with_dither: bool = False, 
-        depth: Optional[int] = None
+        self,
+        b_list: Tuple[np.ndarray, ...],
+        T: int,
+        with_dither: bool = False,
+        depth: Optional[int] = None,
     ) -> Union[np.ndarray, List[np.ndarray]]:
         """
         Get the default decoding based on the decoding parameter.
@@ -547,11 +571,11 @@ class HNLQ:
             raise ValueError(f"Unknown decoding method: {self.decoding}")
 
     def decode_with_depth(
-        self, 
-        b_list: Tuple[np.ndarray, ...], 
-        T: int, 
+        self,
+        b_list: Tuple[np.ndarray, ...],
+        T: int,
         depth: int,
-        with_dither: bool = False
+        with_dither: bool = False,
     ) -> np.ndarray:
         """
         Decode with a specific depth level.
@@ -607,7 +631,9 @@ class HNLQ:
     # Utility Methods
     # ============================================================================
 
-    def create_q_codebook(self, with_dither: bool = False) -> Dict[Tuple[int, ...], np.ndarray]:
+    def create_q_codebook(
+        self, with_dither: bool = False
+    ) -> Dict[Tuple[int, ...], np.ndarray]:
         """
         Create a codebook for the hierarchical quantizer.
 
@@ -633,15 +659,15 @@ class HNLQ:
         """
         # Create NLQ instance with the same configuration but without M parameter
         nlq_config = {
-            'lattice_type': self.config.lattice_type,
-            'q': self.config.q,
-            'beta': self.config.beta,
-            'alpha': self.config.alpha,
-            'eps': self.config.eps,
-            'overload': self.config.overload,
-            'max_scaling_iterations': self.config.max_scaling_iterations,
-            'with_tie_dither': self.config.with_tie_dither,
-            'with_dither': self.config.with_dither
+            "lattice_type": self.config.lattice_type,
+            "q": self.config.q,
+            "beta": self.config.beta,
+            "alpha": self.config.alpha,
+            "eps": self.config.eps,
+            "overload": self.config.overload,
+            "max_scaling_iterations": self.config.max_scaling_iterations,
+            "with_tie_dither": self.config.with_tie_dither,
+            "with_dither": self.config.with_dither,
         }
         nq = NQ(nlq_config, self.G, self.Q_nn)
         return nq.create_codebook(with_dither)
@@ -649,40 +675,40 @@ class HNLQ:
     def get_rate_distortion_info(self) -> Dict[str, Any]:
         """
         Get information about the rate-distortion characteristics of the quantizer.
-        
+
         Returns:
         --------
         Dict[str, Any]
             Dictionary containing rate-distortion information.
         """
         return {
-            'lattice_type': self.lattice_type,
-            'q': self.q,
-            'M': self.M,
-            'beta': self.beta,
-            'alpha': self.alpha,
-            'overload': self.overload,
-            'decoding': self.decoding,
-            'max_scaling_iterations': self.config.max_scaling_iterations,
-            'with_tie_dither': self.with_tie_dither,
-            'with_dither': self.with_dither
+            "lattice_type": self.lattice_type,
+            "q": self.q,
+            "M": self.M,
+            "beta": self.beta,
+            "alpha": self.alpha,
+            "overload": self.overload,
+            "decoding": self.decoding,
+            "max_scaling_iterations": self.config.max_scaling_iterations,
+            "with_tie_dither": self.with_tie_dither,
+            "with_dither": self.with_dither,
         }
 
     def get_config(self) -> HNLQConfig:
         """
         Get the current configuration of the quantizer.
-        
+
         Returns:
         --------
         HNLQConfig
             Current configuration.
         """
         return self.config
-    
+
     def update_config(self, new_config: HNLQConfig) -> None:
         """
         Update the quantizer configuration.
-        
+
         Parameters:
         -----------
         new_config : HNLQConfig
@@ -697,42 +723,46 @@ class HNLQ:
     def get_config_summary(self) -> Dict[str, Any]:
         """Get a summary of the current configuration."""
         return {
-            'lattice_type': self.lattice_type,
-            'lattice_dimension': self._dim,
-            'quantization_parameter': self.q,
-            'hierarchical_levels': self.M,
-            'scaling_parameters': {'beta': self.beta, 'alpha': self.alpha},
-            'perturbation': self.eps,
-            'overload_handling': self.overload,
-            'decoding_method': self.decoding,
-            'max_iterations': self.config.max_scaling_iterations,
-            'dither_settings': {
-                'with_tie_dither': self.with_tie_dither,
-                'with_dither': self.with_dither
-            }
+            "lattice_type": self.lattice_type,
+            "lattice_dimension": self._dim,
+            "quantization_parameter": self.q,
+            "hierarchical_levels": self.M,
+            "scaling_parameters": {"beta": self.beta, "alpha": self.alpha},
+            "perturbation": self.eps,
+            "overload_handling": self.overload,
+            "decoding_method": self.decoding,
+            "max_iterations": self.config.max_scaling_iterations,
+            "dither_settings": {
+                "with_tie_dither": self.with_tie_dither,
+                "with_dither": self.with_dither,
+            },
         }
 
     def __repr__(self) -> str:
         """String representation of the quantizer."""
-        return (f"HNLQ(lattice={self.lattice_type}, dim={self._dim}, q={self.q}, "
-                f"M={self.M}, beta={self.beta:.3f}, alpha={self.alpha:.3f}, "
-                f"overload={self.overload}, decoding={self.decoding})")
-    
+        return (
+            f"HNLQ(lattice={self.lattice_type}, dim={self._dim}, q={self.q}, "
+            f"M={self.M}, beta={self.beta:.3f}, alpha={self.alpha:.3f}, "
+            f"overload={self.overload}, decoding={self.decoding})"
+        )
+
     def __str__(self) -> str:
         """String representation of the quantizer."""
         return self.__repr__()
 
-    def batch_encode(self, X: np.ndarray, with_dither: bool = False) -> Tuple[List[Tuple[np.ndarray, ...]], List[int]]:
+    def batch_encode(
+        self, X: np.ndarray, with_dither: bool = False
+    ) -> Tuple[List[Tuple[np.ndarray, ...]], List[int]]:
         """
         Encode multiple vectors efficiently using hierarchical nested lattice quantization.
-        
+
         Parameters:
         -----------
         X : numpy.ndarray
             Input matrix where each row is a vector to encode.
         with_dither : bool, optional
             Whether to apply dithering during quantization. Default is False.
-            
+
         Returns:
         --------
         tuple
@@ -741,22 +771,27 @@ class HNLQ:
         """
         if X.ndim == 1:
             X = X.reshape(1, -1)
-            
+
         encoded_vectors = []
         scaling_counts = []
-        
+
         for i in range(X.shape[0]):
             b_list, T = self.encode(X[i], with_dither)
             encoded_vectors.append(b_list)
             scaling_counts.append(T)
-            
+
         return encoded_vectors, scaling_counts
-    
-    def batch_decode(self, encoded_vectors: List[Tuple[np.ndarray, ...]], scaling_counts: List[int], 
-                    with_dither: bool = False, decoding: str = "full") -> np.ndarray:
+
+    def batch_decode(
+        self,
+        encoded_vectors: List[Tuple[np.ndarray, ...]],
+        scaling_counts: List[int],
+        with_dither: bool = False,
+        decoding: str = "full",
+    ) -> np.ndarray:
         """
         Decode multiple vectors efficiently using hierarchical nested lattice quantization.
-        
+
         Parameters:
         -----------
         encoded_vectors : list
@@ -768,15 +803,17 @@ class HNLQ:
         decoding : str, optional
             Decoding method to use ('full', 'coarse_to_fine', 'progressive').
             Default is "full".
-            
+
         Returns:
         --------
         numpy.ndarray
             Matrix where each row is a decoded vector.
         """
         if len(encoded_vectors) != len(scaling_counts):
-            raise ValueError("Number of encoded vectors must match number of scaling counts")
-            
+            raise ValueError(
+                "Number of encoded vectors must match number of scaling counts"
+            )
+
         decoded_vectors = []
         for b_list, T in zip(encoded_vectors, scaling_counts):
             if decoding == "full":
@@ -789,9 +826,9 @@ class HNLQ:
                 decoded = progressive_results[-1]  # Take the finest reconstruction
             else:
                 raise ValueError(f"Unknown decoding method: {decoding}")
-            
+
             decoded_vectors.append(decoded)
-            
+
         return np.array(decoded_vectors)
 
     # ============================================================================
@@ -799,13 +836,21 @@ class HNLQ:
     # ============================================================================
 
     @classmethod
-    def create_z2_quantizer(cls, q: int, M: int, beta: float = 1.0, alpha: float = 1.0,
-                           eps: float = 1e-8, overload: bool = True, 
-                           decoding: str = "full", with_tie_dither: bool = True, 
-                           with_dither: bool = False) -> 'HNLQ':
+    def create_z2_quantizer(
+        cls,
+        q: int,
+        M: int,
+        beta: float = 1.0,
+        alpha: float = 1.0,
+        eps: float = 1e-8,
+        overload: bool = True,
+        decoding: str = "full",
+        with_tie_dither: bool = True,
+        with_dither: bool = False,
+    ) -> "HNLQ":
         """
         Create a hierarchical quantizer for the Z² lattice (identity matrix).
-        
+
         Parameters:
         -----------
         q : int
@@ -826,14 +871,14 @@ class HNLQ:
             Whether to add tie dither. Default is True.
         with_dither : bool, optional
             Whether to add dither. Default is False.
-            
+
         Returns:
         --------
         HNLQ
             Configured hierarchical quantizer for Z² lattice.
         """
         config = HNLQConfig(
-            lattice_type='Z2',
+            lattice_type="Z2",
             q=q,
             M=M,
             beta=beta,
@@ -843,18 +888,26 @@ class HNLQ:
             decoding=decoding,
             max_scaling_iterations=10,
             with_tie_dither=with_tie_dither,
-            with_dither=with_dither
+            with_dither=with_dither,
         )
         return cls(config)
 
     @classmethod
-    def create_d4_quantizer(cls, q: int, M: int, beta: float = 1.0, alpha: float = 1.0,
-                           eps: float = 1e-8, overload: bool = True,
-                           decoding: str = "full", with_tie_dither: bool = True, 
-                           with_dither: bool = False) -> 'HNLQ':
+    def create_d4_quantizer(
+        cls,
+        q: int,
+        M: int,
+        beta: float = 1.0,
+        alpha: float = 1.0,
+        eps: float = 1e-8,
+        overload: bool = True,
+        decoding: str = "full",
+        with_tie_dither: bool = True,
+        with_dither: bool = False,
+    ) -> "HNLQ":
         """
         Create a hierarchical quantizer for the D₄ lattice.
-        
+
         Parameters:
         -----------
         q : int
@@ -875,14 +928,14 @@ class HNLQ:
             Whether to add tie dither. Default is True.
         with_dither : bool, optional
             Whether to add dither. Default is False.
-            
+
         Returns:
         --------
         HNLQ
             Configured hierarchical quantizer for D₄ lattice.
         """
         config = HNLQConfig(
-            lattice_type='D4',
+            lattice_type="D4",
             q=q,
             M=M,
             beta=beta,
@@ -892,18 +945,26 @@ class HNLQ:
             decoding=decoding,
             max_scaling_iterations=10,
             with_tie_dither=with_tie_dither,
-            with_dither=with_dither
+            with_dither=with_dither,
         )
         return cls(config)
 
     @classmethod
-    def create_e8_quantizer(cls, q: int, M: int, beta: float = 1.0, alpha: float = 1.0,
-                           eps: float = 1e-8, overload: bool = True,
-                           decoding: str = "full", with_tie_dither: bool = True, 
-                           with_dither: bool = False) -> 'HNLQ':
+    def create_e8_quantizer(
+        cls,
+        q: int,
+        M: int,
+        beta: float = 1.0,
+        alpha: float = 1.0,
+        eps: float = 1e-8,
+        overload: bool = True,
+        decoding: str = "full",
+        with_tie_dither: bool = True,
+        with_dither: bool = False,
+    ) -> "HNLQ":
         """
         Create a hierarchical quantizer for the E₈ lattice.
-        
+
         Parameters:
         -----------
         q : int
@@ -924,14 +985,14 @@ class HNLQ:
             Whether to add tie dither. Default is True.
         with_dither : bool, optional
             Whether to add dither. Default is False.
-            
+
         Returns:
         --------
         HNLQ
             Configured hierarchical quantizer for E₈ lattice.
         """
         config = HNLQConfig(
-            lattice_type='E8',
+            lattice_type="E8",
             q=q,
             M=M,
             beta=beta,
@@ -941,6 +1002,6 @@ class HNLQ:
             decoding=decoding,
             max_scaling_iterations=10,
             with_tie_dither=with_tie_dither,
-            with_dither=with_dither
+            with_dither=with_dither,
         )
         return cls(config)

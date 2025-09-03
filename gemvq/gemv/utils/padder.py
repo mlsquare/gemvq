@@ -10,9 +10,16 @@ from typing import List, Tuple
 
 import numpy as np
 
-from ...quantizers.utils import (closest_point_A2, closest_point_Dn,
-                                closest_point_E8)
-from ...quantizers.utils import get_a2, get_d4, get_e8, get_z2, get_z3
+from ...quantizers.utils import (
+    closest_point_A2,
+    closest_point_Dn,
+    closest_point_E8,
+    get_a2,
+    get_d4,
+    get_e8,
+    get_z2,
+    get_z3,
+)
 
 
 class BlockingStrategy:
@@ -223,7 +230,9 @@ class BlockingStrategy:
         padded[:m, :] = matrix
         return padded
 
-    def unpad_vector(self, padded_vector: np.ndarray, original_length: int) -> np.ndarray:
+    def unpad_vector(
+        self, padded_vector: np.ndarray, original_length: int
+    ) -> np.ndarray:
         """
         Remove padding from a vector.
 

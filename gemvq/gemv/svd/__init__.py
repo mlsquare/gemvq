@@ -7,6 +7,4 @@ multiplication with lattice quantization support.
 
 from .svd_gemv_processor import SVDGEMVProcessor
 
-__all__ = [
-    "SVDGEMVProcessor"
-]
+__all__ = ["SVDGEMVProcessor"]

@@ -31,8 +31,6 @@ by the quantizers, applications, and adaptive modules.
 
 import numpy as np
 
-
-
 # Constants for lattice parameters
 SIG_D3 = 3 / 24
 SIG_D4 = np.sqrt(2) * 0.076602
@@ -244,7 +242,10 @@ def precompute_hq_lut(G, Q_nn, q, m, eps):
     products between quantized vectors.
     """
     from .lattice.hnlq import HNLQ as HQuantizer
-    hq = HQuantizer(G=G, Q_nn=Q_nn, q=q, beta=1, alpha=1, M=m, eps=eps, dither=np.zeros(len(G)))
+
+    hq = HQuantizer(
+        G=G, Q_nn=Q_nn, q=q, beta=1, alpha=1, M=m, eps=eps, dither=np.zeros(len(G))
+    )
     codebook = hq.create_q_codebook(with_dither=False)
     lookup_table = {}
     for enc1, lattice_point1 in codebook.items():
@@ -301,24 +302,27 @@ def calculate_weighted_sum(a_list, b_list, lut, q):
 
     return total_sum
 
+
 # lattice agnostic dither (for breaking ties. not to be confused with the subtractive dither)
 
-def generate_tie_dither(d, beta=1.0, Rin=0.5, magnitude='auto'):
+
+def generate_tie_dither(d, beta=1.0, Rin=0.5, magnitude="auto"):
     # a constant, sample independent dither, to break ties
-    
+
     # direction with irrational components -> avoids alignment with faces
-    irr = np.array([np.sqrt(p) for p in [2,3,5,7,11,13,17,19][:d]])
+    irr = np.array([np.sqrt(p) for p in [2, 3, 5, 7, 11, 13, 17, 19][:d]])
     u = (irr - np.floor(irr)) - 0.5
     u /= np.linalg.norm(u)
 
-    if magnitude == 'auto':
+    if magnitude == "auto":
         # very small relative to scale & lattice packing radius
-        eta = 2.0**-40   # use 2**-20 if float32 end-to-end
+        eta = 2.0**-40  # use 2**-20 if float32 end-to-end
         delta = eta * beta * Rin
     else:
         delta = float(magnitude)
 
     return delta * u  # add to x before Q_L(x)
+
 
 # usage:
 # eps = fixed_tie_dither(d=4, beta=beta, Rin=1/np.sqrt(2))  # e.g., for D4
@@ -326,6 +330,7 @@ def generate_tie_dither(d, beta=1.0, Rin=0.5, magnitude='auto'):
 
 
 # Closest Point Algorithms
+
 
 def custom_round_old(x):
     """
@@ -356,7 +361,9 @@ def custom_round_old(x):
         return np.array([custom_round_old(val) for val in x])
     else:
         if x > 0:
-            return np.floor(x + 0.5) - 1 if (x - np.floor(x)) == 0.5 else np.floor(x + 0.5)
+            return (
+                np.floor(x + 0.5) - 1 if (x - np.floor(x)) == 0.5 else np.floor(x + 0.5)
+            )
         else:
             return np.ceil(x - 0.5) + 1 if (np.ceil(x) - x) == 0.5 else np.ceil(x - 0.5)
 
@@ -387,17 +394,17 @@ def custom_round(x, tiny=None):
     to the nearer-integer toward zero, then rounds to nearest via floor(x+0.5).
     """
     x = np.asarray(x)
-    
+
     if tiny is None:
         # choose a microscopic nudge relative to dtype
-        tiny = np.finfo(x.dtype if x.dtype.kind in 'fc' else np.float64).eps
-    
+        tiny = np.finfo(x.dtype if x.dtype.kind in "fc" else np.float64).eps
+
     # nudge toward zero so exact .5 falls to the nearer-integer toward zero
     y = x - np.sign(x) * tiny
-    
+
     # round-to-nearest via floor(x+0.5) works for all signs after the nudge
     result = np.floor(y + 0.5)
-    
+
     # Preserve original type if scalar, otherwise return array
     if x.ndim == 0:  # scalar
         return result.item()
@@ -434,18 +441,19 @@ def g_x(x):
     g_x_ = f_x.copy()
 
     # Ensure we're working with scalar values
-    #x_k = x.flat[k] if hasattr(x, 'flat') else x[k]
-    #f_x_k = f_x.flat[k] if hasattr(f_x, 'flat') else f_x[k]
-    
+    # x_k = x.flat[k] if hasattr(x, 'flat') else x[k]
+    # f_x_k = f_x.flat[k] if hasattr(f_x, 'flat') else f_x[k]
+
     x_k = x[k]
     f_x_k = f_x[k]
-    
+
     if x_k >= 0:
         g_x_[k] = f_x_k + 1 if f_x_k < x_k else f_x_k - 1
     else:
         g_x_[k] = f_x_k + 1 if f_x_k <= x_k else f_x_k - 1
 
     return g_x_
+
 
 def closest_point_Dn(x):
     """

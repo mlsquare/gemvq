@@ -1,9 +1,20 @@
-from gemvq.quantizers.nlq import NLQ as NQuantizer
-from gemvq.quantizers.hnlq import HNLQ as HQuantizer
-from gemvq.quantizers.utils import get_a2, get_d3, get_d4, get_e8, calculate_mse, calculate_t_entropy
-from gemvq.quantizers.utils import closest_point_A2, closest_point_Dn, closest_point_E8, custom_round
-import numpy as np
 import matplotlib.pyplot as plt
+import numpy as np
+
+from gemvq.quantizers.hnlq import HNLQ as HQuantizer
+from gemvq.quantizers.nlq import NLQ as NQuantizer
+from gemvq.quantizers.utils import (
+    calculate_mse,
+    calculate_t_entropy,
+    closest_point_A2,
+    closest_point_Dn,
+    closest_point_E8,
+    custom_round,
+    get_a2,
+    get_d3,
+    get_d4,
+    get_e8,
+)
 
 
 def calculate_mse_and_overload_for_samples(samples, quantizer):
@@ -35,7 +46,7 @@ def calculate_rate_and_distortion(name, samples, quantizer, q, beta_min):
     overload_percentage = None
 
     for beta_idx, beta in enumerate(betas):
-        quantizer.alpha = 1/3
+        quantizer.alpha = 1 / 3
         quantizer.beta = beta
         mse, T_values = calculate_mse_and_overload_for_samples(samples, quantizer)
 
@@ -52,44 +63,62 @@ def calculate_rate_and_distortion(name, samples, quantizer, q, beta_min):
             optimal_R = R
             overload_percentage = (1 - (T_counts[0] / sum(T_counts))) * 100
 
-
-    print(f"For q={q} and scheme {name}: Optimal beta: {optimal_beta:.3f}, "
-          f"Minimum MSE: {optimal_mse:.6f}, Minimum f(beta, alpha): {min_f_beta:.3f}, "
-          f"optimal_H_T: {optimal_H_T:.4f}, overload percent: {overload_percentage:.2f}%")
+    print(
+        f"For q={q} and scheme {name}: Optimal beta: {optimal_beta:.3f}, "
+        f"Minimum MSE: {optimal_mse:.6f}, Minimum f(beta, alpha): {min_f_beta:.3f}, "
+        f"optimal_H_T: {optimal_H_T:.4f}, overload percent: {overload_percentage:.2f}%"
+    )
     return optimal_R, optimal_mse, optimal_beta
 
 
-def run_comparison_experiment(G, q_nn, q_values, n_samples, d, sigma_squared, M, sig_l, schemes, eps):
+def run_comparison_experiment(
+    G, q_nn, q_values, n_samples, d, sigma_squared, M, sig_l, schemes, eps
+):
     x_std = np.sqrt(sigma_squared)
     samples = np.random.normal(0, x_std, size=(n_samples, d))
 
     results = {scheme["name"]: {"R": [], "min_errors": []} for scheme in schemes}
 
-    markers = ['o', 's', 'x']
-    colors = ['blue', 'green', 'orange']
+    markers = ["o", "s", "x"]
+    colors = ["blue", "green", "orange"]
 
     for q_idx, q in enumerate(q_values):
         print(f"Processing q={q} ({q_idx + 1}/{len(q_values)})...")
-        beta_min = (1 / q ** M) * np.sqrt(1 / sig_l) * np.sqrt(d / (d + 2))
+        beta_min = (1 / q**M) * np.sqrt(1 / sig_l) * np.sqrt(d / (d + 2))
 
         for idx, scheme in enumerate(schemes):
-            name, quantizer_class, nesting = scheme["name"], scheme["quantizer"], scheme["nesting"]
-            
+            name, quantizer_class, nesting = (
+                scheme["name"],
+                scheme["quantizer"],
+                scheme["nesting"],
+            )
+
             if quantizer_class == HQuantizer:
                 # HNLQ uses config-based constructor
                 config = {
-                    'q': nesting(q),
-                    'beta': beta_min,
-                    'alpha': 1,
-                    'eps': eps,
-                    'M': 2
+                    "q": nesting(q),
+                    "beta": beta_min,
+                    "alpha": 1,
+                    "eps": eps,
+                    "M": 2,
                 }
                 quantizer = quantizer_class(G, q_nn, config, dither=np.zeros(d))
             else:
                 # NLQ uses individual parameters
-                quantizer = quantizer_class(G, q_nn, q=nesting(q), beta=beta_min, alpha=1, eps=eps, M=2, dither=np.zeros(d))
+                quantizer = quantizer_class(
+                    G,
+                    q_nn,
+                    q=nesting(q),
+                    beta=beta_min,
+                    alpha=1,
+                    eps=eps,
+                    M=2,
+                    dither=np.zeros(d),
+                )
 
-            R, min_error, optimal_beta = calculate_rate_and_distortion(name, samples, quantizer, q, beta_min)
+            R, min_error, optimal_beta = calculate_rate_and_distortion(
+                name, samples, quantizer, q, beta_min
+            )
             results[name]["R"].append(R)
             results[name]["min_errors"].append(min_error)
 
@@ -102,8 +131,13 @@ def run_comparison_experiment(G, q_nn, q_values, n_samples, d, sigma_squared, M,
     # Commented out since we only have 2 schemes, not 3
     q_2_rates = results[schemes[2]["name"]]["R"]
     benchmark_distortions = [2 ** (-2 * k) for k in q_2_rates]
-    plt.plot(q_2_rates, benchmark_distortions, label=f"Theoretical benchmark", color='red',
-              linestyle="--")
+    plt.plot(
+        q_2_rates,
+        benchmark_distortions,
+        label=f"Theoretical benchmark",
+        color="red",
+        linestyle="--",
+    )
 
     plt.xlabel(r"$R = 2 \log_2 (q) + H(T)/d$")
     plt.ylabel("D (logarithmic scale)")
@@ -127,15 +161,29 @@ def main():
     M = 2
 
     schemes = [
-        {"name": r"$q(q-1)$ Voronoi Code", "quantizer": NQuantizer, "nesting": lambda q: int(q * (q-1))},
-        {"name": "Hierarchical Quantizer",  "quantizer": HQuantizer, "nesting": lambda q: int(q)},
-        {"name": r"$q^2$ Voronoi Code", "quantizer": NQuantizer, "nesting": lambda q: int(q ** 2)},
-    ] 
+        {
+            "name": r"$q(q-1)$ Voronoi Code",
+            "quantizer": NQuantizer,
+            "nesting": lambda q: int(q * (q - 1)),
+        },
+        {
+            "name": "Hierarchical Quantizer",
+            "quantizer": HQuantizer,
+            "nesting": lambda q: int(q),
+        },
+        {
+            "name": r"$q^2$ Voronoi Code",
+            "quantizer": NQuantizer,
+            "nesting": lambda q: int(q**2),
+        },
+    ]
 
-
-    results = run_comparison_experiment(G, q_nn, q_values, num_samples, len(G), sigma_squared, M, sig_l, schemes, eps)
+    results = run_comparison_experiment(
+        G, q_nn, q_values, num_samples, len(G), sigma_squared, M, sig_l, schemes, eps
+    )
 
     print("Comparison complete. Results:")
     print(results)
+
 
 main()

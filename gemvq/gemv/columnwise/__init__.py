@@ -7,6 +7,4 @@ multiplication with lattice quantization support.
 
 from .columnwise_matvec_processor import ColumnwiseMatVecProcessor
 
-__all__ = [
-    "ColumnwiseMatVecProcessor"
-]
+__all__ = ["ColumnwiseMatVecProcessor"]

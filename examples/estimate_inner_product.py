@@ -1,11 +1,10 @@
 import matplotlib.pyplot as plt
 import numpy as np
 
-from gemvq.quantizers.utils import (closest_point_A2, closest_point_Dn,
-                               custom_round)
 from gemvq.quantizers.hnlq import HNLQ as HQuantizer
 from gemvq.quantizers.nlq import NLQ as NQuantizer
 from gemvq.quantizers.utils import *
+from gemvq.quantizers.utils import closest_point_A2, closest_point_Dn, custom_round
 
 
 def pad_vector(vec, lattice_dim):
@@ -110,7 +109,14 @@ def find_best_beta(G, Q_nn, q, m, alpha, sig_l, eps):
     samples = [np.random.normal(0, 1, size=vector_dim) for _ in range(2000)]
     for idx, beta in enumerate(betas):
         quantizer = HQuantizer(
-            G=G, Q_nn=Q_nn, q=q, beta=beta, alpha=alpha, M=m, eps=eps, dither=np.zeros(d)
+            G=G,
+            Q_nn=Q_nn,
+            q=q,
+            beta=beta,
+            alpha=alpha,
+            M=m,
+            eps=eps,
+            dither=np.zeros(d),
         )
         mse, T_values = calculate_mse_and_overload_for_samples(samples, quantizer)
 
@@ -125,11 +131,15 @@ def find_best_beta(G, Q_nn, q, m, alpha, sig_l, eps):
             optimal_R = R
             overload_percentage = (1 - (T_counts[0] / sum(T_counts))) * 100
 
-    print(f"optimal beta index is: {optimal_dx}, overload percentage:{overload_percentage:.3f}")
+    print(
+        f"optimal beta index is: {optimal_dx}, overload percentage:{overload_percentage:.3f}"
+    )
     return optimal_R, optimal_beta
 
 
-def calculate_inner_product_distortion(G, Q_nn, q, m, beta, alpha, samples, eps, lut=None):
+def calculate_inner_product_distortion(
+    G, Q_nn, q, m, beta, alpha, samples, eps, lut=None
+):
     """
     Calculate the distortion for inner products between different pairs of samples.
 
@@ -178,7 +188,14 @@ def calculate_inner_product_distortion(G, Q_nn, q, m, beta, alpha, samples, eps,
         G, Q_nn, q=q**m, beta=beta, alpha=alpha, eps=eps, dither=np.zeros(lattice_dim)
     )
     hierarchical_quantizer = HQuantizer(
-        G, Q_nn=Q_nn, q=q, beta=beta, alpha=alpha, M=m, eps=eps, dither=np.zeros(lattice_dim)
+        G,
+        Q_nn=Q_nn,
+        q=q,
+        beta=beta,
+        alpha=alpha,
+        M=m,
+        eps=eps,
+        dither=np.zeros(lattice_dim),
     )
 
     for i in range(len(samples)):
@@ -195,21 +212,32 @@ def calculate_inner_product_distortion(G, Q_nn, q, m, beta, alpha, samples, eps,
                 block1 = vec1[k : k + lattice_dim]
                 block2 = vec2[k : k + lattice_dim]
 
-                voronoi_res = calculate_inner_product_for_chunks(block1, block2, nested_quantizer)
+                voronoi_res = calculate_inner_product_for_chunks(
+                    block1, block2, nested_quantizer
+                )
                 voronoi_inner_product += voronoi_res
 
-                enc_hierarchical_1, t_h1 = hierarchical_quantizer.encode(block1, with_dither=False)
-                enc_hierarchical_2, t_h2 = hierarchical_quantizer.encode(block2, with_dither=False)
+                enc_hierarchical_1, t_h1 = hierarchical_quantizer.encode(
+                    block1, with_dither=False
+                )
+                enc_hierarchical_2, t_h2 = hierarchical_quantizer.encode(
+                    block2, with_dither=False
+                )
                 c = (2 ** (hierarchical_quantizer.alpha * (t_h1 + t_h2))) * (
                     hierarchical_quantizer.beta**2
                 )
                 hierarchical_res = calculate_weighted_sum(
-                    enc_hierarchical_1, enc_hierarchical_2, lut, hierarchical_quantizer.q
+                    enc_hierarchical_1,
+                    enc_hierarchical_2,
+                    lut,
+                    hierarchical_quantizer.q,
                 )
                 hierarchical_inner_product += hierarchical_res * c
 
             voronoi_errors.append((voronoi_inner_product - true_inner_product) ** 2)
-            hierarchical_errors.append((hierarchical_inner_product - true_inner_product) ** 2)
+            hierarchical_errors.append(
+                (hierarchical_inner_product - true_inner_product) ** 2
+            )
 
     voronoi_mse = np.mean(voronoi_errors) / n
     hierarchical_mse = np.mean(hierarchical_errors) / n
@@ -291,7 +319,9 @@ def plot_distortion_rate():
     vector_dim = 512
     sample_size = 100
     variance = 1
-    samples = [np.random.normal(0, variance, size=vector_dim) for _ in range(sample_size)]
+    samples = [
+        np.random.normal(0, variance, size=vector_dim) for _ in range(sample_size)
+    ]
     nested_distortions = []
     hierarchical_distortions = []
     theoretical_distortions = []
@@ -327,9 +357,19 @@ def plot_distortion_rate():
         linestyle="--",
         color="black",
     )
-    plt.plot(R_values, nested_distortions, label=f"$q^M$ Voronoi Code", marker="o", color="blue")
     plt.plot(
-        R_values, hierarchical_distortions, label="Hierarchical Quantizer", marker="s", color="red"
+        R_values,
+        nested_distortions,
+        label=f"$q^M$ Voronoi Code",
+        marker="o",
+        color="blue",
+    )
+    plt.plot(
+        R_values,
+        hierarchical_distortions,
+        label="Hierarchical Quantizer",
+        marker="s",
+        color="red",
     )
 
     plt.yscale("log", base=2)

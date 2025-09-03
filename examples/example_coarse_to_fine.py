@@ -40,7 +40,9 @@ def main():
 
     # Test full decoding
     full_result = processor.multiply_coarse_to_fine(vector, max_level=None)
-    full_error = np.linalg.norm(full_result - exact_result) / np.linalg.norm(exact_result)
+    full_error = np.linalg.norm(full_result - exact_result) / np.linalg.norm(
+        exact_result
+    )
     print(f"Full decoding: Relative error = {full_error:.6f}")
 
     # Test progressive decoding
